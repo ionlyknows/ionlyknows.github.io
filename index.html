@@ -1,14 +1,473 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Jefferson Laspiñas — Front-End Developer</title>
+<meta name="description" content="Portfolio of Jefferson Laspiñas, Front-End Developer." />
+
+<!-- Google Fonts: Space Grotesk (display) + Inter (body/UI) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    
-<h1> Hello World! </h1>
-<p> this is my first html work on my repository</p>
 
+<!-- ============================================= -->
+<!-- LOADER -->
+<!-- ============================================= -->
+<div id="loader" class="loader" aria-hidden="true">
+  <div class="loader-ring"></div>
+  <p class="loader-text">INITIALIZING<span class="loader-dots">...</span></p>
+</div>
+
+<!-- ============================================= -->
+<!-- BACKGROUND LAYERS (stars / nebula / particles) -->
+<!-- ============================================= -->
+<div class="bg-space" aria-hidden="true">
+  <canvas id="starfield"></canvas>
+  <div class="nebula nebula--one"></div>
+  <div class="nebula nebula--two"></div>
+  <div class="planet planet--one"></div>
+  <div class="planet planet--two"></div>
+  <div class="grid-overlay"></div>
+</div>
+
+<!-- cursor glow -->
+<div id="cursorGlow" class="cursor-glow" aria-hidden="true"></div>
+
+<!-- ============================================= -->
+<!-- NAVIGATION -->
+<!-- ============================================= -->
+<header class="navbar" id="navbar">
+  <div class="navbar__inner">
+    <a href="#home" class="navbar__logo">
+      <svg class="navbar__logo-ring" viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
+        <circle cx="20" cy="20" r="17" class="ring-track" />
+        <circle cx="20" cy="20" r="17" class="ring-progress" id="navProgressRing" />
+      </svg>
+      <span class="navbar__logo-text">JL<span class="dot">.</span></span>
+    </a>
+
+    <nav class="navbar__links" id="navLinks">
+      <a href="#home" class="nav-link active" data-nav>Home</a>
+      <a href="#about" class="nav-link" data-nav>About</a>
+      <a href="#skills" class="nav-link" data-nav>Skills</a>
+      <a href="#projects" class="nav-link" data-nav>Projects</a>
+      <a href="#experience" class="nav-link" data-nav>Experience</a>
+      <a href="#certificates" class="nav-link" data-nav>Certificates</a>
+      <a href="#contact" class="nav-link" data-nav>Contact</a>
+    </nav>
+
+    <button class="navbar__toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============================================= -->
+  <!-- HERO -->
+  <!-- ============================================= -->
+  <section id="home" class="hero section">
+    <div class="hero__inner">
+      <div class="hero__content reveal">
+        <p class="hero__eyebrow"><span class="eyebrow-blip"></span> MISSION: BUILD EXCEPTIONAL INTERFACES</p>
+        <h1 class="hero__name">Jefferson<br /><span class="text-gradient">Laspiñas</span></h1>
+        <h2 class="hero__title">
+          <span id="typedText"></span><span class="typed-cursor">|</span>
+        </h2>
+        <p class="hero__desc">
+          Front-End Developer &amp; UI/UX Designer crafting immersive, high-performance
+          web experiences — placeholder bio. Replace this with a short two-to-three
+          sentence introduction about your craft, your focus, and what drives your work.
+        </p>
+        <div class="hero__actions">
+          <a href="#projects" class="btn btn--primary">
+            <span>View Projects</span>
+          </a>
+          <a href="#" class="btn btn--ghost" id="resumeBtn" download>
+            <span>Download Résumé</span>
+          </a>
+        </div>
+
+        <div class="hero__stats">
+          <div class="stat">
+            <span class="stat__num" data-count="4">0</span><span class="stat__suffix">+</span>
+            <span class="stat__label">Years Experience</span>
+          </div>
+          <div class="stat">
+            <span class="stat__num" data-count="30">0</span><span class="stat__suffix">+</span>
+            <span class="stat__label">Projects Shipped</span>
+          </div>
+          <div class="stat">
+            <span class="stat__num" data-count="12">0</span><span class="stat__suffix">+</span>
+            <span class="stat__label">Certifications</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero__portrait reveal" data-reveal-delay="150">
+        <div class="portrait-frame">
+          <div class="portrait-ring"></div>
+          <div class="portrait-ring portrait-ring--outer"></div>
+          <img
+            src="https://placehold.co/560x560/0d1526/8fb3ff?text=Profile+Photo"
+            alt="Jefferson Laspiñas portrait placeholder"
+            class="portrait-img"
+            loading="eager"
+          />
+          <span class="portrait-tag portrait-tag--one">FRONT-END</span>
+          <span class="portrait-tag portrait-tag--two">UI / UX</span>
+        </div>
+      </div>
+    </div>
+
+    <a href="#about" class="scroll-cue" aria-label="Scroll to About section">
+      <span class="scroll-cue__line"></span>
+      <span class="scroll-cue__text">SCROLL</span>
+    </a>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- ABOUT -->
+  <!-- ============================================= -->
+  <section id="about" class="section about">
+    <div class="section__header reveal">
+      <p class="section__eyebrow">01 — About</p>
+      <h2 class="section__title">Mission Profile</h2>
+    </div>
+
+    <div class="about__grid">
+      <div class="about__text reveal">
+        <p>
+          Placeholder biography. Introduce yourself here — where you're based, how you
+          got into development, and what kind of problems you enjoy solving. Talk about
+          your design philosophy and the type of products you like building.
+        </p>
+        <p>
+          Add a second paragraph covering your current focus, the tools you gravitate
+          toward, and what you're aiming to learn or build next. Keep it concise,
+          genuine, and specific to you.
+        </p>
+
+        <div class="about__cards">
+          <div class="glass-card about-card">
+            <span class="about-card__icon">🎓</span>
+            <h3>Education</h3>
+            <p class="about-card__title">B.S. in Information Technology</p>
+            <p class="about-card__meta">Placeholder University · 2020 – 2024</p>
+          </div>
+          <div class="glass-card about-card">
+            <span class="about-card__icon">📍</span>
+            <h3>Based In</h3>
+            <p class="about-card__title">Davao City, Philippines</p>
+            <p class="about-card__meta">Open to remote opportunities</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="about__timeline reveal" data-reveal-delay="150">
+        <h3 class="timeline-heading">Trajectory</h3>
+        <ol class="timeline">
+          <li class="timeline__item">
+            <span class="timeline__dot"></span>
+            <span class="timeline__year">2024</span>
+            <h4>Junior Front-End Developer</h4>
+            <p>Placeholder Company — building responsive interfaces and component libraries.</p>
+          </li>
+          <li class="timeline__item">
+            <span class="timeline__dot"></span>
+            <span class="timeline__year">2023</span>
+            <h4>Freelance Web Developer</h4>
+            <p>Delivered websites for small businesses — placeholder description.</p>
+          </li>
+          <li class="timeline__item">
+            <span class="timeline__dot"></span>
+            <span class="timeline__year">2022</span>
+            <h4>Started Learning to Code</h4>
+            <p>Began the journey with HTML, CSS, and JavaScript fundamentals.</p>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- SKILLS -->
+  <!-- ============================================= -->
+  <section id="skills" class="section skills">
+    <div class="section__header reveal">
+      <p class="section__eyebrow">02 — Skills</p>
+      <h2 class="section__title">Systems &amp; Instruments</h2>
+    </div>
+
+    <div class="skills__grid">
+
+      <div class="glass-card skill-category reveal">
+        <h3 class="skill-category__title"><span class="cat-icon">🖥️</span> Frontend</h3>
+        <div class="skill-bar"><div class="skill-bar__label"><span>HTML5</span><span>95%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="95"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>CSS3</span><span>90%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="90"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>JavaScript (ES6+)</span><span>85%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="85"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>React</span><span>75%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="75"></div></div></div>
+      </div>
+
+      <div class="glass-card skill-category reveal" data-reveal-delay="80">
+        <h3 class="skill-category__title"><span class="cat-icon">⚙️</span> Backend</h3>
+        <div class="skill-bar"><div class="skill-bar__label"><span>Node.js</span><span>70%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="70"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>Express</span><span>65%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="65"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>REST APIs</span><span>78%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="78"></div></div></div>
+      </div>
+
+      <div class="glass-card skill-category reveal" data-reveal-delay="160">
+        <h3 class="skill-category__title"><span class="cat-icon">💻</span> Languages</h3>
+        <div class="skill-bar"><div class="skill-bar__label"><span>JavaScript</span><span>85%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="85"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>Python</span><span>60%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="60"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>Java</span><span>55%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="55"></div></div></div>
+      </div>
+
+      <div class="glass-card skill-category reveal" data-reveal-delay="240">
+        <h3 class="skill-category__title"><span class="cat-icon">🛠️</span> Tools</h3>
+        <div class="skill-bar"><div class="skill-bar__label"><span>Git &amp; GitHub</span><span>88%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="88"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>Figma</span><span>72%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="72"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>VS Code</span><span>95%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="95"></div></div></div>
+      </div>
+
+      <div class="glass-card skill-category reveal" data-reveal-delay="320">
+        <h3 class="skill-category__title"><span class="cat-icon">🗄️</span> Databases</h3>
+        <div class="skill-bar"><div class="skill-bar__label"><span>MongoDB</span><span>68%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="68"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>MySQL</span><span>72%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="72"></div></div></div>
+        <div class="skill-bar"><div class="skill-bar__label"><span>Firebase</span><span>65%</span></div>
+          <div class="skill-bar__track"><div class="skill-bar__fill" data-width="65"></div></div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- PROJECTS -->
+  <!-- ============================================= -->
+  <section id="projects" class="section projects">
+    <div class="section__header reveal">
+      <p class="section__eyebrow">03 — Projects</p>
+      <h2 class="section__title">Launch Log</h2>
+    </div>
+
+    <div class="projects__grid">
+
+      <article class="glass-card project-card reveal">
+        <div class="project-card__image">
+          <img src="https://placehold.co/600x360/0d1526/4deeea?text=Project+One" alt="Project One placeholder screenshot" loading="lazy" />
+        </div>
+        <div class="project-card__body">
+          <h3>Project Title One</h3>
+          <p>Placeholder description explaining the problem this project solves and your role in building it.</p>
+          <div class="project-card__tags">
+            <span>HTML</span><span>CSS</span><span>JavaScript</span>
+          </div>
+          <div class="project-card__actions">
+            <a href="#" class="btn btn--small btn--ghost">GitHub</a>
+            <a href="#" class="btn btn--small btn--primary">Live Demo</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="glass-card project-card reveal" data-reveal-delay="80">
+        <div class="project-card__image">
+          <img src="https://placehold.co/600x360/0d1526/8b6cf0?text=Project+Two" alt="Project Two placeholder screenshot" loading="lazy" />
+        </div>
+        <div class="project-card__body">
+          <h3>Project Title Two</h3>
+          <p>Placeholder description explaining the problem this project solves and your role in building it.</p>
+          <div class="project-card__tags">
+            <span>React</span><span>Node.js</span><span>MongoDB</span>
+          </div>
+          <div class="project-card__actions">
+            <a href="#" class="btn btn--small btn--ghost">GitHub</a>
+            <a href="#" class="btn btn--small btn--primary">Live Demo</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="glass-card project-card reveal" data-reveal-delay="160">
+        <div class="project-card__image">
+          <img src="https://placehold.co/600x360/0d1526/3f8cff?text=Project+Three" alt="Project Three placeholder screenshot" loading="lazy" />
+        </div>
+        <div class="project-card__body">
+          <h3>Project Title Three</h3>
+          <p>Placeholder description explaining the problem this project solves and your role in building it.</p>
+          <div class="project-card__tags">
+            <span>Vue</span><span>Firebase</span><span>CSS3</span>
+          </div>
+          <div class="project-card__actions">
+            <a href="#" class="btn btn--small btn--ghost">GitHub</a>
+            <a href="#" class="btn btn--small btn--primary">Live Demo</a>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- EXPERIENCE -->
+  <!-- ============================================= -->
+  <section id="experience" class="section experience">
+    <div class="section__header reveal">
+      <p class="section__eyebrow">04 — Experience</p>
+      <h2 class="section__title">Flight History</h2>
+    </div>
+
+    <ol class="exp-timeline">
+      <li class="exp-timeline__item reveal">
+        <div class="exp-timeline__marker"></div>
+        <div class="glass-card exp-card">
+          <span class="exp-card__period">2024 — Present</span>
+          <h3>Junior Front-End Developer</h3>
+          <p class="exp-card__org">Placeholder Company Inc.</p>
+          <p>Placeholder responsibilities — building and maintaining responsive UI components, collaborating with designers, optimizing performance.</p>
+        </div>
+      </li>
+      <li class="exp-timeline__item reveal" data-reveal-delay="80">
+        <div class="exp-timeline__marker"></div>
+        <div class="glass-card exp-card">
+          <span class="exp-card__period">2023 — 2024</span>
+          <h3>Freelance Web Developer</h3>
+          <p class="exp-card__org">Self-Employed</p>
+          <p>Placeholder responsibilities — delivered custom websites for clients across small businesses and personal brands.</p>
+        </div>
+      </li>
+      <li class="exp-timeline__item reveal" data-reveal-delay="160">
+        <div class="exp-timeline__marker"></div>
+        <div class="glass-card exp-card">
+          <span class="exp-card__period">2022 — 2023</span>
+          <h3>Web Development Intern</h3>
+          <p class="exp-card__org">Placeholder Studio</p>
+          <p>Placeholder responsibilities — assisted senior developers with bug fixes and UI polish.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- CERTIFICATES -->
+  <!-- ============================================= -->
+  <section id="certificates" class="section certificates">
+    <div class="section__header reveal">
+      <p class="section__eyebrow">05 — Certificates</p>
+      <h2 class="section__title">Clearance Badges</h2>
+    </div>
+
+    <div class="cert__grid">
+      <div class="glass-card cert-card reveal">
+        <div class="cert-card__image">
+          <img src="https://placehold.co/400x260/0d1526/c7d0e0?text=Certificate+1" alt="Certificate placeholder one" loading="lazy" />
+        </div>
+        <h3>Responsive Web Design</h3>
+        <p class="cert-card__issuer">Placeholder Institution · 2023</p>
+      </div>
+      <div class="glass-card cert-card reveal" data-reveal-delay="80">
+        <div class="cert-card__image">
+          <img src="https://placehold.co/400x260/0d1526/c7d0e0?text=Certificate+2" alt="Certificate placeholder two" loading="lazy" />
+        </div>
+        <h3>JavaScript Algorithms</h3>
+        <p class="cert-card__issuer">Placeholder Institution · 2023</p>
+      </div>
+      <div class="glass-card cert-card reveal" data-reveal-delay="160">
+        <div class="cert-card__image">
+          <img src="https://placehold.co/400x260/0d1526/c7d0e0?text=Certificate+3" alt="Certificate placeholder three" loading="lazy" />
+        </div>
+        <h3>Front-End Libraries</h3>
+        <p class="cert-card__issuer">Placeholder Institution · 2024</p>
+      </div>
+      <div class="glass-card cert-card reveal" data-reveal-delay="240">
+        <div class="cert-card__image">
+          <img src="https://placehold.co/400x260/0d1526/c7d0e0?text=Certificate+4" alt="Certificate placeholder four" loading="lazy" />
+        </div>
+        <h3>UI/UX Design Fundamentals</h3>
+        <p class="cert-card__issuer">Placeholder Institution · 2024</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================= -->
+  <!-- CONTACT -->
+  <!-- ============================================= -->
+  <section id="contact" class="section contact">
+    <div class="section__header reveal">
+      <p class="section__eyebrow">06 — Contact</p>
+      <h2 class="section__title">Open a Channel</h2>
+    </div>
+
+    <div class="contact__grid">
+      <div class="glass-card contact__info reveal">
+        <h3>Let's build something.</h3>
+        <p>Have a project in mind or just want to say hello? Send a transmission — I usually respond within a day or two.</p>
+
+        <ul class="contact__list">
+          <li><span class="contact__icon">✉️</span> jefferson.laspinas@placeholder.com</li>
+          <li><span class="contact__icon">📍</span> Davao City, Philippines</li>
+          <li><span class="contact__icon">💼</span> Open to freelance &amp; full-time roles</li>
+        </ul>
+
+        <div class="social-icons">
+          <a href="#" class="social-icon" aria-label="GitHub">GH</a>
+          <a href="#" class="social-icon" aria-label="LinkedIn">LI</a>
+          <a href="#" class="social-icon" aria-label="Twitter / X">X</a>
+          <a href="#" class="social-icon" aria-label="Dribbble">DR</a>
+        </div>
+      </div>
+
+      <form class="glass-card contact__form" id="contactForm" novalidate>
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="Your name" required />
+          <span class="form-error" data-error-for="name"></span>
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
+          <span class="form-error" data-error-for="email"></span>
+        </div>
+        <div class="form-group">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" rows="5" placeholder="Tell me about your project..." required></textarea>
+          <span class="form-error" data-error-for="message"></span>
+        </div>
+        <button type="submit" class="btn btn--primary btn--block">
+          <span>Transmit Message</span>
+        </button>
+        <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>&copy; <span id="year"></span> Jefferson Laspiñas. Built from scratch — HTML, CSS &amp; JavaScript.</p>
+  </footer>
+
+</main>
+
+<button id="backToTop" class="back-to-top" aria-label="Back to top">↑</button>
+
+<script src="script.js"></script>
 </body>
 </html>
