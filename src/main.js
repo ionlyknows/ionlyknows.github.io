@@ -33,7 +33,7 @@ function animate() {
   if (hudTimer > 0.2) {
     hudTimer = 0;
     const pos = controls.getObject().position;
-    hud.textContent = `SECTOR ? ${zoneAt(pos.x).toUpperCase()}`;
+    hud.textContent = `SECTOR ? ${zoneAt(pos.z).toUpperCase()}`;
   }
 
   renderer.render(scene, camera);

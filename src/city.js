@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { COLORS } from './scene.js';
 
 export const ZONES = {
-  code: { label: 'code district', color: COLORS.cyan, centerX: -30, count: 8 },
-  design: { label: 'design district', color: COLORS.magenta, centerX: 30, count: 6 },
+  code: { label: 'code district', color: COLORS.cyan, centerZ: -25, count: 8 },
+  design: { label: 'design district', color: COLORS.magenta, centerZ: -55, count: 6 },
 };
 
-const ZONE_SPREAD = 18;
+const ZONE_SPREAD = 20;
 
 function buildingMesh(color, width, height, depth) {
   const group = new THREE.Group();
@@ -47,7 +47,7 @@ function seededRandom(seed) {
 }
 
 export function createCity(scene) {
-  const bounds = { minX: -60, maxX: 60, minZ: -40, maxZ: 40 };
+  const bounds = { minX: -35, maxX: 35, minZ: -75, maxZ: 15 };
   const rand = seededRandom(42);
 
   Object.values(ZONES).forEach((zone) => {
@@ -56,8 +56,8 @@ export function createCity(scene) {
       const depth = 3 + rand() * 4;
       const height = 6 + rand() * 22;
 
-      const x = zone.centerX + (rand() - 0.5) * ZONE_SPREAD;
-      const z = (rand() - 0.5) * ZONE_SPREAD * 1.4;
+      const x = (rand() - 0.5) * ZONE_SPREAD * 1.4;
+      const z = zone.centerZ + (rand() - 0.5) * ZONE_SPREAD;
 
       const building = buildingMesh(zone.color, width, height, depth);
       building.position.set(x, 0, z);
@@ -68,8 +68,8 @@ export function createCity(scene) {
   return bounds;
 }
 
-export function zoneAt(x) {
-  if (x < -10) return ZONES.code.label;
-  if (x > 10) return ZONES.design.label;
-  return 'the void';
+export function zoneAt(z) {
+  if (z < -40) return ZONES.design.label;
+  if (z < -10) return ZONES.code.label;
+  return 'the entrance';
 }
