@@ -1,4 +1,4 @@
-﻿import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
 const MOVE_SPEED = 6.0;
 
@@ -22,13 +22,19 @@ export function createControls(camera, domElement, overlayEl) {
     }
   }
 
-  function update(delta) {
+  function update(delta, bounds) {
     if (!controls.isLocked) return;
     const step = MOVE_SPEED * delta;
     if (state.forward) controls.moveForward(step);
     if (state.back) controls.moveForward(-step);
     if (state.right) controls.moveRight(step);
     if (state.left) controls.moveRight(-step);
+
+    if (bounds) {
+      const obj = controls.getObject();
+      obj.position.x = Math.min(bounds.maxX, Math.max(bounds.minX, obj.position.x));
+      obj.position.z = Math.min(bounds.maxZ, Math.max(bounds.minZ, obj.position.z));
+    }
   }
 
   return { controls, update };
