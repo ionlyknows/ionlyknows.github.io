@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 
 export const COLORS = {
   void: 0x0a0a0f,
@@ -11,7 +11,7 @@ export const COLORS = {
 export function createScene() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLORS.void);
-  scene.fog = new THREE.FogExp2(COLORS.void, 0.035);
+  scene.fog = new THREE.FogExp2(COLORS.void, 0.022);
   return scene;
 }
 
