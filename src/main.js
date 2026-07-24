@@ -15,10 +15,12 @@ scene.add(ground);
 scene.add(new THREE.AmbientLight(0x223344, 0.6));
 
 const bounds = createCity(scene);
-console.log('[DEBUG] Scene children:', scene.children.length);
+console.log('[DEBUG] Scene children after city creation:', scene.children.length);
 console.log('[DEBUG] Bounds:', bounds);
 console.log('[DEBUG] Camera position:', camera.position);
-scene.children.forEach((child, i) => console.log(`[DEBUG] child ${i}:`, child.type, child.position));
+scene.children.forEach((child, i) => {
+  console.log('[DEBUG] child ' + i + ':', child.type, child.position);
+});
 
 const overlay = document.getElementById('overlay');
 const { controls, update } = createControls(camera, renderer.domElement, overlay);
@@ -37,11 +39,10 @@ function animate() {
   if (hudTimer > 0.2) {
     hudTimer = 0;
     const pos = controls.getObject().position;
-    hud.textContent = `SECTOR ? ${zoneAt(pos.z).toUpperCase()}`;
+    hud.textContent = 'SECTOR ? ' + zoneAt(pos.z).toUpperCase();
   }
 
   renderer.render(scene, camera);
 }
 
 animate();
-
