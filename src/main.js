@@ -15,6 +15,10 @@ scene.add(ground);
 scene.add(new THREE.AmbientLight(0x223344, 0.6));
 
 const bounds = createCity(scene);
+console.log('[DEBUG] Scene children:', scene.children.length);
+console.log('[DEBUG] Bounds:', bounds);
+console.log('[DEBUG] Camera position:', camera.position);
+scene.children.forEach((child, i) => console.log(`[DEBUG] child ${i}:`, child.type, child.position));
 
 const overlay = document.getElementById('overlay');
 const { controls, update } = createControls(camera, renderer.domElement, overlay);
@@ -40,3 +44,4 @@ function animate() {
 }
 
 animate();
+
