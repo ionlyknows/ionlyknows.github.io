@@ -1,14 +1,34 @@
-﻿import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+﻿import { Euler } from 'three';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { DEBUG } from './config.js';
+import { isTouchDevice } from './deviceDetect.js';
+import { createTouchControls } from './touchControls.js';
+
 const MOVE_SPEED = 6.0;
+const LOOK_SENSITIVITY = 0.0025;
+const PITCH_LIMIT = Math.PI / 2 - 0.05;
+const _lookEuler = new Euler(0, 0, 0, 'YXZ');
+
 export function createControls(camera, domElement, overlayEl) {
   const controls = new PointerLockControls(camera, domElement);
   const state = { forward: false, back: false, left: false, right: false };
-  overlayEl.addEventListener('click', () => controls.lock());
-  controls.addEventListener('lock', () => overlayEl.classList.add('hidden'));
-  controls.addEventListener('unlock', () => overlayEl.classList.remove('hidden'));
-  document.addEventListener('keydown', (e) => setKey(e.code, true));
-  document.addEventListener('keyup', (e) => setKey(e.code, false));
+  const touch = isTouchDevice();
+  let entered = false;
+
+  function enter() {
+    if (entered) return;
+    entered = true;
+    overlayEl.classList.add('hidden');
+  }
+
+  function look(deltaX, deltaY) {
+    _lookEuler.setFromQuaternion(camera.quaternion);
+    _lookEuler.y -= deltaX * LOOK_SENSITIVITY;
+    _lookEuler.x -= deltaY * LOOK_SENSITIVITY;
+    _lookEuler.x = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, _lookEuler.x));
+    camera.quaternion.setFromEuler(_lookEuler);
+  }
+
   function setKey(code, value) {
     switch (code) {
       case 'KeyW': case 'ArrowUp': state.forward = value; break;
@@ -17,6 +37,22 @@ export function createControls(camera, domElement, overlayEl) {
       case 'KeyD': case 'ArrowRight': state.right = value; break;
     }
   }
+
+  if (touch) {
+    document.body.classList.add('touch');
+    overlayEl.addEventListener('click', () => enter());
+    createTouchControls({ state, look, onEnter: enter });
+  } else {
+    overlayEl.addEventListener('click', () => controls.lock());
+    controls.addEventListener('lock', enter);
+    controls.addEventListener('unlock', () => {
+      entered = false;
+      overlayEl.classList.remove('hidden');
+    });
+    document.addEventListener('keydown', (e) => setKey(e.code, true));
+    document.addEventListener('keyup', (e) => setKey(e.code, false));
+  }
+
   function checkCollision(x, z, colliders) {
     for (const c of colliders) {
       if (Math.abs(x - c.x) < c.halfW && Math.abs(z - c.z) < c.halfD) {
@@ -26,8 +62,9 @@ export function createControls(camera, domElement, overlayEl) {
     }
     return false;
   }
+
   function update(delta, bounds) {
-    if (!controls.isLocked) return;
+    if (!entered) return;
     const step = MOVE_SPEED * delta;
     const obj = controls.getObject();
     const colliders = bounds?.colliders || [];
@@ -57,5 +94,8 @@ export function createControls(camera, domElement, overlayEl) {
       obj.position.z = Math.min(bounds.maxZ, Math.max(bounds.minZ, obj.position.z));
     }
   }
+
   return { controls, update };
 }
+
+
