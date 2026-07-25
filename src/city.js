@@ -1,9 +1,10 @@
 ﻿import * as THREE from 'three';
 import { COLORS } from './scene.js';
 export const ZONES = {
-  code: { label: 'code district', color: COLORS.cyan, centerZ: -14, count: 8 },
-  design: { label: 'design district', color: COLORS.magenta, centerZ: -34, count: 6 },
+  code: { label: 'code district', sector: 1, color: COLORS.cyan, centerZ: -14, count: 8 },
+  design: { label: 'design district', sector: 2, color: COLORS.magenta, centerZ: -34, count: 6 },
 };
+const ENTRANCE_ZONE = { label: 'entrance', sector: 0 };
 const ZONE_SPREAD = 20;
 function buildingMesh(color, width, height, depth) {
   const group = new THREE.Group();
@@ -60,7 +61,7 @@ export function createCity(scene) {
   return bounds;
 }
 export function zoneAt(z) {
-  if (z < -29) return ZONES.design.label;
-  if (z < -4) return ZONES.code.label;
-  return 'the entrance';
+  if (z < -29) return ZONES.design;
+  if (z < -4) return ZONES.code;
+  return ENTRANCE_ZONE;
 }

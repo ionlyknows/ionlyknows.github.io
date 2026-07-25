@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { createScene, createCamera, createRenderer, handleResize } from './scene.js';
 import { createGround } from './ground.js';
 import { createControls } from './controls.js';
@@ -15,12 +15,6 @@ scene.add(ground);
 scene.add(new THREE.AmbientLight(0x223344, 0.6));
 
 const bounds = createCity(scene);
-console.log('[DEBUG] Scene children after city creation:', scene.children.length);
-console.log('[DEBUG] Bounds:', bounds);
-console.log('[DEBUG] Camera position:', camera.position);
-scene.children.forEach((child, i) => {
-  console.log('[DEBUG] child ' + i + ':', child.type, child.position);
-});
 
 const overlay = document.getElementById('overlay');
 const { controls, update } = createControls(camera, renderer.domElement, overlay);
@@ -39,7 +33,8 @@ function animate() {
   if (hudTimer > 0.2) {
     hudTimer = 0;
     const pos = controls.getObject().position;
-    hud.textContent = 'SECTOR ? ' + zoneAt(pos.z).toUpperCase();
+    const zone = zoneAt(pos.z);
+    hud.textContent = 'SECTOR ' + zone.sector + ' - ' + zone.label.toUpperCase();
   }
 
   renderer.render(scene, camera);

@@ -1,4 +1,5 @@
 ﻿import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { DEBUG } from './config.js';
 const MOVE_SPEED = 6.0;
 export function createControls(camera, domElement, overlayEl) {
   const controls = new PointerLockControls(camera, domElement);
@@ -19,7 +20,7 @@ export function createControls(camera, domElement, overlayEl) {
   function checkCollision(x, z, colliders) {
     for (const c of colliders) {
       if (Math.abs(x - c.x) < c.halfW && Math.abs(z - c.z) < c.halfD) {
-        console.log('[COLLISION] blocked at', x.toFixed(1), z.toFixed(1), 'by building at', c.x.toFixed(1), c.z.toFixed(1));
+        if (DEBUG) console.log('[COLLISION] blocked at', x.toFixed(1), z.toFixed(1), 'by building at', c.x.toFixed(1), c.z.toFixed(1));
         return true;
       }
     }
@@ -30,7 +31,7 @@ export function createControls(camera, domElement, overlayEl) {
     const step = MOVE_SPEED * delta;
     const obj = controls.getObject();
     const colliders = bounds?.colliders || [];
-    if (!window.__loggedColliders) { console.log('[DEBUG] collider count:', colliders.length); window.__loggedColliders = true; }
+    if (DEBUG && !window.__loggedColliders) { console.log('[DEBUG] collider count:', colliders.length); window.__loggedColliders = true; }
     const startX = obj.position.x;
     const startZ = obj.position.z;
 
@@ -58,5 +59,3 @@ export function createControls(camera, domElement, overlayEl) {
   }
   return { controls, update };
 }
-
-
