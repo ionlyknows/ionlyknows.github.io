@@ -67,7 +67,16 @@ export function createTouchControls({ state, look, onEnter }) {
     look(dx, dy);
   }, { passive: true });
 
-  lookZone.addEventListener('touchend', (e) => {
+  function resetLook(e) {
     if (Array.from(e.changedTouches).some((t) => t.identifier === lookTouchId)) lookTouchId = null;
-  });
+  }
+  lookZone.addEventListener('touchend', resetLook);
+  lookZone.addEventListener('touchcancel', resetLook);
+
+  return {
+    reset() {
+      resetJoystick();
+      lookTouchId = null;
+    },
+  };
 }

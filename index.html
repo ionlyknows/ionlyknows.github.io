@@ -38,6 +38,7 @@
     body.touch .touch-only { display: block; }
     .touch-ui { display: none; }
     body.touch .touch-ui { display: block; }
+    body.touch #exit-btn { display: flex; }
     #joystick {
       position: absolute; left: 24px; bottom: 24px;
       width: 120px; height: 120px; z-index: 6; touch-action: none;
@@ -55,6 +56,13 @@
     #look-zone {
       position: absolute; right: 0; top: 0; width: 55%; height: 100%;
       z-index: 4; touch-action: none;
+    }
+    #exit-btn {
+      position: absolute; top: 16px; right: 16px; z-index: 7;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(10, 10, 15, 0.6); border: 1px solid rgba(0, 240, 255, 0.4);
+      color: #00f0ff; font-family: 'Space Mono', monospace; font-size: 1rem;
+      align-items: center; justify-content: center;
     }
   </style>
 </head>
@@ -78,8 +86,8 @@
       <div id="joystick-knob"></div>
     </div>
     <div id="look-zone" class="touch-ui"></div>
+    <button id="exit-btn" class="touch-ui" aria-label="Exit exploration mode">&times;</button>
   </div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
-
