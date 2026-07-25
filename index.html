@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>[Your Name] — Portfolio</title>
+  <title>[Your Name] - Portfolio</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; }
@@ -33,20 +33,53 @@
       font-family: 'Space Mono', monospace; font-size: 0.7rem;
       color: #00f0ff88; letter-spacing: 0.1em; z-index: 5; pointer-events: none;
     }
+    .touch-only { display: none; }
+    body.touch .desktop-only { display: none; }
+    body.touch .touch-only { display: block; }
+    .touch-ui { display: none; }
+    body.touch .touch-ui { display: block; }
+    #joystick {
+      position: absolute; left: 24px; bottom: 24px;
+      width: 120px; height: 120px; z-index: 6; touch-action: none;
+    }
+    #joystick-base {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 2px solid rgba(0, 240, 255, 0.35);
+      background: rgba(0, 240, 255, 0.06);
+    }
+    #joystick-knob {
+      position: absolute; left: 35px; top: 35px; width: 50px; height: 50px;
+      border-radius: 50%; background: rgba(0, 240, 255, 0.2);
+      border: 1px solid #00f0ff;
+    }
+    #look-zone {
+      position: absolute; right: 0; top: 0; width: 55%; height: 100%;
+      z-index: 4; touch-action: none;
+    }
   </style>
 </head>
 <body>
   <div id="app">
     <div id="overlay">
       <h1>[YOUR NAME]</h1>
-      <p>
+      <p class="desktop-only">
         Click to enter<br /><br />
         <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> to move
-        &nbsp;·&nbsp; mouse to look &nbsp;·&nbsp; <span class="key">ESC</span> to exit
+        &nbsp;&middot;&nbsp; mouse to look &nbsp;&middot;&nbsp; <span class="key">ESC</span> to exit
+      </p>
+      <p class="touch-only">
+        Tap to enter<br /><br />
+        Left joystick to move &nbsp;&middot;&nbsp; drag right side to look
       </p>
     </div>
-    <div id="hud">SECTOR 00 — VOID</div>
+    <div id="hud">SECTOR 00 - VOID</div>
+    <div id="joystick" class="touch-ui">
+      <div id="joystick-base"></div>
+      <div id="joystick-knob"></div>
+    </div>
+    <div id="look-zone" class="touch-ui"></div>
   </div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
+
