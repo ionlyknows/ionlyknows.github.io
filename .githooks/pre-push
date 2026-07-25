@@ -1,0 +1,9 @@
+﻿#!/bin/sh
+echo "Running pre-push release verification..."
+node scripts/verify-release.mjs
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "Pre-push checks failed. Push aborted."
+  echo "Fix the issues above, or use 'git push --no-verify' to skip (not recommended)."
+  exit 1
+fi
