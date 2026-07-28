@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { COLORS } from './scene.js';
+import { getBuildingBodyMaterial } from './materials/buildingMaterials.js';
 
 export const ZONES = {
   code:    { label: 'code district',    sector: 1, color: COLORS.cyan,    x: -16, z: -22, count: 8, from: 'entrance' },
@@ -192,10 +193,10 @@ export function resolveClearance(x, z, halfSize, zone, gates, roads) {
   return { x: px, z: pz };
 }
 
-function buildingMesh(color, width, height, depth) {
+function buildingMesh(color, width, height, depth, variant = 'industrial') {
   const group = new THREE.Group();
   const bodyGeo = new THREE.BoxGeometry(width, height, depth);
-  const bodyMat = new THREE.MeshBasicMaterial({ color: 0x0d0d14 });
+  const bodyMat = getBuildingBodyMaterial(color, variant);
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.position.y = height / 2;
   group.add(body);
@@ -227,6 +228,10 @@ function buildingMesh(color, width, height, depth) {
 // density) without touching ZONES itself.
 export function planCityBuildings(zoneCounts = {}, seed = 42) {
   const rand = seededRandom(seed);
+  // Separate stream, offset from the position/size seed, so adding a new
+  // per-building property here never reshuffles the width/height/x/z
+  // sequence other code (and prior verification runs) already depends on.
+  const styleRand = seededRandom(seed + 1);
   const roads = getRoadCurves();
   const gates = getGates();
   const placements = [];
@@ -243,7 +248,9 @@ export function planCityBuildings(zoneCounts = {}, seed = 42) {
       const halfSize = Math.max(width, depth) / 2;
       ({ x, z } = resolveClearance(x, z, halfSize, zone, gates, roads));
 
-      placements.push({ zone, x, z, width, height, depth, halfSize });
+      const variant = styleRand() < 0.35 ? 'glass' : 'industrial';
+
+      placements.push({ zone, x, z, width, height, depth, halfSize, variant });
     }
   });
 
@@ -254,8 +261,8 @@ export function createCity(scene) {
   const bounds = { minX: -40, maxX: 40, minZ: -70, maxZ: 15, colliders: [] };
   const { placements } = planCityBuildings();
 
-  for (const { zone, x, z, width, height, depth } of placements) {
-    const building = buildingMesh(zone.color, width, height, depth);
+  for (const { zone, x, z, width, height, depth, variant } of placements) {
+    const building = buildingMesh(zone.color, width, height, depth, variant);
     building.position.set(x, 0, z);
     scene.add(building);
     bounds.colliders.push({
