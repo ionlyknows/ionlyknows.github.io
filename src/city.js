@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { COLORS } from './scene.js';
 export const ZONES = {
   code: { label: 'code district', sector: 1, color: COLORS.cyan, centerZ: -14, count: 8 },
@@ -6,6 +6,17 @@ export const ZONES = {
 };
 const ENTRANCE_ZONE = { label: 'entrance', sector: 0 };
 const ZONE_SPREAD = 20;
+
+// Boundaries are derived from ZONES so adding/moving a zone never requires
+// hand-tuning a second, disconnected set of thresholds. Sorted closest-to-
+// entrance first; each zone's "enter" value is the midpoint to the previous
+// zone (or centerZ + half-spread for the first zone, its outer edge).
+const ZONE_BOUNDARIES = Object.values(ZONES)
+  .sort((a, b) => b.centerZ - a.centerZ)
+  .map((zone, i, sorted) => ({
+    zone,
+    enter: i === 0 ? zone.centerZ + ZONE_SPREAD / 2 : (sorted[i - 1].centerZ + zone.centerZ) / 2,
+  }));
 function buildingMesh(color, width, height, depth) {
   const group = new THREE.Group();
   const bodyGeo = new THREE.BoxGeometry(width, height, depth);
@@ -61,7 +72,9 @@ export function createCity(scene) {
   return bounds;
 }
 export function zoneAt(z) {
-  if (z < -29) return ZONES.design;
-  if (z < -4) return ZONES.code;
-  return ENTRANCE_ZONE;
+  let result = ENTRANCE_ZONE;
+  for (const { zone, enter } of ZONE_BOUNDARIES) {
+    if (z < enter) result = zone;
+  }
+  return result;
 }
