@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { COLORS } from './scene.js';
 
 export const ZONES = {
@@ -17,6 +17,7 @@ export const ROAD_WIDTH = 3.5;
 const HUB_RADIUS = 2.5;
 const DISTRICT_EXIT_RADIUS = 3;
 const GATE_CLEARANCE = 10;
+const CORE_CLEARANCE = 6;
 
 const NODES = { entrance: { x: ENTRANCE_POINT.x, z: ENTRANCE_POINT.z, exitRadius: HUB_RADIUS } };
 Object.entries(ZONES).forEach(([key, zone]) => {
@@ -71,10 +72,6 @@ function findZoneCrossing(curve, zone, samples = 160) {
   return { point: curve.getPointAt(1), t: 1 };
 }
 
-// Single source of truth for gate placement -- used both to render the
-// arches (gates.js) and to keep buildings from crowding the opening
-// (createCity below). Computing this twice in two files would risk the
-// two falling out of sync.
 export function getGates() {
   return getRoadCurves().map(({ zone, curve }) => {
     const { point, t } = findZoneCrossing(curve, zone);
@@ -137,6 +134,39 @@ function clearGates(x, z, halfSize, gates) {
   return { x: px, z: pz };
 }
 
+// Guarantees breathing room at the heart of every district. Without this,
+// a building can spawn almost exactly at the zone center -- which is also
+// exactly where every road into that district terminates, so it ends up
+// framed dead-center in the gate view (looks like it's "plugging" the gate).
+function clearZoneCore(x, z, halfSize, zone, gates) {
+  const minRadius = CORE_CLEARANCE + halfSize;
+  const dx = x - zone.x;
+  const dz = z - zone.z;
+  const dist = Math.hypot(dx, dz);
+  if (dist >= minRadius) return { x, z };
+
+  const gate = gates.find(g => g.zone === zone);
+  let dirX = dist > 0.01 ? dx / dist : 1;
+  let dirZ = dist > 0.01 ? dz / dist : 0;
+
+  if (gate) {
+    const axisX = zone.x - gate.point.x;
+    const axisZ = zone.z - gate.point.z;
+    const axisLen = Math.hypot(axisX, axisZ);
+    if (axisLen > 0.01) {
+      const nx = axisX / axisLen, nz = axisZ / axisLen;
+      const along = dirX * nx + dirZ * nz;
+      dirX -= along * nx * 0.85;
+      dirZ -= along * nz * 0.85;
+      const len = Math.hypot(dirX, dirZ);
+      if (len > 0.01) { dirX /= len; dirZ /= len; }
+    }
+  }
+
+  const push = minRadius - dist;
+  return { x: x + dirX * push, z: z + dirZ * push };
+}
+
 function buildingMesh(color, width, height, depth) {
   const group = new THREE.Group();
   const bodyGeo = new THREE.BoxGeometry(width, height, depth);
@@ -178,6 +208,7 @@ export function createCity(scene) {
       let z = zone.z + (rand() - 0.5) * ZONE_SPREAD;
 
       const halfSize = Math.max(width, depth) / 2;
+      ({ x, z } = clearZoneCore(x, z, halfSize, zone, gates));
       ({ x, z } = clearRoadCorridor(x, z, halfSize, roads));
       ({ x, z } = clearGates(x, z, halfSize, gates));
 
