@@ -2,7 +2,9 @@
 import { createScene, createCamera, createRenderer, handleResize } from './scene.js';
 import { createGround } from './ground.js';
 import { createControls } from './controls.js';
-import { createCity, zoneAt } from './city.js';
+import { createCity, zoneAt, atmosphereColor } from './city.js';
+import { createRoads } from './roads.js';
+import { createGates } from './gates.js';
 
 const scene = createScene();
 const camera = createCamera();
@@ -15,6 +17,8 @@ scene.add(ground);
 scene.add(new THREE.AmbientLight(0x223344, 0.6));
 
 const bounds = createCity(scene);
+createRoads(scene);
+createGates(scene);
 
 const overlay = document.getElementById('overlay');
 const { controls, update } = createControls(camera, renderer.domElement, overlay);
@@ -29,11 +33,16 @@ function animate() {
   const delta = clock.getDelta();
   update(delta, bounds);
 
+  const pos = controls.getObject().position;
+  const zone = zoneAt(pos.x, pos.z);
+  const targetColor = atmosphereColor(zone);
+  const blend = Math.min(delta * 2, 1);
+  scene.fog.color.lerp(targetColor, blend);
+  scene.background.lerp(targetColor, blend);
+
   hudTimer += delta;
   if (hudTimer > 0.2) {
     hudTimer = 0;
-    const pos = controls.getObject().position;
-    const zone = zoneAt(pos.x, pos.z);
     hud.textContent = 'SECTOR ' + zone.sector + ' - ' + zone.label.toUpperCase();
   }
 
