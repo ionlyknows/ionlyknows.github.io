@@ -138,10 +138,6 @@ function clearGates(x, z, halfSize, gates) {
 // a building can spawn almost exactly at the zone center -- which is also
 // exactly where every road into that district terminates, so it ends up
 // framed dead-center in the gate view (looks like it's "plugging" the gate).
-      // TODO(TD-001, docs/TECH_DEBT.md): these three passes are not run to a
-      // fixed point -- a later pass can reintroduce a violation an earlier
-      // pass already fixed. Fine at current building counts, revisit before
-      // Phase 5 density increases.
 function clearZoneCore(x, z, halfSize, zone, gates) {
   const minRadius = CORE_CLEARANCE + halfSize;
   const dx = x - zone.x;
@@ -212,6 +208,10 @@ export function createCity(scene) {
       let z = zone.z + (rand() - 0.5) * ZONE_SPREAD;
 
       const halfSize = Math.max(width, depth) / 2;
+      // TODO(TD-001, docs/TECH_DEBT.md): these three passes are not run to a
+      // fixed point -- a later pass can reintroduce a violation an earlier
+      // pass already fixed. Fine at current building counts, revisit before
+      // Phase 5 density increases.
       ({ x, z } = clearZoneCore(x, z, halfSize, zone, gates));
       ({ x, z } = clearRoadCorridor(x, z, halfSize, roads));
       ({ x, z } = clearGates(x, z, halfSize, gates));
