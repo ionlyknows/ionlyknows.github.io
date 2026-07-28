@@ -33,6 +33,9 @@ jobs:
       - name: Verify release (build + regression guards)
         run: node scripts/verify-release.mjs
 
+      - name: Verify city building clearance (TD-001 regression guard)
+        run: node scripts/verify-city-clearance.mjs
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

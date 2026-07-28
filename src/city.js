@@ -18,6 +18,8 @@ const HUB_RADIUS = 2.5;
 const DISTRICT_EXIT_RADIUS = 3;
 const GATE_CLEARANCE = 10;
 const CORE_CLEARANCE = 6;
+const CLEARANCE_MAX_ITERATIONS = 8;
+const CLEARANCE_EPSILON = 0.01;
 
 const NODES = { entrance: { x: ENTRANCE_POINT.x, z: ENTRANCE_POINT.z, exitRadius: HUB_RADIUS } };
 Object.entries(ZONES).forEach(([key, zone]) => {
@@ -167,6 +169,29 @@ function clearZoneCore(x, z, halfSize, zone, gates) {
   return { x: x + dirX * push, z: z + dirZ * push };
 }
 
+// TD-001 fix (docs/TECH_DEBT.md): clearZoneCore / clearRoadCorridor / clearGates
+// each solve one constraint in isolation, and a later pass can reintroduce a
+// violation an earlier pass just fixed. Running all three to a fixed point --
+// repeating the sequence until none of them move the building, capped at
+// CLEARANCE_MAX_ITERATIONS -- guarantees the final position satisfies all
+// three simultaneously instead of "whichever ran last."
+function resolveClearance(x, z, halfSize, zone, gates, roads) {
+  let px = x;
+  let pz = z;
+  for (let i = 0; i < CLEARANCE_MAX_ITERATIONS; i++) {
+    const beforeX = px;
+    const beforeZ = pz;
+
+    ({ x: px, z: pz } = clearZoneCore(px, pz, halfSize, zone, gates));
+    ({ x: px, z: pz } = clearRoadCorridor(px, pz, halfSize, roads));
+    ({ x: px, z: pz } = clearGates(px, pz, halfSize, gates));
+
+    const moved = Math.hypot(px - beforeX, pz - beforeZ);
+    if (moved < CLEARANCE_EPSILON) break;
+  }
+  return { x: px, z: pz };
+}
+
 function buildingMesh(color, width, height, depth) {
   const group = new THREE.Group();
   const bodyGeo = new THREE.BoxGeometry(width, height, depth);
@@ -208,13 +233,7 @@ export function createCity(scene) {
       let z = zone.z + (rand() - 0.5) * ZONE_SPREAD;
 
       const halfSize = Math.max(width, depth) / 2;
-      // TODO(TD-001, docs/TECH_DEBT.md): these three passes are not run to a
-      // fixed point -- a later pass can reintroduce a violation an earlier
-      // pass already fixed. Fine at current building counts, revisit before
-      // Phase 5 density increases.
-      ({ x, z } = clearZoneCore(x, z, halfSize, zone, gates));
-      ({ x, z } = clearRoadCorridor(x, z, halfSize, roads));
-      ({ x, z } = clearGates(x, z, halfSize, gates));
+      ({ x, z } = resolveClearance(x, z, halfSize, zone, gates, roads));
 
       const building = buildingMesh(zone.color, width, height, depth);
       building.position.set(x, 0, z);

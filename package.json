@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "verify": "node scripts/verify-release.mjs",
+    "verify:city": "node scripts/verify-city-clearance.mjs",
     "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {

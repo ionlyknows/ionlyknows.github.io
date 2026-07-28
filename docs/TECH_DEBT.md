@@ -7,11 +7,39 @@ re-justified before the phase noted in "Revisit by" begins.
 
 ## TD-001: Building clearance passes are not convergent
 
-**File:** `src/city.js` -- `createCity()`
+**Status:** RESOLVED 2026-07-28
+**File:** `src/city.js` -- `createCity()`, `resolveClearance()`
 **Opened:** 2026-07-28 (after `a2d7fe7`)
 **Severity:** Low (no known visual bug currently; latent risk)
-**Revisit by:** Before Phase 5 (Environment Art) adds density/props that could
-expose it, and before building counts per zone increase.
+**Revisit by:** ~~Before Phase 5 (Environment Art) adds density/props that
+could expose it, and before building counts per zone increase.~~ Resolved
+ahead of schedule.
+
+### Resolution
+
+Implemented fix option 1 (iterate to a fixed point). `createCity()` no longer
+calls `clearZoneCore` / `clearRoadCorridor` / `clearGates` once each; it calls
+a new `resolveClearance()` that re-runs all three in sequence, up to
+`CLEARANCE_MAX_ITERATIONS` times, stopping early once a full pass moves the
+building less than `CLEARANCE_EPSILON`. This guarantees the final position
+satisfies all three constraints simultaneously rather than "whichever
+constraint's pass ran last."
+
+**Found during fix:** the first attempt capped iterations at 4, which was
+sufficient at current density (0/23 violations) but left 1 genuine, slowly-
+converging violation at 3x density (`about` district, core-clearance dist
+8.90 vs required 8.92 -- moving by ~0.3x its previous step each iteration).
+Not oscillation -- it was still converging, just not within 4 passes. Raised
+`CLEARANCE_MAX_ITERATIONS` to 8, which converges cleanly. This is exactly the
+failure mode the original doc entry predicted density increases would expose.
+
+**Verification:** added `scripts/verify-city-clearance.mjs`, which
+re-implements the placement loop headlessly and checks every building's final
+position against all three constraints at once (not per-pass). Wired into
+`npm run verify:city` and into CI (`.github/workflows/deploy.yml`) as a
+regression guard. Confirmed 0 violations at current density (23 buildings),
+3x density (69 buildings), and 6x density across 6 different seeds (138
+buildings each, seeds 1/7/42/99/12345/500000) -- 0 violations in every case.
 
 ### Problem
 
@@ -49,27 +77,30 @@ structurally guaranteed.
 - Any future constraint added to this list (e.g. building-to-building
   spacing, prop placement) compounds the same non-convergence risk.
 
-### Fix options (not yet implemented)
+### Fix options considered
 
-1. **Iterate to a fixed point.** Loop the three passes (2-3 iterations) per
-   building until none of them move it, or a max-iteration cap is hit.
-   Simplest change, matches existing code style.
+1. **Iterate to a fixed point (chosen).** Loop the three passes per building
+   until none of them move it, or a max-iteration cap is hit. Simplest
+   change, matches existing code style, no changes to individual constraint
+   functions. Implemented as `resolveClearance()`.
 2. **Single combined constraint solve.** Replace the three sequential
    pushes with one function that computes all active constraints for a
    position and resolves them as a single weighted vector. More correct,
-   more refactoring.
-3. **Rejection sampling.** If a building violates any constraint after
-   placement, re-roll its position instead of pushing it. Simple, but can
-   loop indefinitely in dense zones without a fallback.
-
-Recommendation: option 1 first (cheap, low-risk), revisit option 2 if Phase 5
-density makes option 1 insufficient.
+   more refactoring. Not needed -- option 1 converges cleanly through 6x
+   density; revisit only if a future constraint (e.g. building-to-building
+   spacing) makes option 1 insufficient.
+3. **Rejection sampling.** Re-roll on violation instead of pushing. Rejected:
+   can loop indefinitely in dense zones without a fallback.
 
 ### How to re-verify
 
-Check every building's perpendicular distance from its zone's gate-to-center
-sightline axis. Re-run the same check after any change to zone counts,
-clearance constants, or the clearance pass order.
+Run `npm run verify:city` (also runs automatically in CI on every push to
+`main`). It re-implements the placement loop headlessly and checks every
+building's final position against all three constraints -- core clearance,
+road corridor, and gate radius -- simultaneously, at current density and at
+3x/6x stress densities across multiple seeds. Re-run after any change to
+zone counts, clearance constants, `CLEARANCE_MAX_ITERATIONS`, or the
+clearance pass order/logic.
 
 ### Related: also worth logging alongside this
 
