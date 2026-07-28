@@ -7,3 +7,12 @@ if [ $? -ne 0 ]; then
   echo "Fix the issues above, or use 'git push --no-verify' to skip (not recommended)."
   exit 1
 fi
+
+echo "Running pre-push city clearance verification..."
+node scripts/verify-city-clearance.mjs
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "Pre-push checks failed. Push aborted."
+  echo "Fix the issues above, or use 'git push --no-verify' to skip (not recommended)."
+  exit 1
+fi

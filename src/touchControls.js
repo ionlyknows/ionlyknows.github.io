@@ -1,4 +1,4 @@
-﻿const JOYSTICK_RADIUS = 45;
+const JOYSTICK_RADIUS = 45;
 const DEAD_ZONE = 8;
 
 export function createTouchControls({ state, look, onEnter }) {

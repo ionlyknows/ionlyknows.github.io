@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { getRoadCurves, ROAD_WIDTH } from './city.js';
 
 function roadMesh(curve, color) {

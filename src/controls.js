@@ -1,4 +1,4 @@
-﻿import { Euler, Vector3 } from 'three';
+import { Euler, Vector3 } from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { DEBUG } from './config.js';
 import { isTouchDevice } from './deviceDetect.js';
@@ -68,6 +68,12 @@ export function createControls(camera, domElement, overlayEl) {
   if (touch) {
     document.body.classList.add('touch');
     overlayEl.addEventListener('click', () => enter());
+    overlayEl.addEventListener('keydown', (e) => {
+      if (e.code === 'Enter' || e.code === 'Space') {
+        e.preventDefault();
+        enter();
+      }
+    });
     const touchApi = createTouchControls({ state, look, onEnter: enter });
     const exitBtn = document.getElementById('exit-btn');
     exitBtn?.addEventListener('click', () => {
@@ -77,6 +83,12 @@ export function createControls(camera, domElement, overlayEl) {
     });
   } else {
     overlayEl.addEventListener('click', () => controls.lock());
+    overlayEl.addEventListener('keydown', (e) => {
+      if (e.code === 'Enter' || e.code === 'Space') {
+        e.preventDefault();
+        controls.lock();
+      }
+    });
     controls.addEventListener('lock', enter);
     controls.addEventListener('unlock', () => {
       entered = false;

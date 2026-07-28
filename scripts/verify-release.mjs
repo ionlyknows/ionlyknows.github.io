@@ -1,14 +1,14 @@
-﻿import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 let failed = false;
-const fail = (msg) => { console.error(`âœ— ${msg}`); failed = true; };
-const ok = (msg) => console.log(`âœ“ ${msg}`);
+const fail = (msg) => { console.error(`✗ ${msg}`); failed = true; };
+const ok = (msg) => console.log(`✓ ${msg}`);
 
 const html = readFileSync('index.html', 'utf8');
 if (/src=["']\/assets\/index-[a-zA-Z0-9_-]+\.js["']/.test(html)) {
   fail('index.html references a hashed /assets/*.js bundle directly. ' +
-       'It must point to /src/main.js â€” Vite generates the hashed bundle at build time.');
+       'It must point to /src/main.js — Vite generates the hashed bundle at build time.');
 } else if (!html.includes('/src/main.js')) {
   fail('index.html does not reference /src/main.js. Is this still a valid Vite entry point?');
 } else {
@@ -29,7 +29,7 @@ if (!existsSync('dist/index.html')) {
 } else {
   const distHtml = readFileSync('dist/index.html', 'utf8');
   if (!/src="\/assets\/index-[a-zA-Z0-9_-]+\.js"/.test(distHtml)) {
-    fail('dist/index.html does not reference a hashed bundle â€” build may not have run correctly');
+    fail('dist/index.html does not reference a hashed bundle — build may not have run correctly');
   } else {
     ok('Build produced a valid hashed bundle');
   }
@@ -41,4 +41,3 @@ if (failed) {
 } else {
   console.log('\nAll release checks passed.');
 }
-

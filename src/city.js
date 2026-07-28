@@ -9,17 +9,17 @@ export const ZONES = {
 };
 const ENTRANCE_ZONE = { label: 'entrance', sector: 0 };
 
-const ZONE_SPREAD = 20;
+export const ZONE_SPREAD = 20;
 export const ZONE_RADIUS = 15;
 
 export const ENTRANCE_POINT = new THREE.Vector3(0, 0.02, 3);
 export const ROAD_WIDTH = 3.5;
 const HUB_RADIUS = 2.5;
 const DISTRICT_EXIT_RADIUS = 3;
-const GATE_CLEARANCE = 10;
-const CORE_CLEARANCE = 6;
-const CLEARANCE_MAX_ITERATIONS = 8;
-const CLEARANCE_EPSILON = 0.01;
+export const GATE_CLEARANCE = 10;
+export const CORE_CLEARANCE = 6;
+export const CLEARANCE_MAX_ITERATIONS = 8;
+export const CLEARANCE_EPSILON = 0.01;
 
 const NODES = { entrance: { x: ENTRANCE_POINT.x, z: ENTRANCE_POINT.z, exitRadius: HUB_RADIUS } };
 Object.entries(ZONES).forEach(([key, zone]) => {
@@ -96,7 +96,7 @@ function distanceToCurve(x, z, curve, samples = 24) {
   return { minDist, nearest };
 }
 
-function clearRoadCorridor(x, z, halfSize, roads) {
+export function clearRoadCorridor(x, z, halfSize, roads) {
   let px = x;
   let pz = z;
   for (const { curve } of roads) {
@@ -116,7 +116,7 @@ function clearRoadCorridor(x, z, halfSize, roads) {
   return { x: px, z: pz };
 }
 
-function clearGates(x, z, halfSize, gates) {
+export function clearGates(x, z, halfSize, gates) {
   let px = x;
   let pz = z;
   for (const { point } of gates) {
@@ -140,7 +140,7 @@ function clearGates(x, z, halfSize, gates) {
 // a building can spawn almost exactly at the zone center -- which is also
 // exactly where every road into that district terminates, so it ends up
 // framed dead-center in the gate view (looks like it's "plugging" the gate).
-function clearZoneCore(x, z, halfSize, zone, gates) {
+export function clearZoneCore(x, z, halfSize, zone, gates) {
   const minRadius = CORE_CLEARANCE + halfSize;
   const dx = x - zone.x;
   const dz = z - zone.z;
@@ -175,7 +175,7 @@ function clearZoneCore(x, z, halfSize, zone, gates) {
 // repeating the sequence until none of them move the building, capped at
 // CLEARANCE_MAX_ITERATIONS -- guarantees the final position satisfies all
 // three simultaneously instead of "whichever ran last."
-function resolveClearance(x, z, halfSize, zone, gates, roads) {
+export function resolveClearance(x, z, halfSize, zone, gates, roads) {
   let px = x;
   let pz = z;
   for (let i = 0; i < CLEARANCE_MAX_ITERATIONS; i++) {
@@ -218,14 +218,22 @@ function buildingMesh(color, width, height, depth) {
   return group;
 }
 
-export function createCity(scene) {
-  const bounds = { minX: -40, maxX: 40, minZ: -70, maxZ: 15, colliders: [] };
-  const rand = seededRandom(42);
+// Pure placement logic, independent of THREE mesh/scene creation. Building
+// this once and having both createCity() and the headless verifier
+// (scripts/verify-city-clearance.mjs) call it means there is exactly one
+// implementation of "how buildings get placed" -- the verifier tests the
+// real production logic, not a hand-maintained copy of it. zoneCounts lets
+// tests override per-zone building count (e.g. to stress-test at 3x/6x
+// density) without touching ZONES itself.
+export function planCityBuildings(zoneCounts = {}, seed = 42) {
+  const rand = seededRandom(seed);
   const roads = getRoadCurves();
   const gates = getGates();
+  const placements = [];
 
-  Object.values(ZONES).forEach((zone) => {
-    for (let i = 0; i < zone.count; i++) {
+  Object.entries(ZONES).forEach(([key, zone]) => {
+    const count = zoneCounts[key] ?? zone.count;
+    for (let i = 0; i < count; i++) {
       const width = 3 + rand() * 4;
       const depth = 3 + rand() * 4;
       const height = 6 + rand() * 22;
@@ -235,16 +243,28 @@ export function createCity(scene) {
       const halfSize = Math.max(width, depth) / 2;
       ({ x, z } = resolveClearance(x, z, halfSize, zone, gates, roads));
 
-      const building = buildingMesh(zone.color, width, height, depth);
-      building.position.set(x, 0, z);
-      scene.add(building);
-      bounds.colliders.push({
-        x, z,
-        halfW: width / 2 + 0.5,
-        halfD: depth / 2 + 0.5,
-      });
+      placements.push({ zone, x, z, width, height, depth, halfSize });
     }
   });
+
+  return { placements, roads, gates };
+}
+
+export function createCity(scene) {
+  const bounds = { minX: -40, maxX: 40, minZ: -70, maxZ: 15, colliders: [] };
+  const { placements } = planCityBuildings();
+
+  for (const { zone, x, z, width, height, depth } of placements) {
+    const building = buildingMesh(zone.color, width, height, depth);
+    building.position.set(x, 0, z);
+    scene.add(building);
+    bounds.colliders.push({
+      x, z,
+      halfW: width / 2 + 0.5,
+      halfD: depth / 2 + 0.5,
+    });
+  }
+
   return bounds;
 }
 

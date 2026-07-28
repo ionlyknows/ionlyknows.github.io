@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 
 export const COLORS = {
   void: 0x0a0a0f,

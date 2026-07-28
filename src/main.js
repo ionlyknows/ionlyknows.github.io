@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { createScene, createCamera, createRenderer, handleResize } from './scene.js';
 import { createGround } from './ground.js';
 import { createControls } from './controls.js';

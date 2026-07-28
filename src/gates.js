@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { getGates } from './city.js';
 
 function archMesh(width, height, color) {
