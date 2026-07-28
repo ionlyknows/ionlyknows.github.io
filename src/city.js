@@ -1,22 +1,21 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { COLORS } from './scene.js';
+
 export const ZONES = {
-  code: { label: 'code district', sector: 1, color: COLORS.cyan, centerZ: -14, count: 8 },
-  design: { label: 'design district', sector: 2, color: COLORS.magenta, centerZ: -34, count: 6 },
+  code:    { label: 'code district',    sector: 1, color: COLORS.cyan,    x: -16, z: -22, count: 8 },
+  design:  { label: 'design district',  sector: 2, color: COLORS.magenta, x:  16, z: -22, count: 6 },
+  about:   { label: 'about district',   sector: 3, color: COLORS.yellow,  x: -18, z: -50, count: 5 },
+  contact: { label: 'contact district', sector: 4, color: COLORS.lime,    x:  18, z: -50, count: 4 },
 };
 const ENTRANCE_ZONE = { label: 'entrance', sector: 0 };
-const ZONE_SPREAD = 20;
 
-// Boundaries are derived from ZONES so adding/moving a zone never requires
-// hand-tuning a second, disconnected set of thresholds. Sorted closest-to-
-// entrance first; each zone's "enter" value is the midpoint to the previous
-// zone (or centerZ + half-spread for the first zone, its outer edge).
-const ZONE_BOUNDARIES = Object.values(ZONES)
-  .sort((a, b) => b.centerZ - a.centerZ)
-  .map((zone, i, sorted) => ({
-    zone,
-    enter: i === 0 ? zone.centerZ + ZONE_SPREAD / 2 : (sorted[i - 1].centerZ + zone.centerZ) / 2,
-  }));
+// ZONE_SPREAD: how far buildings scatter within their own district.
+// ZONE_RADIUS: how close the player must be to register as "inside" a
+// district for HUD purposes. Kept separate  conflating them broke down
+// once districts stopped sitting on a single line.
+const ZONE_SPREAD = 20;
+const ZONE_RADIUS = 15;
+
 function buildingMesh(color, width, height, depth) {
   const group = new THREE.Group();
   const bodyGeo = new THREE.BoxGeometry(width, height, depth);
@@ -42,6 +41,7 @@ function buildingMesh(color, width, height, depth) {
   }
   return group;
 }
+
 function seededRandom(seed) {
   let value = seed;
   return () => {
@@ -49,16 +49,17 @@ function seededRandom(seed) {
     return value / 233280;
   };
 }
+
 export function createCity(scene) {
-  const bounds = { minX: -35, maxX: 35, minZ: -55, maxZ: 15, colliders: [] };
+  const bounds = { minX: -40, maxX: 40, minZ: -70, maxZ: 15, colliders: [] };
   const rand = seededRandom(42);
   Object.values(ZONES).forEach((zone) => {
     for (let i = 0; i < zone.count; i++) {
       const width = 3 + rand() * 4;
       const depth = 3 + rand() * 4;
       const height = 6 + rand() * 22;
-      const x = (rand() - 0.5) * ZONE_SPREAD * 1.4;
-      const z = zone.centerZ + (rand() - 0.5) * ZONE_SPREAD;
+      const x = zone.x + (rand() - 0.5) * ZONE_SPREAD * 1.4;
+      const z = zone.z + (rand() - 0.5) * ZONE_SPREAD;
       const building = buildingMesh(zone.color, width, height, depth);
       building.position.set(x, 0, z);
       scene.add(building);
@@ -71,10 +72,16 @@ export function createCity(scene) {
   });
   return bounds;
 }
-export function zoneAt(z) {
-  let result = ENTRANCE_ZONE;
-  for (const { zone, enter } of ZONE_BOUNDARIES) {
-    if (z < enter) result = zone;
+
+export function zoneAt(x, z) {
+  let closest = ENTRANCE_ZONE;
+  let closestDist = ZONE_RADIUS;
+  for (const zone of Object.values(ZONES)) {
+    const dist = Math.hypot(x - zone.x, z - zone.z);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = zone;
+    }
   }
-  return result;
+  return closest;
 }

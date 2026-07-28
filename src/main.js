@@ -33,7 +33,7 @@ function animate() {
   if (hudTimer > 0.2) {
     hudTimer = 0;
     const pos = controls.getObject().position;
-    const zone = zoneAt(pos.z);
+    const zone = zoneAt(pos.x, pos.z);
     hud.textContent = 'SECTOR ' + zone.sector + ' - ' + zone.label.toUpperCase();
   }
 

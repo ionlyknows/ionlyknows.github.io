@@ -1,10 +1,11 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 
 export const COLORS = {
   void: 0x0a0a0f,
   cyan: 0x00f0ff,
   magenta: 0xff2ec4,
   yellow: 0xe8ff3d,
+  lime: 0x7dffb0,
   steel: 0x2a2f3a,
 };
 
