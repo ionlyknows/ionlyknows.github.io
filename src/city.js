@@ -1,6 +1,7 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { COLORS } from './scene.js';
 import { getBuildingBodyMaterial } from './materials/buildingMaterials.js';
+import { buildNeonSignage, SIGN_SEED_COUNT } from './props/neonSignage.js';
 
 export const ZONES = {
   code:    { label: 'code district',    sector: 1, color: COLORS.cyan,    x: -16, z: -22, count: 8, from: 'entrance' },
@@ -137,10 +138,6 @@ export function clearGates(x, z, halfSize, gates) {
   return { x: px, z: pz };
 }
 
-// Guarantees breathing room at the heart of every district. Without this,
-// a building can spawn almost exactly at the zone center -- which is also
-// exactly where every road into that district terminates, so it ends up
-// framed dead-center in the gate view (looks like it's "plugging" the gate).
 export function clearZoneCore(x, z, halfSize, zone, gates) {
   const minRadius = CORE_CLEARANCE + halfSize;
   const dx = x - zone.x;
@@ -170,12 +167,6 @@ export function clearZoneCore(x, z, halfSize, zone, gates) {
   return { x: x + dirX * push, z: z + dirZ * push };
 }
 
-// TD-001 fix (docs/TECH_DEBT.md): clearZoneCore / clearRoadCorridor / clearGates
-// each solve one constraint in isolation, and a later pass can reintroduce a
-// violation an earlier pass just fixed. Running all three to a fixed point --
-// repeating the sequence until none of them move the building, capped at
-// CLEARANCE_MAX_ITERATIONS -- guarantees the final position satisfies all
-// three simultaneously instead of "whichever ran last."
 export function resolveClearance(x, z, halfSize, zone, gates, roads) {
   let px = x;
   let pz = z;
@@ -193,7 +184,18 @@ export function resolveClearance(x, z, halfSize, zone, gates, roads) {
   return { x: px, z: pz };
 }
 
-function buildingMesh(color, width, height, depth, variant = 'industrial') {
+function facingFromGate(x, z, zone, gates) {
+  const gate = gates.find(g => g.zone === zone);
+  const targetX = gate ? gate.point.x : zone.x;
+  const targetZ = gate ? gate.point.z : zone.z;
+  const dx = targetX - x;
+  const dz = targetZ - z;
+  return Math.abs(dx) >= Math.abs(dz)
+    ? { facingAxis: 'x', facingSign: dx >= 0 ? 1 : -1 }
+    : { facingAxis: 'z', facingSign: dz >= 0 ? 1 : -1 };
+}
+
+function buildingMesh(color, width, height, depth, variant, signage) {
   const group = new THREE.Group();
   const bodyGeo = new THREE.BoxGeometry(width, height, depth);
   const bodyMat = getBuildingBodyMaterial(color, variant);
@@ -216,22 +218,14 @@ function buildingMesh(color, width, height, depth, variant = 'industrial') {
       group.add(ring);
     }
   }
+  group.add(buildNeonSignage({ width, height, depth, zoneColor: color, ...signage }));
   return group;
 }
 
-// Pure placement logic, independent of THREE mesh/scene creation. Building
-// this once and having both createCity() and the headless verifier
-// (scripts/verify-city-clearance.mjs) call it means there is exactly one
-// implementation of "how buildings get placed" -- the verifier tests the
-// real production logic, not a hand-maintained copy of it. zoneCounts lets
-// tests override per-zone building count (e.g. to stress-test at 3x/6x
-// density) without touching ZONES itself.
 export function planCityBuildings(zoneCounts = {}, seed = 42) {
   const rand = seededRandom(seed);
-  // Separate stream, offset from the position/size seed, so adding a new
-  // per-building property here never reshuffles the width/height/x/z
-  // sequence other code (and prior verification runs) already depends on.
   const styleRand = seededRandom(seed + 1);
+  const neonRand = seededRandom(seed + 2);
   const roads = getRoadCurves();
   const gates = getGates();
   const placements = [];
@@ -249,8 +243,13 @@ export function planCityBuildings(zoneCounts = {}, seed = 42) {
       ({ x, z } = resolveClearance(x, z, halfSize, zone, gates, roads));
 
       const variant = styleRand() < 0.35 ? 'glass' : 'industrial';
+      const { facingAxis, facingSign } = facingFromGate(x, z, zone, gates);
+      const signSeeds = Array.from({ length: SIGN_SEED_COUNT }, () => neonRand());
 
-      placements.push({ zone, x, z, width, height, depth, halfSize, variant });
+      placements.push({
+        zone, x, z, width, height, depth, halfSize, variant,
+        facingAxis, facingSign, signSeeds,
+      });
     }
   });
 
@@ -261,8 +260,10 @@ export function createCity(scene) {
   const bounds = { minX: -40, maxX: 40, minZ: -70, maxZ: 15, colliders: [] };
   const { placements } = planCityBuildings();
 
-  for (const { zone, x, z, width, height, depth, variant } of placements) {
-    const building = buildingMesh(zone.color, width, height, depth, variant);
+  for (const { zone, x, z, width, height, depth, variant, facingAxis, facingSign, signSeeds } of placements) {
+    const building = buildingMesh(zone.color, width, height, depth, variant, {
+      facingAxis, facingSign, signSeeds,
+    });
     building.position.set(x, 0, z);
     scene.add(building);
     bounds.colliders.push({
