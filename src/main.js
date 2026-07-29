@@ -19,7 +19,7 @@ scene.add(ground);
 scene.add(new THREE.HemisphereLight(0x2a3a55, COLORS.void, 0.55));
 
 const bounds = createCity(scene);
-createRoads(scene);
+const { updateReflections } = createRoads(scene);
 createGates(scene);
 const lampCount = createStreetLights(scene);
 if (DEBUG) console.log('[DEBUG] street lamps placed:', lampCount);
@@ -31,10 +31,12 @@ scene.add(controls.getObject());
 const hud = document.getElementById('hud');
 const clock = new THREE.Clock();
 let hudTimer = 0;
+let elapsed = 0;
 
 function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
+  elapsed += delta;
   update(delta, bounds);
 
   const pos = controls.getObject().position;
@@ -43,6 +45,7 @@ function animate() {
   const blend = Math.min(delta * 2, 1);
   scene.fog.color.lerp(targetColor, blend);
   scene.background.lerp(targetColor, blend);
+  updateReflections(scene.fog.color, elapsed);
 
   hudTimer += delta;
   if (hudTimer > 0.2) {
