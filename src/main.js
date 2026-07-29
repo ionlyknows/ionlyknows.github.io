@@ -1,10 +1,12 @@
-import * as THREE from 'three';
-import { createScene, createCamera, createRenderer, handleResize } from './scene.js';
+﻿import * as THREE from 'three';
+import { createScene, createCamera, createRenderer, handleResize, COLORS } from './scene.js';
 import { createGround } from './ground.js';
 import { createControls } from './controls.js';
 import { createCity, zoneAt, atmosphereColor } from './city.js';
 import { createRoads } from './roads.js';
 import { createGates } from './gates.js';
+import { createStreetLights } from './lighting/streetLights.js';
+import { DEBUG } from './config.js';
 
 const scene = createScene();
 const camera = createCamera();
@@ -14,11 +16,13 @@ handleResize(camera, renderer);
 const ground = createGround();
 scene.add(ground);
 
-scene.add(new THREE.AmbientLight(0x223344, 0.6));
+scene.add(new THREE.HemisphereLight(0x2a3a55, COLORS.void, 0.55));
 
 const bounds = createCity(scene);
 createRoads(scene);
 createGates(scene);
+const lampCount = createStreetLights(scene);
+if (DEBUG) console.log('[DEBUG] street lamps placed:', lampCount);
 
 const overlay = document.getElementById('overlay');
 const { controls, update } = createControls(camera, renderer.domElement, overlay);
