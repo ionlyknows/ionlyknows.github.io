@@ -1,5 +1,5 @@
 ﻿import * as THREE from 'three';
-import { getRoadCurves, ROAD_WIDTH } from '../city.js';
+import { getRoadCurves, getGates, ROAD_WIDTH, GATE_ARCH_CLEARANCE } from '../city.js';
 
 export const LAMP_SPACING = 9;
 export const MIN_LAMPS_PER_ROAD = 2;
@@ -16,15 +16,22 @@ function lampCountForLength(length) {
 
 export function planStreetLamps() {
   const roads = getRoadCurves();
+  const gates = getGates();
   const lamps = [];
 
   for (const { zone, curve } of roads) {
+    const gate = gates.find((g) => g.zone === zone);
     const length = curve.getLength();
     const count = lampCountForLength(length);
 
     for (let i = 0; i < count; i++) {
       const u = U_MARGIN + (i / (count - 1)) * (1 - 2 * U_MARGIN);
       const point = curve.getPointAt(u);
+
+      if (gate && Math.hypot(point.x - gate.point.x, point.z - gate.point.z) < GATE_ARCH_CLEARANCE) {
+        continue;
+      }
+
       const tangent = curve.getTangentAt(u);
       const perp = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
       const side = i % 2 === 0 ? 1 : -1;

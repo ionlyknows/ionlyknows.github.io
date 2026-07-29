@@ -6,6 +6,8 @@ import { createCity, zoneAt, atmosphereColor } from './city.js';
 import { createRoads } from './roads.js';
 import { createGates } from './gates.js';
 import { createStreetLights } from './lighting/streetLights.js';
+import { createStreetProps } from './props/streetProps.js';
+import { createCables } from './props/cables.js';
 import { DEBUG } from './config.js';
 
 const scene = createScene();
@@ -22,7 +24,14 @@ const bounds = createCity(scene);
 const { updateReflections } = createRoads(scene);
 createGates(scene);
 const lampCount = createStreetLights(scene);
-if (DEBUG) console.log('[DEBUG] street lamps placed:', lampCount);
+const propColliders = createStreetProps(scene, bounds.colliders);
+bounds.colliders.push(...propColliders);
+const cableCount = createCables(scene);
+if (DEBUG) {
+  console.log('[DEBUG] street lamps placed:', lampCount);
+  console.log('[DEBUG] street props placed:', propColliders.length);
+  console.log('[DEBUG] cables placed:', cableCount);
+}
 
 const overlay = document.getElementById('overlay');
 const { controls, update } = createControls(camera, renderer.domElement, overlay);

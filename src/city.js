@@ -19,6 +19,7 @@ export const ROAD_WIDTH = 3.5;
 const HUB_RADIUS = 2.5;
 const DISTRICT_EXIT_RADIUS = 3;
 export const GATE_CLEARANCE = 10;
+export const GATE_ARCH_CLEARANCE = 6;
 export const CORE_CLEARANCE = 6;
 export const CLEARANCE_MAX_ITERATIONS = 8;
 export const CLEARANCE_EPSILON = 0.01;
@@ -28,7 +29,7 @@ Object.entries(ZONES).forEach(([key, zone]) => {
   NODES[key] = { x: zone.x, z: zone.z, exitRadius: DISTRICT_EXIT_RADIUS };
 });
 
-function seededRandom(seed) {
+export function seededRandom(seed) {
   let value = seed;
   return () => {
     value = (value * 9301 + 49297) % 233280;
@@ -294,3 +295,4 @@ export function atmosphereColor(zone) {
   if (!zone || !zone.color) return base;
   return base.clone().lerp(new THREE.Color(zone.color), 0.18);
 }
+
