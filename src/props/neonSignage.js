@@ -1,9 +1,11 @@
 ﻿import * as THREE from 'three';
 import { getNeonMaterial } from '../materials/neonMaterials.js';
+import { registerFlicker } from '../effects/flicker.js';
 
 const OUTWARD_TUBE = 0.03;
 const OUTWARD_GLOW = 0.015;
-const SIGN_SEED_COUNT = 4;
+export const SIGN_SEED_COUNT = 5;
+const FLICKER_CHANCE = 0.4;
 
 function facadeOffset(facingAxis, facingSign, width, depth, outward) {
   const position = new THREE.Vector3();
@@ -73,14 +75,24 @@ export function buildNeonSignage({
   const barGap = 0.28;
   const usableSpan = Math.max(span - 0.6, 1);
 
+  const flickerSeed = signSeeds[4];
+  const flickers = flickerSeed < FLICKER_CHANCE;
+  const barTubeMat = flickers ? tubeMat.clone() : tubeMat;
+  const barGlowMat = flickers ? glowMat.clone() : glowMat;
+  if (flickers) {
+    const phase = flickerSeed * Math.PI * 8;
+    registerFlicker(barTubeMat, phase);
+    registerFlicker(barGlowMat, phase);
+  }
+
   let maxBarLength = 0;
   for (let i = 0; i < barCount; i++) {
-    const lengthFrac = 0.35 + signSeeds[1 + (i % (SIGN_SEED_COUNT - 1))] * 0.45;
+    const lengthFrac = 0.35 + signSeeds[1 + (i % (SIGN_SEED_COUNT - 2))] * 0.45;
     const barLength = usableSpan * lengthFrac;
     maxBarLength = Math.max(maxBarLength, barLength);
     const barY = bandTop - i * barGap;
 
-    const bar = new THREE.Mesh(makeSpanBoxGeometry(facingAxis, 0.06, barThickness), tubeMat);
+    const bar = new THREE.Mesh(makeSpanBoxGeometry(facingAxis, 0.06, barThickness), barTubeMat);
     bar.position.copy(baseOffset);
     bar.position.y = barY;
     applySpanScale(bar, facingAxis, barLength);
@@ -91,7 +103,7 @@ export function buildNeonSignage({
   const clusterY = bandTop - (barGap * (barCount - 1)) / 2;
   const clusterSpan = maxBarLength + 0.4;
 
-  const clusterGlow = new THREE.Mesh(makeSpanBoxGeometry(facingAxis, 0.5, clusterHeight), glowMat);
+  const clusterGlow = new THREE.Mesh(makeSpanBoxGeometry(facingAxis, 0.5, clusterHeight), barGlowMat);
   clusterGlow.position.copy(glowOffset);
   clusterGlow.position.y = clusterY;
   applySpanScale(clusterGlow, facingAxis, clusterSpan);
@@ -99,5 +111,3 @@ export function buildNeonSignage({
 
   return group;
 }
-
-export { SIGN_SEED_COUNT };

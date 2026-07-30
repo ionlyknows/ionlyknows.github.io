@@ -8,6 +8,9 @@ import { createGates } from './gates.js';
 import { createStreetLights } from './lighting/streetLights.js';
 import { createStreetProps } from './props/streetProps.js';
 import { createCables } from './props/cables.js';
+import { createParticles } from './effects/particles.js';
+import { createSteamVents } from './effects/steamVents.js';
+import { updateAnimators } from './effects/animator.js';
 import { DEBUG } from './config.js';
 
 const scene = createScene();
@@ -27,10 +30,13 @@ const lampCount = createStreetLights(scene);
 const propColliders = createStreetProps(scene, bounds.colliders);
 bounds.colliders.push(...propColliders);
 const cableCount = createCables(scene);
+createParticles(scene);
+const steamCount = createSteamVents(scene);
 if (DEBUG) {
   console.log('[DEBUG] street lamps placed:', lampCount);
   console.log('[DEBUG] street props placed:', propColliders.length);
   console.log('[DEBUG] cables placed:', cableCount);
+  console.log('[DEBUG] steam vents placed:', steamCount);
 }
 
 const overlay = document.getElementById('overlay');
@@ -55,6 +61,7 @@ function animate() {
   scene.fog.color.lerp(targetColor, blend);
   scene.background.lerp(targetColor, blend);
   updateReflections(scene.fog.color, elapsed);
+  updateAnimators(elapsed, delta);
 
   hudTimer += delta;
   if (hudTimer > 0.2) {

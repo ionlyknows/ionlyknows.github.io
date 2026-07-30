@@ -1,6 +1,7 @@
 ﻿import * as THREE from 'three';
 import { planStreetLamps } from './lampPlacement.js';
 import { getPoleMaterial, getLampMaterial } from '../materials/lampMaterials.js';
+import { registerAnimator } from '../effects/animator.js';
 
 const POLE_HEIGHT = 4.2;
 const ARM_LENGTH = 0.9;
@@ -9,7 +10,11 @@ const LIGHT_INTENSITY = 18;
 const LIGHT_DISTANCE = 12;
 const LIGHT_DECAY = 2;
 
-function buildLampPost(zoneColor) {
+function breathingBrightness(t, phase) {
+  return 0.85 + 0.15 * Math.sin(t * 1.6 + phase);
+}
+
+function buildLampPost(zoneColor, phase) {
   const group = new THREE.Group();
   const poleMat = getPoleMaterial();
 
@@ -23,12 +28,12 @@ function buildLampPost(zoneColor) {
 
   const bulbPos = new THREE.Vector3(ARM_LENGTH, POLE_HEIGHT - 0.3, 0);
 
-  const bulbMat = getLampMaterial(zoneColor, 'bulb');
+  const bulbMat = getLampMaterial(zoneColor, 'bulb').clone();
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), bulbMat);
   bulb.position.copy(bulbPos);
   group.add(bulb);
 
-  const glowMat = getLampMaterial(zoneColor, 'glow');
+  const glowMat = getLampMaterial(zoneColor, 'glow').clone();
   const glow = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), glowMat);
   glow.position.copy(bulbPos);
   group.add(glow);
@@ -37,17 +42,29 @@ function buildLampPost(zoneColor) {
   light.position.copy(bulbPos);
   group.add(light);
 
+  const bulbBase = bulbMat.color.clone();
+  const glowBase = glowMat.color.clone();
+  registerAnimator((elapsed) => {
+    const brightness = breathingBrightness(elapsed, phase);
+    bulbMat.color.copy(bulbBase).multiplyScalar(brightness);
+    glowMat.color.copy(glowBase).multiplyScalar(brightness);
+    light.intensity = LIGHT_INTENSITY * brightness;
+  });
+
   return group;
 }
 
 export function createStreetLights(scene) {
   const lamps = planStreetLamps();
+  let index = 0;
 
   for (const { groundPosition, rotationY, color } of lamps) {
-    const lamp = buildLampPost(color);
+    const phase = index * 2.399;
+    const lamp = buildLampPost(color, phase);
     lamp.position.copy(groundPosition);
     lamp.rotation.y = rotationY;
     scene.add(lamp);
+    index++;
   }
 
   return lamps.length;
