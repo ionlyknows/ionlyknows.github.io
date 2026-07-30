@@ -10,6 +10,8 @@ import { createStreetProps } from './props/streetProps.js';
 import { createCables } from './props/cables.js';
 import { createParticles } from './effects/particles.js';
 import { createSteamVents } from './effects/steamVents.js';
+import { createGroundMist } from './effects/groundMist.js';
+import { createLampVolumetrics } from './effects/lampVolumetrics.js';
 import { updateAnimators } from './effects/animator.js';
 import { DEBUG } from './config.js';
 
@@ -32,11 +34,14 @@ bounds.colliders.push(...propColliders);
 const cableCount = createCables(scene);
 createParticles(scene);
 const steamCount = createSteamVents(scene);
+const groundMist = createGroundMist(scene, bounds);
+const volumetricCount = createLampVolumetrics(scene);
 if (DEBUG) {
   console.log('[DEBUG] street lamps placed:', lampCount);
   console.log('[DEBUG] street props placed:', propColliders.length);
   console.log('[DEBUG] cables placed:', cableCount);
   console.log('[DEBUG] steam vents placed:', steamCount);
+  console.log('[DEBUG] lamp volumetric cones placed:', volumetricCount);
 }
 
 const overlay = document.getElementById('overlay');
@@ -61,6 +66,7 @@ function animate() {
   scene.fog.color.lerp(targetColor, blend);
   scene.background.lerp(targetColor, blend);
   updateReflections(scene.fog.color, elapsed);
+  groundMist.update(scene.fog.color, elapsed);
   updateAnimators(elapsed, delta);
 
   hudTimer += delta;

@@ -10,7 +10,7 @@ const LIGHT_INTENSITY = 18;
 const LIGHT_DISTANCE = 12;
 const LIGHT_DECAY = 2;
 
-function breathingBrightness(t, phase) {
+export function breathingBrightness(t, phase) {
   return 0.85 + 0.15 * Math.sin(t * 1.6 + phase);
 }
 
@@ -56,15 +56,12 @@ function buildLampPost(zoneColor, phase) {
 
 export function createStreetLights(scene) {
   const lamps = planStreetLamps();
-  let index = 0;
 
-  for (const { groundPosition, rotationY, color } of lamps) {
-    const phase = index * 2.399;
+  for (const { groundPosition, rotationY, color, phase } of lamps) {
     const lamp = buildLampPost(color, phase);
     lamp.position.copy(groundPosition);
     lamp.rotation.y = rotationY;
     scene.add(lamp);
-    index++;
   }
 
   return lamps.length;

@@ -47,7 +47,9 @@ export function planStreetLamps() {
       const dirZ = -perp.z * side;
       const rotationY = Math.atan2(-dirZ, dirX);
 
-      lamps.push({ groundPosition, bulbPosition, rotationY, color: zone.color, zone });
+      const phase = lamps.length * 2.399;
+
+      lamps.push({ groundPosition, bulbPosition, rotationY, color: zone.color, zone, phase });
     }
   }
 
