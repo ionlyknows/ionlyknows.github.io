@@ -49,7 +49,7 @@ function buildMaterial() {
         float wisp = smoothstep(0.35, 0.75, n);
         float vertical = smoothstep(0.0, 0.15, vUv.y) * smoothstep(1.0, 0.55, vUv.y);
         float edge = smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
-        float alpha = wisp * vertical * edge * 0.35;
+        float alpha = wisp * vertical * edge * 0.18;
         gl_FragColor = vec4(uColor, alpha);
       }
     `,
@@ -57,6 +57,12 @@ function buildMaterial() {
 }
 
 function buildPlume() {
+  // The two crossed planes below share this material and overlap heavily
+  // near their shared vertical axis. Since blending is additive, overlapping
+  // fragments sum their brightness rather than compositing normally -- alpha
+  // here is tuned assuming ~2x stacking in the overlap region, so it reads
+  // as smoke rather than blowing out to white once ACES tone mapping and
+  // exposure (see postprocessing/composer.js) are applied.
   const group = new THREE.Group();
   const material = buildMaterial();
   const geometry = new THREE.PlaneGeometry(PLUME_WIDTH, PLUME_HEIGHT, 1, 1);

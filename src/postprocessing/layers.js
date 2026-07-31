@@ -1,4 +1,4 @@
-﻿export const BLOOM_LAYER = 1;
+export const BLOOM_LAYER = 1;
 
 export function enableBloom(object3d) {
   object3d.traverse((child) => {

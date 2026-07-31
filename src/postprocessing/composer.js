@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -43,9 +43,12 @@ export function createPostProcessing(renderer, scene, camera) {
 
   const size = new THREE.Vector2();
   renderer.getSize(size);
+  const pixelRatio = renderer.getPixelRatio();
+  const bufferWidth = size.x * pixelRatio;
+  const bufferHeight = size.y * pixelRatio;
 
   function createRenderTarget() {
-    return new THREE.WebGLRenderTarget(size.x, size.y, {
+    return new THREE.WebGLRenderTarget(bufferWidth, bufferHeight, {
       type: THREE.HalfFloatType,
       samples: 4,
     });
@@ -56,7 +59,7 @@ export function createPostProcessing(renderer, scene, camera) {
   bloomComposer.addPass(new RenderPass(scene, camera));
 
   const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(size.x, size.y),
+    new THREE.Vector2(bufferWidth, bufferHeight),
     BLOOM_STRENGTH,
     BLOOM_RADIUS,
     BLOOM_THRESHOLD

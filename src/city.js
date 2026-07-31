@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { COLORS } from './scene.js';
 import { getBuildingBodyMaterial } from './materials/buildingMaterials.js';
 import { buildNeonSignage, SIGN_SEED_COUNT } from './props/neonSignage.js';

@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 
 export const GRADE_DEFAULTS = {
   contrast: 1.04,

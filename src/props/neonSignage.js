@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { getNeonMaterial } from '../materials/neonMaterials.js';
 import { registerFlicker } from '../effects/flicker.js';
 import { enableBloom } from '../postprocessing/layers.js';

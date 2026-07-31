@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { planStreetLamps, ARM_LENGTH } from './lampPlacement.js';
 import { getPoleMaterial, getLampMaterial } from '../materials/lampMaterials.js';
 import { registerAnimator } from '../effects/animator.js';
