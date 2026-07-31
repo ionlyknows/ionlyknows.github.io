@@ -9,10 +9,10 @@ import { BLOOM_LAYER } from './layers.js';
 import { CyberGradeShader } from './colorGradePass.js';
 import { DEBUG } from '../config.js';
 
-const BLOOM_STRENGTH = 1.35;
-const BLOOM_RADIUS = 0.55;
-const BLOOM_THRESHOLD = 0.12;
-const TONE_MAPPING_EXPOSURE = 1.1;
+const BLOOM_STRENGTH = 0.85;
+const BLOOM_RADIUS = 0.45;
+const BLOOM_THRESHOLD = 0.35;
+const TONE_MAPPING_EXPOSURE = 1.15;
 
 const mixShaderDef = {
   uniforms: {
@@ -44,15 +44,17 @@ export function createPostProcessing(renderer, scene, camera) {
   const size = new THREE.Vector2();
   renderer.getSize(size);
 
-  const bloomComposer = new EffectComposer(renderer);
+  function createRenderTarget() {
+    return new THREE.WebGLRenderTarget(size.x, size.y, {
+      type: THREE.HalfFloatType,
+      samples: 4,
+    });
+  }
+
+  const bloomComposer = new EffectComposer(renderer, createRenderTarget());
   bloomComposer.renderToScreen = false;
   bloomComposer.addPass(new RenderPass(scene, camera));
 
-  // The Vector2 here is cosmetic — EffectComposer.addPass() immediately calls
-  // pass.setSize() to match the composer's own render target, so UnrealBloomPass's
-  // actual working resolution always tracks bloomComposer's size. Its internal mip
-  // chain (halving repeatedly down to nMips levels) is what keeps the blur cheap,
-  // not this constructor argument.
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(size.x, size.y),
     BLOOM_STRENGTH,
@@ -61,7 +63,7 @@ export function createPostProcessing(renderer, scene, camera) {
   );
   bloomComposer.addPass(bloomPass);
 
-  const finalComposer = new EffectComposer(renderer);
+  const finalComposer = new EffectComposer(renderer, createRenderTarget());
   finalComposer.addPass(new RenderPass(scene, camera));
 
   const mixPass = new ShaderPass(mixShaderDef, 'baseTexture');

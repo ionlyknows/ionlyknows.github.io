@@ -1,8 +1,8 @@
 ﻿import * as THREE from 'three';
 
 export const GRADE_DEFAULTS = {
-  contrast: 1.08,
-  saturation: 1.15,
+  contrast: 1.04,
+  saturation: 1.08,
   aberration: 0.0018,
   vignetteRadius: 0.35,
   vignetteSoftness: 0.7,

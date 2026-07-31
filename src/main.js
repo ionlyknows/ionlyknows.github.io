@@ -29,7 +29,7 @@ window.addEventListener('resize', () => {
 const ground = createGround();
 scene.add(ground);
 
-scene.add(new THREE.HemisphereLight(0x2a3a55, COLORS.void, 0.55));
+scene.add(new THREE.HemisphereLight(0x2a3a55, COLORS.void, 1.1));
 
 const bounds = createCity(scene);
 const { updateReflections } = createRoads(scene);
