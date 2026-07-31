@@ -30,12 +30,10 @@ export function getLampMaterial(zoneColor, kind = 'bulb') {
         opacity: 0.35,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        fog: false,
         toneMapped: false,
       })
     : new THREE.MeshBasicMaterial({
         color,
-        fog: false,
         toneMapped: false,
       });
 

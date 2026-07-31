@@ -205,7 +205,7 @@ function buildingMesh(color, width, height, depth, variant, signage) {
   body.position.y = height / 2;
   group.add(body);
   const edges = new THREE.EdgesGeometry(bodyGeo);
-  const lineMat = new THREE.LineBasicMaterial({ color, fog: false });
+  const lineMat = new THREE.LineBasicMaterial({ color });
   const wireframe = new THREE.LineSegments(edges, lineMat);
   wireframe.position.y = height / 2;
   enableBloom(wireframe);
@@ -215,7 +215,7 @@ function buildingMesh(color, width, height, depth, variant, signage) {
     for (let f = 1; f < floors; f++) {
       const ring = new THREE.LineSegments(
         new THREE.EdgesGeometry(new THREE.BoxGeometry(width, 0.05, depth)),
-        new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5, fog: false })
+        new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 })
       );
       ring.position.y = f * 4;
       enableBloom(ring);

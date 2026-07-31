@@ -14,12 +14,10 @@ export function getNeonMaterial(zoneColor, kind = 'tube') {
         opacity: 0.3,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        fog: false,
         toneMapped: false,
       })
     : new THREE.MeshBasicMaterial({
         color: zoneColor,
-        fog: false,
         toneMapped: false,
       });
 

@@ -37,8 +37,23 @@ export function createGround() {
       void main() {
         float dist = length(vWorldPos.xz);
         float fade = 1.0 - smoothstep(0.0, uFadeDistance, dist);
+
+        // gridLine()'s fwidth-based antialiasing is only stable while a grid
+        // cell still spans a few screen pixels. At grazing viewing angles
+        // (looking near the horizon from a low first-person camera), a
+        // single pixel can cover many world-space units, so the derivative
+        // swings wildly and the line test flickers between 0 and 1 per
+        // pixel -- visible as a dashed/staticky pattern that shifts as the
+        // camera moves. Fading the grid out once cells approach sub-pixel
+        // size (independent of the existing distance fade, which alone
+        // doesn't kick in early enough at shallow angles) keeps the pattern
+        // from ever reaching that aliased regime.
+        vec2 cellDerivative = fwidth(vWorldPos.xz / uCellSize);
+        float cellDensity = max(cellDerivative.x, cellDerivative.y);
+        float aaFade = 1.0 - smoothstep(0.15, 0.5, cellDensity);
+
         float line = gridLine(vWorldPos.xz, uCellSize, uLineWidth);
-        vec3 color = mix(uBackground, uColor, line * fade);
+        vec3 color = mix(uBackground, uColor, line * fade * aaFade);
         gl_FragColor = vec4(color, 1.0);
       }
     `,
