@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { planStreetProps } from './streetPropPlacement.js';
 import { getPoleMaterial } from '../materials/lampMaterials.js';
 import { getNeonMaterial } from '../materials/neonMaterials.js';

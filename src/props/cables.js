@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { planStreetLamps } from '../lighting/lampPlacement.js';
 
 const CABLE_COLOR = 0x151515;

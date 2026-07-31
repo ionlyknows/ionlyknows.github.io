@@ -1,10 +1,10 @@
 ﻿import * as THREE from 'three';
-import { planStreetLamps } from './lampPlacement.js';
+import { planStreetLamps, ARM_LENGTH } from './lampPlacement.js';
 import { getPoleMaterial, getLampMaterial } from '../materials/lampMaterials.js';
 import { registerAnimator } from '../effects/animator.js';
+import { enableBloom } from '../postprocessing/layers.js';
 
 const POLE_HEIGHT = 4.2;
-const ARM_LENGTH = 0.9;
 
 const LIGHT_INTENSITY = 18;
 const LIGHT_DISTANCE = 12;
@@ -37,6 +37,9 @@ function buildLampPost(zoneColor, phase) {
   const glow = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), glowMat);
   glow.position.copy(bulbPos);
   group.add(glow);
+
+  enableBloom(bulb);
+  enableBloom(glow);
 
   const light = new THREE.PointLight(bulbMat.color.clone(), LIGHT_INTENSITY, LIGHT_DISTANCE, LIGHT_DECAY);
   light.position.copy(bulbPos);

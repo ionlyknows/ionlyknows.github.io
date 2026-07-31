@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { seededRandom } from '../city.js';
 import { registerAnimator } from './animator.js';
 

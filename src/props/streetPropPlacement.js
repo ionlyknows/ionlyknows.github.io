@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { getRoadCurves, getGates, ROAD_WIDTH, GATE_ARCH_CLEARANCE, seededRandom } from '../city.js';
 import { SIDE_OFFSET as LAMP_SIDE_OFFSET } from '../lighting/lampPlacement.js';
 

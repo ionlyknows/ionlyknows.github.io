@@ -1,6 +1,7 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { getRoadCurves, ROAD_WIDTH } from './city.js';
 import { planStreetLamps, MAX_LAMPS_PER_ROAD } from './lighting/lampPlacement.js';
+import { COLORS } from './scene.js';
 
 function padLampUniforms(roadLamps) {
   const positions = [];
@@ -131,7 +132,7 @@ export function createRoads(scene) {
 
   roads.forEach(({ zone, curve }) => {
     const roadLamps = lamps.filter((lamp) => lamp.zone === zone);
-    const mesh = roadMesh(curve, zone.color, roadLamps);
+    const mesh = roadMesh(curve, COLORS.roadAccent, roadLamps);
     materials.push(mesh.material);
     scene.add(mesh);
   });

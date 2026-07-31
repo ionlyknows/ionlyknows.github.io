@@ -1,6 +1,7 @@
 ﻿import * as THREE from 'three';
 import { getNeonMaterial } from '../materials/neonMaterials.js';
 import { registerFlicker } from '../effects/flicker.js';
+import { enableBloom } from '../postprocessing/layers.js';
 
 const OUTWARD_TUBE = 0.03;
 const OUTWARD_GLOW = 0.015;
@@ -109,5 +110,6 @@ export function buildNeonSignage({
   applySpanScale(clusterGlow, facingAxis, clusterSpan);
   group.add(clusterGlow);
 
+  enableBloom(group);
   return group;
 }

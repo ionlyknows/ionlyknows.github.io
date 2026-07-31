@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 
 export const COLORS = {
   void: 0x0a0a0f,
@@ -7,6 +7,7 @@ export const COLORS = {
   yellow: 0xe8ff3d,
   lime: 0x7dffb0,
   steel: 0x2a2f3a,
+  roadAccent: 0x3fc6ff,
 };
 
 export function createScene() {

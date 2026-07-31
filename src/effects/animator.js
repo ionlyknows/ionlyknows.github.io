@@ -1,4 +1,4 @@
-﻿const animators = [];
+const animators = [];
 
 export function registerAnimator(fn) {
   animators.push(fn);

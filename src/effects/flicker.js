@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { registerAnimator } from './animator.js';
 
 function flickerBrightness(t, phase) {

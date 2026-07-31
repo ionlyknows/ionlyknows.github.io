@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { COLORS } from '../scene.js';
 
 const WARM_WHITE = 0xfff1d6;

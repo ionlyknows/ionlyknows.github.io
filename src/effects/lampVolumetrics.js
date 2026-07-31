@@ -1,11 +1,11 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { planStreetLamps } from '../lighting/lampPlacement.js';
 import { breathingBrightness } from '../lighting/streetLights.js';
 import { registerAnimator } from './animator.js';
 
 const CONE_RADIUS = 1.6;
 const CONE_HEIGHT_RATIO = 0.82;
-const PEAK_ALPHA = 0.1;
+const PEAK_ALPHA = 0.13;
 
 function buildMaterial(color) {
   return new THREE.ShaderMaterial({
@@ -29,7 +29,7 @@ function buildMaterial(color) {
       uniform float uBrightness;
       varying vec2 vUv;
       void main() {
-        float falloff = pow(vUv.y, 1.6);
+        float falloff = pow(vUv.y, 1.15);
         gl_FragColor = vec4(uColor, falloff * ${PEAK_ALPHA.toFixed(3)} * uBrightness);
       }
     `,

@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 
 const MIST_HEIGHT = 0.9;
 const EDGE_MARGIN = 12;

@@ -2,6 +2,7 @@
 import { COLORS } from './scene.js';
 import { getBuildingBodyMaterial } from './materials/buildingMaterials.js';
 import { buildNeonSignage, SIGN_SEED_COUNT } from './props/neonSignage.js';
+import { enableBloom } from './postprocessing/layers.js';
 
 export const ZONES = {
   code:    { label: 'code district',    sector: 1, color: COLORS.cyan,    x: -16, z: -22, count: 8, from: 'entrance' },
@@ -207,6 +208,7 @@ function buildingMesh(color, width, height, depth, variant, signage) {
   const lineMat = new THREE.LineBasicMaterial({ color, fog: false });
   const wireframe = new THREE.LineSegments(edges, lineMat);
   wireframe.position.y = height / 2;
+  enableBloom(wireframe);
   group.add(wireframe);
   if (height > 8) {
     const floors = Math.floor(height / 4);
@@ -216,6 +218,7 @@ function buildingMesh(color, width, height, depth, variant, signage) {
         new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5, fog: false })
       );
       ring.position.y = f * 4;
+      enableBloom(ring);
       group.add(ring);
     }
   }

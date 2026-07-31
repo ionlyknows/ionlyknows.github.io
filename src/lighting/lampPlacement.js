@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { getRoadCurves, getGates, ROAD_WIDTH, GATE_ARCH_CLEARANCE } from '../city.js';
 
 export const LAMP_SPACING = 9;
@@ -7,6 +7,7 @@ export const MAX_LAMPS_PER_ROAD = 5;
 export const U_MARGIN = 0.08;
 export const SIDE_OFFSET = ROAD_WIDTH / 2 + 1.1;
 export const BULB_HEIGHT = 3.9;
+export const ARM_LENGTH = 0.9;
 
 function lampCountForLength(length) {
   const usableLength = length * (1 - 2 * U_MARGIN);
@@ -41,11 +42,16 @@ export function planStreetLamps() {
         0,
         point.z + perp.z * SIDE_OFFSET * side
       );
-      const bulbPosition = groundPosition.clone().setY(BULB_HEIGHT);
 
       const dirX = -perp.x * side;
       const dirZ = -perp.z * side;
       const rotationY = Math.atan2(-dirZ, dirX);
+
+      const bulbPosition = new THREE.Vector3(
+        groundPosition.x + Math.cos(rotationY) * ARM_LENGTH,
+        BULB_HEIGHT,
+        groundPosition.z - Math.sin(rotationY) * ARM_LENGTH
+      );
 
       const phase = lamps.length * 2.399;
 

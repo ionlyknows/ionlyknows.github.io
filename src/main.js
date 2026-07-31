@@ -13,12 +13,18 @@ import { createSteamVents } from './effects/steamVents.js';
 import { createGroundMist } from './effects/groundMist.js';
 import { createLampVolumetrics } from './effects/lampVolumetrics.js';
 import { updateAnimators } from './effects/animator.js';
+import { createPostProcessing } from './postprocessing/composer.js';
 import { DEBUG } from './config.js';
 
 const scene = createScene();
 const camera = createCamera();
 const renderer = createRenderer();
 handleResize(camera, renderer);
+
+const postFX = createPostProcessing(renderer, scene, camera);
+window.addEventListener('resize', () => {
+  postFX.resize(window.innerWidth, window.innerHeight);
+});
 
 const ground = createGround();
 scene.add(ground);
@@ -75,7 +81,7 @@ function animate() {
     hud.textContent = 'SECTOR ' + zone.sector + ' - ' + zone.label.toUpperCase();
   }
 
-  renderer.render(scene, camera);
+  postFX.render();
 }
 
 animate();
