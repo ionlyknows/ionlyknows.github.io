@@ -1,3 +1,0 @@
-* text=auto eol=lf
-.githooks/pre-push text eol=lf
-*.sh text eol=lf
