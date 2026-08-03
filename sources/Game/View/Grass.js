@@ -1,4 +1,4 @@
-import * as THREE from 'three'
+﻿import * as THREE from 'three'
 
 import Game from '@/Game.js'
 import View from '@/View/View.js'
@@ -17,14 +17,19 @@ export default class Grass
         this.scene = this.view.scene
         this.noises = this.view.noises
 
-        this.details = 200
+        this.details = 260
         this.size = this.state.chunks.minSize
         this.count = this.details * this.details
         this.fragmentSize = this.size / this.details
-        this.bladeWidthRatio = 1.5
-        this.bladeHeightRatio = 4
-        this.bladeHeightRandomness = 0.5
-        this.positionRandomness = 0.5
+        // Slightly taller than lawn-height, with subtle (not extreme)
+        // height variation, and a 1.69x density increase (200 -> 260 grid
+        // resolution = 40,000 -> 67,600 blades). Single draw call, so this
+        // only adds proportional vertex-shader work - trivial for desktop
+        // GPUs (this project already flags itself as desktop-only).
+        this.bladeWidthRatio = 1.0
+        this.bladeHeightRatio = 1.6
+        this.bladeHeightRandomness = 0.35
+        this.positionRandomness = 0.75
         this.noiseTexture = this.noises.create(128, 128)
 
         this.setGeometry()
@@ -36,21 +41,18 @@ export default class Grass
     {
         const centers = new Float32Array(this.count * 3 * 2)
         const positions = new Float32Array(this.count * 3 * 3)
-        // const tipness = new Float32Array(this.count * 3)
 
         for(let iX = 0; iX < this.details; iX++)
         {
             const fragmentX = (iX / this.details - 0.5) * this.size + this.fragmentSize * 0.5
-            
+
             for(let iZ = 0; iZ < this.details; iZ++)
             {
                 const fragmentZ = (iZ / this.details - 0.5) * this.size + this.fragmentSize * 0.5
 
                 const iStride9 = (iX * this.details + iZ) * 9
                 const iStride6 = (iX * this.details + iZ) * 6
-                // const iStride3 = (iX * this.details + iZ) * 3
 
-                // Center (for blade rotation)
                 const centerX = fragmentX + (Math.random() - 0.5) * this.fragmentSize * this.positionRandomness
                 const centerZ = fragmentZ + (Math.random() - 0.5) * this.fragmentSize * this.positionRandomness
 
@@ -63,7 +65,6 @@ export default class Grass
                 centers[iStride6 + 4] = centerX
                 centers[iStride6 + 5] = centerZ
 
-                // Position
                 const bladeWidth = this.fragmentSize * this.bladeWidthRatio
                 const bladeHalfWidth = bladeWidth * 0.5
                 const bladeHeight = this.fragmentSize * this.bladeHeightRatio * (1 - this.bladeHeightRandomness + Math.random() * this.bladeHeightRandomness)
@@ -79,18 +80,12 @@ export default class Grass
                 positions[iStride9 + 6] = bladeHalfWidth
                 positions[iStride9 + 7] = 0
                 positions[iStride9 + 8] = 0
-
-                // // Tipness
-                // tipness[iStride3    ] = 0
-                // tipness[iStride3 + 1] = 1
-                // tipness[iStride3 + 2] = 0
             }
         }
-        
+
         this.geometry = new THREE.BufferGeometry()
         this.geometry.setAttribute('center', new THREE.Float32BufferAttribute(centers, 2))
         this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-        // this.geometry.setAttribute('tipness', new THREE.Float32BufferAttribute(tipness, 1))
     }
 
     setMaterial()
@@ -98,7 +93,6 @@ export default class Grass
         const engineChunks = this.state.chunks
         const engineTerrains = this.state.terrains
 
-        // this.material = new THREE.MeshBasicMaterial({ wireframe: true, color: 'green' })
         this.material = new GrassMaterial()
         this.material.uniforms.uTime.value = 0
         this.material.uniforms.uGrassDistance.value = this.size
@@ -118,7 +112,6 @@ export default class Grass
         this.material.uniforms.uFresnelScale.value = 0.5
         this.material.uniforms.uFresnelPower.value = 2
         this.material.uniforms.uSunPosition.value = new THREE.Vector3(- 0.5, - 0.5, - 0.5)
-        // this.material.wireframe = true
     }
 
     setMesh()
@@ -140,27 +133,23 @@ export default class Grass
 
         this.material.uniforms.uTime.value = this.time.elapsed
         this.material.uniforms.uSunPosition.value.set(sunState.position.x, sunState.position.y, sunState.position.z)
-        
+
         this.mesh.position.set(playerPosition[0], 0, playerPosition[2])
-        // this.mesh.position.set(playerPosition[0], playerPosition[1], playerPosition[2])
         this.material.uniforms.uPlayerPosition.value.set(playerPosition[0], playerPosition[1], playerPosition[2])
-    
-        // Get terrain data
+
         const aChunkState = engineChunks.getDeepestChunkForPosition(playerPosition[0], playerPosition[2])
 
         if(aChunkState && aChunkState.terrain && aChunkState.terrain.renderInstance.texture)
         {
-            // Texture A
             this.material.uniforms.uTerrainATexture.value = aChunkState.terrain.renderInstance.texture
             this.material.uniforms.uTerrainAOffset.value.set(
                 aChunkState.x - aChunkState.size * 0.5,
                 aChunkState.z - aChunkState.size * 0.5
             )
-            
+
             const chunkPositionRatioX = (playerPosition[0] - aChunkState.x + aChunkState.size * 0.5) / aChunkState.size
             const chunkPositionRatioZ = (playerPosition[2] - aChunkState.z + aChunkState.size * 0.5) / aChunkState.size
-            
-            // Texture B
+
             const bChunkSate = aChunkState.neighbours.get(chunkPositionRatioX < 0.5 ? 'w' : 'e')
 
             if(bChunkSate && bChunkSate.terrain && bChunkSate.terrain.renderInstance.texture)
@@ -171,8 +160,7 @@ export default class Grass
                     bChunkSate.z - bChunkSate.size * 0.5
                 )
             }
-            
-            // Texture C
+
             const cChunkSate = aChunkState.neighbours.get(chunkPositionRatioZ < 0.5 ? 'n' : 's')
 
             if(cChunkSate && cChunkSate.terrain && cChunkSate.terrain.renderInstance.texture)
@@ -183,8 +171,7 @@ export default class Grass
                     cChunkSate.z - cChunkSate.size * 0.5
                 )
             }
-            
-            // Texture D
+
             const dChunkSate = bChunkSate.neighbours.get(chunkPositionRatioZ < 0.5 ? 'n' : 's')
 
             if(dChunkSate && dChunkSate.terrain && dChunkSate.terrain.renderInstance.texture)

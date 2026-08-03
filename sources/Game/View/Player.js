@@ -8,6 +8,22 @@ import PlayerModel from './PlayerModel.js'
 
 const SUN_LIGHT_DISTANCE = 20
 
+const ROTATION_SMOOTHING_SPEED = 15
+
+function dampAngle(current, target, speed, delta)
+{
+    let diff = (target - current) % (Math.PI * 2)
+
+    if(diff > Math.PI)
+        diff -= Math.PI * 2
+    else if(diff < -Math.PI)
+        diff += Math.PI * 2
+
+    const t = 1 - Math.exp(-speed * delta)
+
+    return current + diff * t
+}
+
 export default class Player
 {
     constructor()
@@ -18,6 +34,8 @@ export default class Player
         this.debug = Debug.getInstance()
 
         this.scene = this.view.scene
+
+        this.renderedRotationY = this.state.player.rotation
 
         this.setGroup()
         this.setLights()
@@ -33,13 +51,6 @@ export default class Player
 
     setLights()
     {
-        // Every other material in the scene (terrain, sky, grass, water...) is a hand
-        // rolled ShaderMaterial that fakes lighting from a uSunPosition uniform and
-        // never touches THREE's lighting system. The imported character instead uses
-        // a real MeshStandardMaterial (needed for skinning), so it needs an actual
-        // THREE.Light to be shaded consistently with the same sun direction. These
-        // lights live at the scene root (not under this.group) so their direction
-        // stays correct regardless of player position/rotation.
         this.sunLight = new THREE.DirectionalLight('#fff8d6', 2.4)
         this.sunLight.target.position.set(0, 0, 0)
         this.scene.add(this.sunLight)
@@ -70,6 +81,7 @@ export default class Player
     {
         const playerState = this.state.player
         const sunState = this.state.sun
+        const delta = this.state.time.delta
 
         this.group.position.set(
             playerState.position.current[0],
@@ -77,10 +89,9 @@ export default class Player
             playerState.position.current[2]
         )
 
-        this.group.rotation.y = playerState.rotation
+        this.renderedRotationY = dampAngle(this.renderedRotationY, playerState.rotation, ROTATION_SMOOTHING_SPEED, delta)
+        this.group.rotation.y = this.renderedRotationY
 
-        // Keep the light's target glued to the player (precision) while its offset
-        // from that target still matches the global sun direction (position - target).
         this.sunLight.target.position.copy(this.group.position)
         this.sunLight.position.set(
             this.group.position.x + sunState.position.x * SUN_LIGHT_DISTANCE,
@@ -88,6 +99,6 @@ export default class Player
             this.group.position.z + sunState.position.z * SUN_LIGHT_DISTANCE
         )
 
-        this.model.update(playerState, this.state.time.delta)
+        this.model.update(playerState, delta)
     }
 }

@@ -84,7 +84,6 @@ export default class PlayerModel
                     const vrm = gltf.userData.vrm
 
                     VRMUtils.removeUnnecessaryVertices(gltf.scene)
-                    VRMUtils.removeUnnecessaryJoints(gltf.scene)
                     VRMUtils.combineSkeletons(gltf.scene)
                     VRMUtils.combineMorphs(vrm)
 
@@ -169,7 +168,25 @@ export default class PlayerModel
 
         const previousAction = this.currentAction
 
-        nextAction.reset().fadeIn(CROSSFADE_DURATION).play()
+        nextAction.reset()
+
+        // Phase-sync two looping clips (e.g. Running <-> Fast Run, Idle <-> Dancing)
+        // so the crossfade blends between similar poses instead of two arbitrary,
+        // unrelated points in each clip's gait cycle. Without this, a switch to
+        // Fast Run mid-stride could blend e.g. "left leg forward" against "right
+        // leg forward" for the fade duration, which is what was distorting the
+        // skin. Doesn't apply to one-shots like Running Jump - starting a jump at
+        // frame 0 every time is correct, there's no "cycle" to sync to.
+        if(previousAction && previousAction.loop === THREE.LoopRepeat && nextAction.loop === THREE.LoopRepeat)
+        {
+            const previousDuration = previousAction.getClip().duration
+            const nextDuration = nextAction.getClip().duration
+            const phase = (previousAction.time % previousDuration) / previousDuration
+
+            nextAction.time = phase * nextDuration
+        }
+
+        nextAction.fadeIn(CROSSFADE_DURATION).play()
 
         if(previousAction && previousAction !== nextAction)
             previousAction.fadeOut(CROSSFADE_DURATION)

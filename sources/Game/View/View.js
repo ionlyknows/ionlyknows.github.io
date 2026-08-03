@@ -1,5 +1,6 @@
-import Camera from './Camera.js'
+﻿import Camera from './Camera.js'
 import Chunks from './Chunks.js'
+import Flowers from './Flowers.js'
 import Grass from './Grass.js'
 import Noises from './Noises.js'
 import Player from './Player.js'
@@ -27,7 +28,7 @@ export default class View
         View.instance = this
 
         this.scene = new THREE.Scene()
-        
+
         this.camera = new Camera()
         this.renderer = new Renderer()
         this.noises = new Noises()
@@ -37,6 +38,7 @@ export default class View
         this.chunks = new Chunks()
         this.player = new Player()
         this.grass = new Grass()
+        this.flowers = new Flowers()
     }
 
     resize()
@@ -55,6 +57,7 @@ export default class View
         this.chunks.update()
         this.player.update()
         this.grass.update()
+        this.flowers.update()
         this.camera.update()
         this.renderer.update()
     }
