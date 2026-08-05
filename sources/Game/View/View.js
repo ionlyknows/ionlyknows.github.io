@@ -1,6 +1,6 @@
-﻿import Camera from './Camera.js'
+﻿import Billboard from './Billboard.js'
+import Camera from './Camera.js'
 import Chunks from './Chunks.js'
-import Flowers from './Flowers.js'
 import Grass from './Grass.js'
 import Noises from './Noises.js'
 import Player from './Player.js'
@@ -9,6 +9,7 @@ import Sky from './Sky.js'
 import Terrains from './Terrains.js'
 import Water from './Water.js'
 
+import State from '@/State/State.js'
 import * as THREE from 'three'
 
 export default class View
@@ -28,7 +29,7 @@ export default class View
         View.instance = this
 
         this.scene = new THREE.Scene()
-
+        
         this.camera = new Camera()
         this.renderer = new Renderer()
         this.noises = new Noises()
@@ -38,7 +39,9 @@ export default class View
         this.chunks = new Chunks()
         this.player = new Player()
         this.grass = new Grass()
-        this.flowers = new Flowers()
+
+        this.state = State.getInstance()
+        this.billboard = new Billboard(this.scene)
     }
 
     resize()
@@ -57,7 +60,7 @@ export default class View
         this.chunks.update()
         this.player.update()
         this.grass.update()
-        this.flowers.update()
+        this.billboard.update(this.state.time.elapsed)
         this.camera.update()
         this.renderer.update()
     }

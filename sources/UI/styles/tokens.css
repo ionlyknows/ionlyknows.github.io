@@ -1,0 +1,49 @@
+﻿:root
+{
+    /* Palette: dusk terrain map -- deep slate base, contour-line accents */
+    --iw-ink: #0b0f14;
+    --iw-ink-soft: rgba(11, 15, 20, 0.78);
+    --iw-panel: rgba(15, 20, 27, 0.92);
+    --iw-border: rgba(148, 176, 168, 0.22);
+    --iw-border-strong: rgba(148, 176, 168, 0.45);
+    --iw-text: #eef2ee;
+    --iw-text-dim: rgba(238, 242, 238, 0.62);
+    --iw-accent: #ff8a3d;
+    --iw-accent-soft: rgba(255, 138, 61, 0.16);
+    --iw-accent-2: #ffc178;
+    --iw-danger: #f2a65a;
+
+    --iw-radius-sm: 6px;
+    --iw-radius-md: 12px;
+    --iw-radius-lg: 20px;
+
+    --iw-font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --iw-font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+    --iw-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#ui-root
+{
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    font-family: var(--iw-font);
+    color: var(--iw-text);
+    /* Pass clicks straight through to the canvas by default; individual
+       interactive surfaces opt back in with pointer-events: auto. */
+    pointer-events: none;
+    user-select: none;
+}
+
+#ui-root button
+{
+    font-family: inherit;
+    cursor: pointer;
+}
+
+#ui-root .iw-scrollable
+{
+    scrollbar-width: thin;
+    scrollbar-color: var(--iw-border-strong) transparent;
+}
