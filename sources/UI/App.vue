@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { ref, computed, provide, watch } from 'vue'
-import { UI_BRIDGE_KEY, useUIBridge } from './composables/useUIBridge.js'
+import { UI_BRIDGE_KEY } from './composables/useUIBridge.js'
 import { GAME_KEY } from './composables/useGame.js'
 
 import Navigation from './components/Navigation.vue'
@@ -17,7 +17,16 @@ const props = defineProps({
 provide(UI_BRIDGE_KEY, props.bridge)
 provide(GAME_KEY, props.game)
 
-useUIBridge() // no-op here beyond validating the bridge exists for children
+// A component can never inject a value it just provided to itself --
+// inject() on the root component reads the app-level context, not the
+// local `provides` object provide() just wrote to, so useUIBridge()
+// (which calls inject() under the hood) always threw "UIBridge has not
+// been provided" here even though the bridge was provided one line above.
+// Validate the prop directly instead. Descendants (WorkPanel, AboutPanel,
+// ResumePanel via usePanelEscape()/useGame()) are true children of this
+// instance, so their inject() calls resolve correctly and are unaffected.
+if(!props.bridge)
+    throw new Error('UIBridge has not been provided')
 
 // The player is already in the world from the first frame -- no loading
 // screen / menu gate in this design. activePanel is the only thing that
@@ -57,9 +66,19 @@ function closePanel()
 
     <ExploreHUD v-if="!activePanel" />
 
-    <Transition name="iw-panel-switch" mode="out-in">
-        <WorkPanel v-if="activePanel === 'work'" key="work" @close="closePanel" />
-        <AboutPanel v-else-if="activePanel === 'about'" key="about" @close="closePanel" />
-        <ResumePanel v-else-if="activePanel === 'resume'" key="resume" @close="closePanel" />
-    </Transition>
+    <!-- No outer <Transition> here: PanelShell (rendered by each panel)
+         already owns real enter/leave animation via its own nested
+         <Transition :css="false"> + GSAP hooks. Wrapping it in another
+         <Transition> from here doesn't work anyway -- PanelShell's root is
+         itself a <Transition> component, not a plain element, which Vue
+         can't attach transition classes to (that's what was spamming
+         "Component inside <Transition> renders non-element root node that
+         cannot be animated" in the console) -- and it was dead weight
+         besides: activePanel only ever goes work/about/resume <-> null
+         (Navigation is hidden while any panel is open, so you can't jump
+         directly from one panel to another), so mode="out-in" never had
+         two real branches to sequence between. -->
+    <WorkPanel v-if="activePanel === 'work'" @close="closePanel" />
+    <AboutPanel v-else-if="activePanel === 'about'" @close="closePanel" />
+    <ResumePanel v-else-if="activePanel === 'resume'" @close="closePanel" />
 </template>
