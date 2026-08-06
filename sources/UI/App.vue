@@ -1,11 +1,11 @@
 ﻿<script setup>
-import { ref, computed, provide, watch } from 'vue'
+import { ref, computed, provide, watch, onUnmounted } from 'vue'
 import { UI_BRIDGE_KEY } from './composables/useUIBridge.js'
 import { GAME_KEY } from './composables/useGame.js'
 
 import Navigation from './components/Navigation.vue'
 import ExploreHUD from './components/ExploreHUD.vue'
-import WorkPanel from './components/panels/WorkPanel.vue'
+import BillboardViewer from './components/BillboardViewer.vue'
 import AboutPanel from './components/panels/AboutPanel.vue'
 import ResumePanel from './components/panels/ResumePanel.vue'
 
@@ -32,6 +32,24 @@ if(!props.bridge)
 // screen / menu gate in this design. activePanel is the only thing that
 // pauses gameplay: null means "exploring", any string means a panel is open.
 const activePanel = ref(null)
+const workActive = ref(false)
+const projectIndex = ref(0)
+
+const stopBillboardState = props.bridge.on('billboardInteractionChanged', (active) =>
+{
+    workActive.value = active
+})
+
+const stopProjectState = props.bridge.on('billboardProjectChanged', (index) =>
+{
+    projectIndex.value = index
+})
+
+onUnmounted(() =>
+{
+    stopBillboardState()
+    stopProjectState()
+})
 
 const inputEnabled = computed(() => !activePanel.value)
 
@@ -45,6 +63,12 @@ watch(inputEnabled, (value) =>
 
 function openPanel(name)
 {
+    if(name === 'work')
+    {
+        props.bridge.emit('openWorkBillboard')
+        return
+    }
+
     if(activePanel.value === name)
         return
 
@@ -59,12 +83,12 @@ function closePanel()
 
 <template>
     <Navigation
-        v-if="!activePanel"
+        v-if="!activePanel && !workActive"
         :active-panel="activePanel"
         @open-panel="openPanel"
     />
 
-    <ExploreHUD v-if="!activePanel" />
+    <ExploreHUD v-if="!activePanel && !workActive" />
 
     <!-- No outer <Transition> here: PanelShell (rendered by each panel)
          already owns real enter/leave animation via its own nested
@@ -78,7 +102,7 @@ function closePanel()
          (Navigation is hidden while any panel is open, so you can't jump
          directly from one panel to another), so mode="out-in" never had
          two real branches to sequence between. -->
-    <WorkPanel v-if="activePanel === 'work'" @close="closePanel" />
+    <BillboardViewer v-if="workActive" :bridge="bridge" :project-index="projectIndex" />
     <AboutPanel v-else-if="activePanel === 'about'" @close="closePanel" />
     <ResumePanel v-else-if="activePanel === 'resume'" @close="closePanel" />
 </template>
