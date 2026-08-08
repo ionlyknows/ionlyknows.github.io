@@ -1,4 +1,4 @@
-﻿uniform float uTime;
+uniform float uTime;
 uniform float uFlowerDistance;
 uniform vec3 uPlayerPosition;
 uniform float uTerrainSize;

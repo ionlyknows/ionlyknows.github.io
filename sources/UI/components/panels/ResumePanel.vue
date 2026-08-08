@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import PanelShell from './PanelShell.vue'
 import { usePanelEscape } from '../../composables/usePanelEscape.js'
 import about from '../../data/about.js'

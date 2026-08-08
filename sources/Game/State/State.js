@@ -1,4 +1,4 @@
-﻿import Time from './Time.js'
+import Time from './Time.js'
 import Controls from './Controls.js'
 import Viewport from './Viewport.js'
 import DayCycle from './DayCycle.js'

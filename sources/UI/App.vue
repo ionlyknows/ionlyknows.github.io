@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, computed, provide, watch, onUnmounted } from 'vue'
 import { UI_BRIDGE_KEY } from './composables/useUIBridge.js'
 import { GAME_KEY } from './composables/useGame.js'

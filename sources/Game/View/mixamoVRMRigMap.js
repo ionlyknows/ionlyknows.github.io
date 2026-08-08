@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Map from Mixamo rig bone names to VRM humanoid bone names.
  * Source: official pixiv/three-vrm "humanoidAnimation" example (packages/three-vrm/examples/humanoidAnimation/mixamoVRMRigMap.js),
  * reproduced here so the game has no runtime dependency on the three-vrm examples folder.

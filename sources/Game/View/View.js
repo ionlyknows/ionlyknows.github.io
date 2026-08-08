@@ -1,4 +1,4 @@
-﻿import Billboard from './Billboard.js'
+import Billboard from './Billboard.js'
 import Camera from './Camera.js'
 import Chunks from './Chunks.js'
 import Grass from './Grass.js'

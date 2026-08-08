@@ -1,4 +1,4 @@
-﻿import { useUIBridge } from './useUIBridge.js'
+import { useUIBridge } from './useUIBridge.js'
 
 /**
  * Wires the global Escape key (emitted on UIBridge as 'escapePressed') to a

@@ -1,4 +1,4 @@
-﻿import EventsEmitter from 'events'
+import EventsEmitter from 'events'
 
 import Game from '@/Game.js'
 import State from '@/State/State.js'

@@ -1,4 +1,4 @@
-﻿import Game from '@/Game.js'
+import Game from '@/Game.js'
 import UIBridge from './UI/UIBridge.js'
 import { createUIApp } from './UI/main.js'
 import projects from './UI/data/projects.js'

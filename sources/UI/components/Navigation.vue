@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted } from 'vue'
 import gsap from 'gsap'
 import about from '../data/about.js'

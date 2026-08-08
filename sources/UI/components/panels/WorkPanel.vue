@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, computed, onMounted } from 'vue'
 import PanelShell from './PanelShell.vue'
 import { useGame } from '../../composables/useGame.js'

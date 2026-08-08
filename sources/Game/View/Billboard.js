@@ -1,24 +1,36 @@
 import * as THREE from 'three'
 import gsap from 'gsap'
 
-// The display is intentionally a world landmark: the canvas is texture-capped
-// for memory/bandwidth, while its UI is authored as an 8K display design.
-export const BILLBOARD = {
-    structurePosition: [ 10, 0, -45 ],
-    displayResolution: '7680 × 4320',
-    viewpoint: {
-        x: 10,
-        z: -18,
-        rotation: 0,
-        theta: 0,
-        phi: Math.PI * 0.43,
-        distance: 16
-    },
-    color: 0x00e5ff
-}
+import State from '@/State/State.js'
 
 const SCREEN_WIDTH = 30
 const SCREEN_HEIGHT = 16.875
+
+// The display is intentionally a world landmark: the canvas is texture-capped
+// for memory/bandwidth, while its UI is authored as an 8K display design.
+export const BILLBOARD = {
+    // Y here is only a startup fallback used for the handful of frames before
+    // the terrain worker resolves real elevation at this X/Z -- see
+    // Billboard#resolveGroundElevation(). It is not the structure's real
+    // ground height.
+    structurePosition: [ 10, 0, -45 ],
+    displayResolution: '7680 x 4320',
+    screenWidth: SCREEN_WIDTH,
+    screenHeight: SCREEN_HEIGHT,
+    // Tuning knobs for Teleporter#_computeWorkViewpoint(). x/z are no longer
+    // stored here: the player's standoff position is solved at fly-time from
+    // these plus the live viewport aspect + camera FOV, so the framing stays
+    // correct across window sizes instead of being hand-tuned for one.
+    viewpoint: {
+        rotation: 0,
+        theta: 0,
+        phi: Math.PI * 0.5, // camera orbits level with the player's own ground height
+        orbitDistance: 6, // how far the camera sits behind the player, third-person style
+        framingPadding: 1.2, // extra margin so the screen doesn't touch the frame edges
+        maxStandoffDistance: 55 // hard cap so extreme (e.g. narrow mobile) aspects can't fling the player away
+    },
+    color: 0x00e5ff
+}
 
 export default class Billboard
 {
@@ -30,19 +42,69 @@ export default class Billboard
         this.mediaElement = null
         this.mediaSource = null
         this.lastVideoFrame = 0
+
+        // Ground placement: terrain elevation streams in asynchronously from a
+        // Web Worker (see State/Terrain.js), so it's essentially never ready on
+        // the very first frame. `groundY` starts at the static fallback and is
+        // corrected to the real terrain height by resolveGroundElevation() as
+        // soon as the surrounding chunk finishes generating -- this is what
+        // stops the structure clipping into/floating above the ground.
+        this.groundY = BILLBOARD.structurePosition[1]
+        this.groundResolved = false
+
+        // The idle bob tween used to animate `group.position.y` directly, which
+        // is exactly the value resolveGroundElevation() also needs to write to.
+        // Two writers on the same property fight each other (GSAP replays its
+        // own recorded start/end values every tick and would stomp the ground
+        // snap right back down). Bob amount now lives in its own plain object
+        // and is composed with groundY each frame in update() instead.
+        this.floatState = { y: 0 }
+
         this.group = new THREE.Group()
-        this.group.position.set(...BILLBOARD.structurePosition)
+        this.group.position.set(BILLBOARD.structurePosition[0], this.groundY, BILLBOARD.structurePosition[2])
 
         this.buildFrame()
         this.buildScreen()
         this.startIdleAnimation()
+        this.resolveGroundElevation()
         this.scene.add(this.group)
+    }
+
+    // World-space Y the billboard's base is currently resting on (terrain
+    // elevation once resolved, the startup fallback until then).
+    get groundElevation()
+    {
+        return this.groundY
+    }
+
+    // World-space Y of the screen's centre -- ground height plus the screen's
+    // fixed local offset. Used by Teleporter to frame the "Work" camera shot.
+    get screenCenterY()
+    {
+        return this.groundY + this.screen.position.y
+    }
+
+    resolveGroundElevation()
+    {
+        if(this.groundResolved)
+            return
+
+        const state = State.getInstance()
+        const elevation = state.chunks.getElevationForPosition(BILLBOARD.structurePosition[0], BILLBOARD.structurePosition[2])
+
+        // getElevationForPosition() returns `false` (no chunk yet) or
+        // `undefined` (chunk exists, terrain worker hasn't finished) while not
+        // ready -- only a real number means the data is in.
+        if(typeof elevation === 'number')
+        {
+            this.groundY = elevation
+            this.groundResolved = true
+        }
     }
 
     buildFrame()
     {
         const shell = new THREE.MeshBasicMaterial({ color: 0x070b13 })
-        const accent = new THREE.MeshBasicMaterial({ color: BILLBOARD.color })
         const width = SCREEN_WIDTH + 1.4
         const height = SCREEN_HEIGHT + 1.4
 
@@ -57,18 +119,6 @@ export default class Billboard
         )
         edge.position.copy(housing.position)
         this.group.add(edge)
-
-        const trussGeometry = new THREE.BoxGeometry(0.7, 6, 0.7)
-        for(const x of [ -width * 0.39, width * 0.39 ])
-        {
-            const truss = new THREE.Mesh(trussGeometry, shell)
-            truss.position.set(x, 3, 0)
-            this.group.add(truss)
-
-            const strip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 5.7, 0.75), accent)
-            strip.position.set(x, 3, 0.38)
-            this.group.add(strip)
-        }
 
         const beaconGeometry = new THREE.SphereGeometry(0.32, 12, 8)
         for(const x of [ -width * 0.46, width * 0.46 ])
@@ -210,8 +260,8 @@ export default class Billboard
 
         ctx.fillStyle = '#e9ffff'
         ctx.font = '700 28px monospace'
-        ctx.fillText('← PREV', 105, height - 105)
-        ctx.fillText('NEXT →', width - 250, height - 105)
+        ctx.fillText('<- PREV', 105, height - 105)
+        ctx.fillText('NEXT ->', width - 250, height - 105)
         ctx.fillStyle = '#ff174f'
         ctx.fillText(this.active ? 'ESC // EXIT INTERFACE' : 'WORK // CONNECT', width * 0.5 - 185, height - 105)
 
@@ -253,7 +303,7 @@ export default class Billboard
 
     startIdleAnimation()
     {
-        this.idleTween = gsap.to(this.group.position, {
+        this.idleTween = gsap.to(this.floatState, {
             y: 0.35,
             duration: 3.2,
             ease: 'sine.inOut',
@@ -339,6 +389,11 @@ export default class Billboard
 
     update(elapsedTime)
     {
+        if(!this.groundResolved)
+            this.resolveGroundElevation()
+
+        this.group.position.y = this.groundY + this.floatState.y
+
         this.glow.material.opacity = (this.active ? 0.1 : 0.045) + Math.sin(elapsedTime * 2.4) * 0.018
 
         if(this.active && this.mediaElement instanceof HTMLVideoElement && elapsedTime - this.lastVideoFrame > 0.12)
