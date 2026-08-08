@@ -6,8 +6,10 @@ const props = defineProps({
     subtitle: { type: String, default: '' },
     // 'card' (default) is a centered card over a translucent backdrop that
     // still shows the 3D scene behind it -- used for Work/Resume. 'fullscreen'
-    // fills the viewport edge-to-edge with a scrollable body -- used for About,
-    // per spec ("full-screen HTML/CSS overlay ... vertically scrollable").
+    // is a wider (max 980px) glass HUD card over a fully transparent backdrop
+    // with its own scrollable body -- used for About. Per the Figma source of
+    // truth, the 3D world must stay visible behind it at all times, so this
+    // variant never paints an opaque background at any layer.
     variant: { type: String, default: 'card' }
 })
 
@@ -66,12 +68,17 @@ function onPanelLeave(el, done)
                             <h2 class="iw-panel__title">{{ title }}</h2>
                             <p v-if="subtitle" class="iw-panel__subtitle">{{ subtitle }}</p>
                         </div>
-                        <button class="iw-panel__close" type="button" @click="emit('close')" aria-label="Close">
-                            <span>Close</span>
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                            </svg>
-                        </button>
+                        <div class="iw-panel__header-right">
+                            <!-- Optional per-panel extra (e.g. About's "AVAILABLE" status dot).
+                                 Empty by default, so Work/Resume render exactly as before. -->
+                            <slot name="header-meta" />
+                            <button class="iw-panel__close" type="button" @click="emit('close')" aria-label="Close">
+                                <span>Close</span>
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                    <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                                </svg>
+                            </button>
+                        </div>
                     </header>
                     <div class="iw-panel__body iw-scrollable">
                         <slot />
@@ -98,8 +105,11 @@ function onPanelLeave(el, done)
 
 .iw-panel-backdrop--fullscreen
 {
-    padding: 0;
-    background: var(--iw-ink);
+    /* Figma source of truth: "the 3D game world MUST remain visible behind
+       the About Me interface at all times" -- no opaque page background,
+       just enough padding to let the HUD card float above the scene. */
+    padding: 14px;
+    background: transparent;
 }
 
 .iw-panel
@@ -118,12 +128,16 @@ function onPanelLeave(el, done)
 .iw-panel--fullscreen
 {
     width: 100%;
+    max-width: 980px;
     height: 100%;
     max-height: 100%;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
+    margin: 0 auto;
+    border: 1px solid var(--iw-border);
+    border-radius: var(--iw-radius-lg);
+    box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.65);
+    background: rgba(6, 9, 16, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 .iw-panel__header
@@ -138,11 +152,32 @@ function onPanelLeave(el, done)
 
 .iw-panel--fullscreen .iw-panel__header
 {
-    padding: 32px clamp(20px, 6vw, 80px) 20px;
+    padding: 18px 28px;
     position: sticky;
     top: 0;
-    background: var(--iw-ink);
+    background: rgba(4, 6, 12, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 1;
+}
+
+.iw-panel--fullscreen .iw-panel__title
+{
+    font-family: 'JetBrains Mono', var(--iw-font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.iw-panel--fullscreen .iw-panel__subtitle
+{
+    font-family: 'JetBrains Mono', var(--iw-font-mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--iw-accent);
+    opacity: 0.75;
+    margin-top: 2px;
 }
 
 .iw-panel__title
@@ -158,6 +193,13 @@ function onPanelLeave(el, done)
     margin: 6px 0 0;
     font-size: 13px;
     color: var(--iw-text-dim);
+}
+
+.iw-panel__header-right
+{
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 
 .iw-panel__close
@@ -191,6 +233,6 @@ function onPanelLeave(el, done)
 
 .iw-panel--fullscreen .iw-panel__body
 {
-    padding: 8px clamp(20px, 6vw, 80px) 80px;
+    padding: 32px clamp(20px, 4vw, 40px) 60px;
 }
 </style>
