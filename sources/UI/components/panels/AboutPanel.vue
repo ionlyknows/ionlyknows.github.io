@@ -94,6 +94,58 @@ usePanelEscape(close)
                             <div class="iw-about__tag-row">
                                 <span v-for="tag in project.tags" :key="tag" class="iw-about__tag">{{ tag }}</span>
                             </div>
+
+                            <!-- Live Site / Repository actions. Each renders as a real
+                                 link only when its URL is filled in (see about.js); with
+                                 no URL it renders a disabled placeholder instead, so we
+                                 never ship a dead or fake link. @click.stop keeps the
+                                 button clicks from bubbling into the card's own
+                                 hover/click affordance above. -->
+                            <div class="iw-about__project-links">
+                                <a
+                                    v-if="project.liveUrl"
+                                    class="iw-about__project-link iw-about__project-link--live"
+                                    :href="project.liveUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    :aria-label="`Open live site for ${project.title} (opens in a new tab)`"
+                                    @click.stop
+                                >
+                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                        <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    Live Site
+                                </a>
+                                <span v-else class="iw-about__project-link iw-about__project-link--disabled" aria-disabled="true" title="Live site link coming soon">
+                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                        <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    Live Site
+                                </span>
+
+                                <a
+                                    v-if="project.repoUrl"
+                                    class="iw-about__project-link iw-about__project-link--repo"
+                                    :href="project.repoUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    :aria-label="`Open GitHub repository for ${project.title} (opens in a new tab)`"
+                                    @click.stop
+                                >
+                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                                    </svg>
+                                    Repository
+                                </a>
+                                <span v-else class="iw-about__project-link iw-about__project-link--disabled" aria-disabled="true" title="Repository link coming soon">
+                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                                    </svg>
+                                    Repository
+                                </span>
+                            </div>
                         </div>
                     </article>
                 </div>
@@ -459,6 +511,8 @@ usePanelEscape(close)
 
 .iw-about__project-card
 {
+    display: flex;
+    flex-direction: column;
     border-radius: 8px;
     border: 1px solid var(--iw-border);
     background: rgba(255, 255, 255, 0.01);
@@ -518,6 +572,9 @@ usePanelEscape(close)
 
 .iw-about__project-body
 {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
     padding: 16px 18px;
 }
 
@@ -561,6 +618,99 @@ usePanelEscape(close)
     color: var(--iw-about-text-2);
     line-height: 1.7;
     margin: 0 0 14px;
+}
+
+/* -- Project actions: Live Site / Repository --
+   Full-width, evenly-split accent-outlined pills (per the approved mock):
+   both buttons share one look, icon + label centered, colored border and
+   label visible at rest (not just on hover), subtle lift + glow on
+   hover/focus.
+
+   margin-top: auto pins this row to the bottom of .iw-about__project-body
+   (a flex column) -- so the buttons sit on the same baseline across all
+   three cards regardless of how long each project's description/tag list
+   runs, instead of trailing right after the tags at whatever height that
+   happens to land on. */
+.iw-about__project-links
+{
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 16px;
+}
+
+.iw-about__project-link
+{
+    flex: 1 1 0;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: var(--iw-about-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--iw-about-accent);
+    background: var(--iw-about-accent-faint);
+    border: 1.5px solid var(--iw-about-border-accent);
+    border-radius: 8px;
+    padding: 11px 10px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s var(--iw-ease), border-color 0.2s var(--iw-ease),
+        background 0.2s var(--iw-ease), box-shadow 0.2s var(--iw-ease),
+        transform 0.2s var(--iw-ease);
+}
+
+.iw-about__project-link-icon
+{
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.iw-about__project-link:hover,
+.iw-about__project-link:focus-visible
+{
+    color: var(--iw-about-accent);
+    border-color: var(--iw-about-accent);
+    background: rgba(255, 138, 61, 0.16);
+    box-shadow: 0 0 0 1px rgba(255, 138, 61, 0.25), 0 8px 20px -10px rgba(255, 138, 61, 0.5);
+    transform: translateY(-1px);
+}
+
+.iw-about__project-link:focus-visible
+{
+    outline: 2px solid var(--iw-about-accent);
+    outline-offset: 2px;
+}
+
+/* Disabled state -- shown when a project has no liveUrl/repoUrl yet.
+   Same footprint/size as a real button so the row layout never jumps once
+   the URL is filled in, but visually inert: dashed border, dimmed, no
+   hover motion, not focusable (it's a <span>, not an <a>). */
+.iw-about__project-link--disabled
+{
+    color: var(--iw-about-text-3);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--iw-border);
+    border-style: dashed;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.iw-about__project-link--disabled:hover
+{
+    color: var(--iw-about-text-3);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--iw-border);
+    box-shadow: none;
+    transform: none;
 }
 
 /* -- Activities -- */
@@ -865,6 +1015,11 @@ usePanelEscape(close)
     .iw-about__projects
     {
         grid-template-columns: 1fr;
+    }
+
+    .iw-about__project-links
+    {
+        flex-direction: column;
     }
 
     .iw-about__quick-row

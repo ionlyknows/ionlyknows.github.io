@@ -32,6 +32,12 @@ export default {
     // billboard) -- About tells the same story in its own scrollable list,
     // per the Figma design. Swap `image` for local screenshots when ready;
     // these are placeholder Unsplash photos carried over from the design file.
+    //
+    // liveUrl / repoUrl: PLACEHOLDERS. Leave as '' until you have the real
+    // link -- AboutPanel.vue hides a project's Live Site / Repository button
+    // whenever its URL is empty (renders a disabled state instead), so an
+    // empty string never produces a dead or fake link. Fill these in with
+    // your actual deployed URL and GitHub repo URL when ready.
     projects: [
         {
             num: 'Project 01',
@@ -39,7 +45,9 @@ export default {
             desc: 'An immersive 3D portfolio experience designed around exploration and interaction.',
             tags: [ 'Three.js', 'WebGL', 'JavaScript' ],
             image: 'https://images.unsplash.com/photo-1760008486593-a85315610136?w=600&h=360&fit=crop&auto=format',
-            imageAlt: '3D abstract shapes representing an interactive portfolio'
+            imageAlt: '3D abstract shapes representing an interactive portfolio',
+            liveUrl: '',
+            repoUrl: ''
         },
         {
             num: 'Project 02',
@@ -47,7 +55,9 @@ export default {
             desc: 'Desktop application for managing walk-in registration and attendee check-ins.',
             tags: [ 'Java', 'Swing', 'JSON' ],
             image: 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?w=600&h=360&fit=crop&auto=format',
-            imageAlt: 'Dashboard monitoring screen for event management'
+            imageAlt: 'Dashboard monitoring screen for event management',
+            liveUrl: '',
+            repoUrl: ''
         },
         {
             num: 'Project 03',
@@ -55,7 +65,9 @@ export default {
             desc: 'Desktop ordering application designed to simplify canteen transactions.',
             tags: [ 'Java', 'GUI' ],
             image: 'https://images.unsplash.com/photo-1760888549280-4aef010720bd?w=600&h=360&fit=crop&auto=format',
-            imageAlt: 'Food ordering app on a smartphone'
+            imageAlt: 'Food ordering app on a smartphone',
+            liveUrl: '',
+            repoUrl: ''
         }
     ],
 

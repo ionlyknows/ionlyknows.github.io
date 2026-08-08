@@ -1,29 +1,32 @@
 <# ============================================================
-   deploy-about-panel.ps1
-   Writes PanelShell.vue, AboutPanel.vue, and about.js into the
-   Yknowjeff.github.io project, using no-BOM UTF8 writes
-   (PowerShell 5.1-safe -- avoids the Set-Content BOM collision
-   that breaks Rollup with "Unexpected character '»'").
+   deploy-project-buttons.ps1
+   Restyles the Live Site / Repository buttons on About Me > Projects
+   to full-width, accent-outlined pills (matches the approved mock).
+
+   Writes (with backups of any existing files):
+     sources/UI/components/panels/AboutPanel.vue   (modified: button restyle)
+     sources/UI/components/panels/PanelShell.vue    (unchanged, re-written for consistency)
+     sources/UI/data/about.js                       (unchanged, re-written for consistency)
+
+   Uses no-BOM UTF8 writes (PowerShell 5.1-safe).
 
    USAGE:
      1. Edit $ProjectRoot below if your repo lives elsewhere.
-     2. Save this file as deploy-about-panel.ps1
+     2. Save this file as deploy-project-buttons.ps1
      3. Run:
-          Unblock-File .\deploy-about-panel.ps1
-          powershell -ExecutionPolicy Bypass -File .\deploy-about-panel.ps1
+          Unblock-File .\deploy-project-buttons.ps1
+          powershell -ExecutionPolicy Bypass -File .\deploy-project-buttons.ps1
    ============================================================ #>
 
 $ErrorActionPreference = "Stop"
 
-# ---- CONFIG: adjust if your local clone path differs ----
 $ProjectRoot = "$PSScriptRoot"
 # If this script is NOT sitting inside the repo root, set the absolute path instead, e.g.:
-# $ProjectRoot = "C:\Users\Jeff\Projects\Yknowjeff.github.io"
+# $ProjectRoot = "C:\Users\JEFF\OneDrive\Documents\YknowJeff"
 
 $PanelsDir = Join-Path $ProjectRoot "sources\UI\components\panels"
 $DataDir   = Join-Path $ProjectRoot "sources\UI\data"
 
-# ---- Sanity checks before writing anything ----
 if (-not (Test-Path $ProjectRoot)) {
     throw "ProjectRoot not found: $ProjectRoot -- update `$ProjectRoot at the top of this script."
 }
@@ -35,7 +38,6 @@ Write-Host "Target panels dir: $PanelsDir"
 Write-Host "Target data dir:   $DataDir"
 Write-Host ""
 
-# ---- No-BOM UTF8 writer (PS 5.1 compatible) ----
 function Write-Utf8NoBom {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
@@ -46,7 +48,6 @@ function Write-Utf8NoBom {
     Write-Host "  Wrote: $Path"
 }
 
-# ---- Pre-write backups of anything that already exists ----
 $targets = @(
     (Join-Path $PanelsDir "PanelShell.vue"),
     (Join-Path $PanelsDir "AboutPanel.vue"),
@@ -63,7 +64,6 @@ foreach ($t in $targets) {
 }
 Write-Host ""
 
-# ---- PanelShell.vue ----
 $panelShellContent = @'
 <script setup>
 import gsap from 'gsap'
@@ -305,10 +305,8 @@ function onPanelLeave(el, done)
 </style>
 
 '@
-
 Write-Utf8NoBom -Path (Join-Path $PanelsDir "PanelShell.vue") -Content $panelShellContent
 
-# ---- AboutPanel.vue ----
 $aboutPanelContent = @'
 <script setup>
 import PanelShell from './PanelShell.vue'
@@ -405,6 +403,58 @@ usePanelEscape(close)
                             <p class="iw-about__project-desc">{{ project.desc }}</p>
                             <div class="iw-about__tag-row">
                                 <span v-for="tag in project.tags" :key="tag" class="iw-about__tag">{{ tag }}</span>
+                            </div>
+
+                            <!-- Live Site / Repository actions. Each renders as a real
+                                 link only when its URL is filled in (see about.js); with
+                                 no URL it renders a disabled placeholder instead, so we
+                                 never ship a dead or fake link. @click.stop keeps the
+                                 button clicks from bubbling into the card's own
+                                 hover/click affordance above. -->
+                            <div class="iw-about__project-links">
+                                <a
+                                    v-if="project.liveUrl"
+                                    class="iw-about__project-link iw-about__project-link--live"
+                                    :href="project.liveUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    :aria-label="`Open live site for ${project.title} (opens in a new tab)`"
+                                    @click.stop
+                                >
+                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                        <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    Live Site
+                                </a>
+                                <span v-else class="iw-about__project-link iw-about__project-link--disabled" aria-disabled="true" title="Live site link coming soon">
+                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                        <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    Live Site
+                                </span>
+
+                                <a
+                                    v-if="project.repoUrl"
+                                    class="iw-about__project-link iw-about__project-link--repo"
+                                    :href="project.repoUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    :aria-label="`Open GitHub repository for ${project.title} (opens in a new tab)`"
+                                    @click.stop
+                                >
+                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                                    </svg>
+                                    Repository
+                                </a>
+                                <span v-else class="iw-about__project-link iw-about__project-link--disabled" aria-disabled="true" title="Repository link coming soon">
+                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                                    </svg>
+                                    Repository
+                                </span>
                             </div>
                         </div>
                     </article>
@@ -875,6 +925,88 @@ usePanelEscape(close)
     margin: 0 0 14px;
 }
 
+/* -- Project actions: Live Site / Repository --
+   Full-width, evenly-split accent-outlined pills (per the approved mock):
+   both buttons share one look, icon + label centered, colored border and
+   label visible at rest (not just on hover), subtle lift + glow on
+   hover/focus. */
+.iw-about__project-links
+{
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.iw-about__project-link
+{
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--iw-about-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--iw-about-accent);
+    background: var(--iw-about-accent-faint);
+    border: 1.5px solid var(--iw-about-border-accent);
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s var(--iw-ease), border-color 0.2s var(--iw-ease),
+        background 0.2s var(--iw-ease), box-shadow 0.2s var(--iw-ease),
+        transform 0.2s var(--iw-ease);
+}
+
+.iw-about__project-link-icon
+{
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.iw-about__project-link:hover,
+.iw-about__project-link:focus-visible
+{
+    color: var(--iw-about-accent);
+    border-color: var(--iw-about-accent);
+    background: rgba(255, 138, 61, 0.16);
+    box-shadow: 0 0 0 1px rgba(255, 138, 61, 0.25), 0 8px 20px -10px rgba(255, 138, 61, 0.5);
+    transform: translateY(-1px);
+}
+
+.iw-about__project-link:focus-visible
+{
+    outline: 2px solid var(--iw-about-accent);
+    outline-offset: 2px;
+}
+
+/* Disabled state -- shown when a project has no liveUrl/repoUrl yet.
+   Same footprint/size as a real button so the row layout never jumps once
+   the URL is filled in, but visually inert: dashed border, dimmed, no
+   hover motion, not focusable (it's a <span>, not an <a>). */
+.iw-about__project-link--disabled
+{
+    color: var(--iw-about-text-3);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--iw-border);
+    border-style: dashed;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.iw-about__project-link--disabled:hover
+{
+    color: var(--iw-about-text-3);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--iw-border);
+    box-shadow: none;
+    transform: none;
+}
+
 /* -- Activities -- */
 .iw-about__activity
 {
@@ -1179,6 +1311,11 @@ usePanelEscape(close)
         grid-template-columns: 1fr;
     }
 
+    .iw-about__project-links
+    {
+        flex-direction: column;
+    }
+
     .iw-about__quick-row
     {
         flex-direction: column;
@@ -1188,10 +1325,8 @@ usePanelEscape(close)
 </style>
 
 '@
-
 Write-Utf8NoBom -Path (Join-Path $PanelsDir "AboutPanel.vue") -Content $aboutPanelContent
 
-# ---- about.js ----
 $aboutJsContent = @'
 // Content for the About panel (sources/UI/components/panels/AboutPanel.vue)
 // and, for name/role only, the Resume panel. Source of truth for layout is
@@ -1227,6 +1362,12 @@ export default {
     // billboard) -- About tells the same story in its own scrollable list,
     // per the Figma design. Swap `image` for local screenshots when ready;
     // these are placeholder Unsplash photos carried over from the design file.
+    //
+    // liveUrl / repoUrl: PLACEHOLDERS. Leave as '' until you have the real
+    // link -- AboutPanel.vue hides a project's Live Site / Repository button
+    // whenever its URL is empty (renders a disabled state instead), so an
+    // empty string never produces a dead or fake link. Fill these in with
+    // your actual deployed URL and GitHub repo URL when ready.
     projects: [
         {
             num: 'Project 01',
@@ -1234,7 +1375,9 @@ export default {
             desc: 'An immersive 3D portfolio experience designed around exploration and interaction.',
             tags: [ 'Three.js', 'WebGL', 'JavaScript' ],
             image: 'https://images.unsplash.com/photo-1760008486593-a85315610136?w=600&h=360&fit=crop&auto=format',
-            imageAlt: '3D abstract shapes representing an interactive portfolio'
+            imageAlt: '3D abstract shapes representing an interactive portfolio',
+            liveUrl: '',
+            repoUrl: ''
         },
         {
             num: 'Project 02',
@@ -1242,7 +1385,9 @@ export default {
             desc: 'Desktop application for managing walk-in registration and attendee check-ins.',
             tags: [ 'Java', 'Swing', 'JSON' ],
             image: 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?w=600&h=360&fit=crop&auto=format',
-            imageAlt: 'Dashboard monitoring screen for event management'
+            imageAlt: 'Dashboard monitoring screen for event management',
+            liveUrl: '',
+            repoUrl: ''
         },
         {
             num: 'Project 03',
@@ -1250,7 +1395,9 @@ export default {
             desc: 'Desktop ordering application designed to simplify canteen transactions.',
             tags: [ 'Java', 'GUI' ],
             image: 'https://images.unsplash.com/photo-1760888549280-4aef010720bd?w=600&h=360&fit=crop&auto=format',
-            imageAlt: 'Food ordering app on a smartphone'
+            imageAlt: 'Food ordering app on a smartphone',
+            liveUrl: '',
+            repoUrl: ''
         }
     ],
 
@@ -1319,7 +1466,6 @@ export default {
 }
 
 '@
-
 Write-Utf8NoBom -Path (Join-Path $DataDir "about.js") -Content $aboutJsContent
 
 Write-Host ""
@@ -1338,4 +1484,6 @@ foreach ($t in $targets) {
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  git status"
-Write-Host "  npm run build   # sanity-check the Rollup/Vite build before committing"
+Write-Host "  git diff sources/UI/components/panels/AboutPanel.vue"
+Write-Host "  npm run build"
+Write-Host "  npm run dev   # check About Me > Projects visually"
