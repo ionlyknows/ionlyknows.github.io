@@ -146,6 +146,29 @@ export default class Teleporter
         return this._flyTo(target, duration)
     }
 
+    returnToSpawn(duration = 0.8)
+    {
+        const player = this.state.player
+
+        if(player.camera.mode !== Camera.MODE_THIRDPERSON)
+        {
+            player.camera.fly.deactivate()
+            player.camera.thirdPerson.activate()
+            player.camera.mode = Camera.MODE_THIRDPERSON
+        }
+
+        return this._flyTo({
+            x: 10,
+            z: 1,
+            rotation: 0,
+            theta: -Math.PI * 0.25,
+            phi: Math.PI * 0.45,
+            distance: 15,
+            aboveOffset: 2,
+            heightOffset: 0
+        }, duration)
+    }
+
     _flyTo(target, duration)
     {
         const player = this.state.player

@@ -1,18 +1,21 @@
 <script setup>
+import { ref } from 'vue'
 import PanelShell from './PanelShell.vue'
 import { usePanelEscape } from '../../composables/usePanelEscape.js'
 import about from '../../data/about.js'
 
 const emit = defineEmits([ 'close' ])
+const avatarLoadFailed = ref(false)
 
 function close() { emit('close') }
+function onAvatarError() { avatarLoadFailed.value = true }
 
 // Unchanged: same global-Escape wiring every panel uses.
 usePanelEscape(close)
 </script>
 
 <template>
-    <PanelShell variant="fullscreen" :title="about.name" :subtitle="about.role" @close="close">
+    <PanelShell variant="fullscreen" :title="about.name" :subtitle="about.role" :show-header-copy="false" @close="close">
         <template #header-meta>
             <span class="iw-about__status">
                 <span class="iw-about__status-dot" />
@@ -48,12 +51,19 @@ usePanelEscape(close)
                 <div class="iw-about__avatar-block">
                     <div class="iw-about__avatar">
                         <div class="iw-about__avatar-glow" />
-                        <svg class="iw-about__avatar-icon" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                        <template v-if="about.hero.avatarImage && !avatarLoadFailed">
+                            <img
+                                class="iw-about__avatar-image"
+                                :src="about.hero.avatarImage"
+                                :alt="`Profile picture of ${about.name}`"
+                                @error="onAvatarError"
+                            />
+                        </template>
+                        <svg v-else class="iw-about__avatar-icon" viewBox="0 0 80 80" fill="none" aria-hidden="true">
                             <circle cx="40" cy="30" r="18" fill="var(--iw-about-accent-faint)" stroke="var(--iw-about-accent-dim)" stroke-width="1.5" />
                             <path d="M8 72 C8 52 72 52 72 72" fill="var(--iw-about-accent-faint)" stroke="var(--iw-about-accent-dim)" stroke-width="1.5" />
                         </svg>
                     </div>
-                    <p class="iw-about__avatar-caption">{{ about.hero.avatarCaption }}</p>
                 </div>
             </section>
 
@@ -88,7 +98,6 @@ usePanelEscape(close)
                         <div class="iw-about__project-body">
                             <div class="iw-about__project-head">
                                 <span class="iw-about__project-title">{{ project.title }}</span>
-                                <span class="iw-about__project-view">View →</span>
                             </div>
                             <p class="iw-about__project-desc">{{ project.desc }}</p>
                             <div class="iw-about__tag-row">
@@ -98,9 +107,7 @@ usePanelEscape(close)
                             <!-- Live Site / Repository actions. Each renders as a real
                                  link only when its URL is filled in (see about.js); with
                                  no URL it renders a disabled placeholder instead, so we
-                                 never ship a dead or fake link. @click.stop keeps the
-                                 button clicks from bubbling into the card's own
-                                 hover/click affordance above. -->
+                                 never ship a dead or fake link. -->
                             <div class="iw-about__project-links">
                                 <a
                                     v-if="project.liveUrl"
@@ -157,7 +164,15 @@ usePanelEscape(close)
             <section>
                 <p class="iw-about__slug">// activities</p>
                 <h3 class="iw-about__heading">Hands-on Practice</h3>
-                <article v-for="activity in about.activities" :key="activity.title" class="iw-about__activity">
+                <a
+                    v-for="activity in about.activities"
+                    :key="activity.title"
+                    class="iw-about__activity"
+                    :href="activity.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :aria-label="`Open ${activity.title} in a new tab`"
+                >
                     <div class="iw-about__activity-head">
                         <div>
                             <p class="iw-about__activity-meta">{{ activity.num }} · {{ activity.year }}</p>
@@ -167,7 +182,7 @@ usePanelEscape(close)
                         <span class="iw-about__activity-details">Details →</span>
                     </div>
                     <p class="iw-about__activity-desc">{{ activity.desc }}</p>
-                </article>
+                </a>
             </section>
 
             <hr class="iw-about__divider">
@@ -180,7 +195,10 @@ usePanelEscape(close)
                     <p class="iw-about__timeline-period">{{ entry.period }}</p>
                     <p class="iw-about__timeline-title">{{ entry.title }}</p>
                     <p class="iw-about__timeline-place">{{ entry.place }}</p>
-                    <p class="iw-about__timeline-desc">{{ entry.desc }}</p>
+                    <p v-if="entry.desc" class="iw-about__timeline-desc">{{ entry.desc }}</p>
+                    <ul v-if="entry.bullets" class="iw-about__timeline-bullets">
+                        <li v-for="(bullet, index) in entry.bullets" :key="index">{{ bullet }}</li>
+                    </ul>
                 </div>
             </section>
 
@@ -190,35 +208,41 @@ usePanelEscape(close)
             <section>
                 <p class="iw-about__slug">// achievements</p>
                 <h3 class="iw-about__heading">Milestones</h3>
-                <div v-for="(item, i) in about.achievements" :key="i" class="iw-about__achievement-row">
-                    <span class="iw-about__achievement-year">{{ item.year }}</span>
-                    <span class="iw-about__achievement-label">{{ item.label }}</span>
+                <div class="iw-about__achievements">
+                    <article v-for="(item, i) in about.achievements" :key="i" class="iw-about__achievement-row">
+                        <div class="iw-about__achievement-copy">
+                            <span class="iw-about__achievement-year">{{ item.year }}</span>
+                            <span class="iw-about__achievement-label">{{ item.label }}</span>
+                            <dl class="iw-about__achievement-details">
+                                <div>
+                                    <dt>Issuer</dt>
+                                    <dd>{{ item.issuer }}</dd>
+                                </div>
+                                <div>
+                                    <dt>Credential ID</dt>
+                                    <dd>{{ item.credentialId }}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                        <a
+                            class="iw-about__achievement-image-link"
+                            :href="item.imageUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            :aria-label="`Open full certificate image for ${item.label} in a new tab`"
+                        >
+                            <img class="iw-about__achievement-image" :src="item.imageUrl" :alt="item.imageAlt" />
+                        </a>
+                        <a
+                            class="iw-about__achievement-credential-button"
+                            :href="item.credentialUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            CREDENTIAL
+                        </a>
+                    </article>
                 </div>
-            </section>
-
-            <hr class="iw-about__divider">
-
-            <!-- â”€â”€ EDUCATION â”€â”€ -->
-            <section>
-                <p class="iw-about__slug">// education</p>
-                <h3 class="iw-about__heading">Academic Background</h3>
-                <div class="iw-about__education-card">
-                    <p class="iw-about__education-school">{{ about.education.school }}</p>
-                    <p class="iw-about__education-degree">{{ about.education.degree }}</p>
-                    <p class="iw-about__education-period">{{ about.education.period }}</p>
-                </div>
-            </section>
-
-            <hr class="iw-about__divider">
-
-            <!-- â”€â”€ RESUME â”€â”€ -->
-            <section>
-                <p class="iw-about__slug">// resume</p>
-                <h3 class="iw-about__heading">{{ about.resumeCta.heading }}</h3>
-                <p class="iw-about__bio">{{ about.resumeCta.text }}</p>
-                <a class="iw-about__resume-button" :href="about.resumeCta.path" download>
-                    {{ about.resumeCta.buttonLabel }}
-                </a>
             </section>
 
             <hr class="iw-about__divider">
@@ -230,23 +254,24 @@ usePanelEscape(close)
                 <p class="iw-about__bio">{{ about.contact.subheading }}</p>
 
                 <div class="iw-about__contact-rows">
-                    <a v-if="about.contact.email" class="iw-about__contact-row" :href="`mailto:${about.contact.email}`">
+                    <div v-if="about.contact.email" class="iw-about__contact-row">
                         <span>Email</span>
-                        <span>{{ about.contact.email }}</span>
-                    </a>
-                    <a v-if="about.contact.github" class="iw-about__contact-row" :href="about.contact.github" target="_blank" rel="noopener noreferrer">
+                        <a :href="`mailto:${about.contact.email}?subject=Portfolio%20Inquiry`" target="_blank" rel="noopener noreferrer">{{ about.contact.email }}</a>
+                    </div>
+                    <div v-if="about.contact.github" class="iw-about__contact-row">
                         <span>GitHub</span>
-                        <span>{{ about.contact.github.replace('https://', '') }}</span>
-                    </a>
-                    <a v-if="about.contact.linkedin" class="iw-about__contact-row" :href="about.contact.linkedin" target="_blank" rel="noopener noreferrer">
+                        <a :href="about.contact.github" target="_blank" rel="noopener noreferrer">{{ about.contact.github.replace('https://', '') }}</a>
+                    </div>
+                    <div v-if="about.contact.linkedin" class="iw-about__contact-row">
                         <span>LinkedIn</span>
-                        <span>{{ about.contact.linkedin.replace('https://', '') }}</span>
-                    </a>
+                        <a :href="about.contact.linkedin" target="_blank" rel="noopener noreferrer">{{ about.contact.linkedin.replace('https://', '') }}</a>
+                    </div>
+                    <div v-if="about.contact.facebook" class="iw-about__contact-row">
+                        <span>Facebook</span>
+                        <a :href="about.contact.facebook" target="_blank" rel="noopener noreferrer">{{ about.contact.facebook.replace('https://', '') }}</a>
+                    </div>
                 </div>
 
-                <a v-if="about.contact.email" class="iw-about__connect-button" :href="`mailto:${about.contact.email}`">
-                    Connect With Me
-                </a>
             </section>
         </div>
     </PanelShell>
@@ -382,7 +407,6 @@ usePanelEscape(close)
 
 .iw-about__quick-info
 {
-    border-top: 1px solid var(--iw-border);
     margin: 20px 0 0;
 }
 
@@ -392,7 +416,6 @@ usePanelEscape(close)
     align-items: flex-start;
     gap: 16px;
     padding: 12px 0;
-    border-bottom: 1px solid var(--iw-border);
     margin: 0;
 }
 
@@ -428,8 +451,18 @@ usePanelEscape(close)
 .iw-about__avatar
 {
     position: relative;
-    width: 180px;
-    height: 180px;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.iw-about__avatar-image
+{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .iw-about__avatar-glow
@@ -488,8 +521,17 @@ usePanelEscape(close)
 .iw-about__skills
 {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.iw-about__skill-group
+{
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--iw-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .iw-about__skill-group-title
@@ -498,7 +540,7 @@ usePanelEscape(close)
     font-size: 10px;
     color: var(--iw-about-text-3);
     letter-spacing: 0.1em;
-    margin: 0 0 12px;
+    margin: 0 0 10px;
 }
 
 /* -- Projects -- */
@@ -517,15 +559,7 @@ usePanelEscape(close)
     border: 1px solid var(--iw-border);
     background: rgba(255, 255, 255, 0.01);
     overflow: hidden;
-    cursor: pointer;
     transition: border-color 0.25s var(--iw-ease), background 0.25s var(--iw-ease);
-}
-
-.iw-about__project-card:hover,
-.iw-about__project-card:focus-within
-{
-    border-color: var(--iw-about-border-accent);
-    background: rgba(255, 138, 61, 0.03);
 }
 
 .iw-about__project-media
@@ -533,7 +567,6 @@ usePanelEscape(close)
     position: relative;
     width: 100%;
     height: 160px;
-    background: rgba(10, 14, 22, 0.8);
     overflow: hidden;
 }
 
@@ -543,13 +576,7 @@ usePanelEscape(close)
     height: 100%;
     object-fit: cover;
     display: block;
-    opacity: 0.5;
-    transition: opacity 0.25s var(--iw-ease);
-}
-
-.iw-about__project-card:hover .iw-about__project-media img
-{
-    opacity: 0.75;
+    opacity: 1;
 }
 
 .iw-about__project-num
@@ -716,12 +743,15 @@ usePanelEscape(close)
 /* -- Activities -- */
 .iw-about__activity
 {
+    display: block;
     padding: 18px 20px;
     border-radius: 6px;
     border: 1px solid var(--iw-border);
     background: transparent;
     cursor: pointer;
     margin-bottom: 10px;
+    color: inherit;
+    text-decoration: none;
     transition: border-color 0.2s var(--iw-ease), background 0.2s var(--iw-ease);
 }
 
@@ -730,6 +760,12 @@ usePanelEscape(close)
 {
     border-color: var(--iw-about-border-accent);
     background: var(--iw-about-accent-faint);
+}
+
+.iw-about__activity:focus-visible
+{
+    outline: 2px solid var(--iw-about-accent);
+    outline-offset: 2px;
 }
 
 .iw-about__activity-head
@@ -845,17 +881,44 @@ usePanelEscape(close)
     font-size: 12px;
     color: var(--iw-about-text-2);
     line-height: 1.75;
+    margin: 0 0 10px;
+}
+
+.iw-about__timeline-bullets
+{
     margin: 0;
+    padding-left: 18px;
+    color: var(--iw-about-text-2);
+    font-size: 12px;
+    line-height: 1.75;
+}
+
+.iw-about__timeline-bullets li
+{
+    margin-bottom: 8px;
 }
 
 /* -- Achievements -- */
+.iw-about__achievements
+{
+    display: grid;
+    gap: 18px;
+}
+
 .iw-about__achievement-row
 {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    padding: 13px 0;
+    display: grid;
+    grid-template-columns: 1fr minmax(180px, 240px) auto;
+    gap: 16px;
+    align-items: start;
+    padding: 18px 0;
     border-bottom: 1px solid var(--iw-border);
+}
+
+.iw-about__achievement-copy
+{
+    display: grid;
+    gap: 6px;
 }
 
 .iw-about__achievement-year
@@ -864,13 +927,103 @@ usePanelEscape(close)
     font-size: 10px;
     color: var(--iw-about-accent-dim);
     letter-spacing: 0.1em;
-    min-width: 40px;
 }
 
 .iw-about__achievement-label
 {
-    font-size: 12px;
+    font-size: 14px;
+    color: var(--iw-text);
+    line-height: 1.5;
+}
+
+.iw-about__achievement-details
+{
+    display: grid;
+    gap: 3px;
+    margin: 6px 0 0;
+    font-family: var(--iw-about-mono);
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.iw-about__achievement-details div
+{
+    display: flex;
+    gap: 7px;
+}
+
+.iw-about__achievement-details dt
+{
+    color: var(--iw-about-text-3);
+}
+
+.iw-about__achievement-details dd
+{
+    margin: 0;
     color: var(--iw-about-text-2);
+}
+
+.iw-about__achievement-image-link
+{
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 10px;
+    border: 1px solid var(--iw-border);
+    background: rgba(255, 255, 255, 0.03);
+    transition: border-color 0.2s var(--iw-ease), box-shadow 0.2s var(--iw-ease), transform 0.2s var(--iw-ease);
+}
+
+.iw-about__achievement-image-link:hover,
+.iw-about__achievement-image-link:focus-visible
+{
+    border-color: var(--iw-about-border-accent);
+    box-shadow: 0 12px 28px -18px var(--iw-text);
+    transform: translateY(-1px);
+}
+
+.iw-about__achievement-image
+{
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: contain;
+}
+
+.iw-about__achievement-credential-button
+{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px;
+    min-width: 120px;
+    border-radius: 8px;
+    border: 1px solid var(--iw-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--iw-text);
+    font-family: var(--iw-about-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: color 0.2s var(--iw-ease), border-color 0.2s var(--iw-ease), background 0.2s var(--iw-ease), transform 0.2s var(--iw-ease);
+}
+
+.iw-about__achievement-credential-button:hover,
+.iw-about__achievement-credential-button:focus-visible
+{
+    color: var(--iw-about-accent);
+    border-color: var(--iw-about-accent);
+    background: rgba(255, 138, 61, 0.1);
+    transform: translateY(-1px);
+}
+
+.iw-about__achievement-credential-button:focus-visible
+{
+    outline: 2px solid var(--iw-about-accent);
+    outline-offset: 2px;
 }
 
 /* -- Education -- */
@@ -949,8 +1102,6 @@ usePanelEscape(close)
     align-items: center;
     gap: 18px;
     padding: 13px 0;
-    border-bottom: 1px solid var(--iw-border);
-    text-decoration: none;
 }
 
 .iw-about__contact-row span:first-child
@@ -963,10 +1114,25 @@ usePanelEscape(close)
     min-width: 72px;
 }
 
-.iw-about__contact-row span:last-child
+.iw-about__contact-row a
 {
     font-size: 12px;
     color: var(--iw-about-text-2);
+    text-decoration: none;
+    transition: color 0.2s var(--iw-ease), text-shadow 0.2s var(--iw-ease);
+}
+
+.iw-about__contact-row a:hover,
+.iw-about__contact-row a:focus-visible
+{
+    color: var(--iw-about-accent);
+    text-shadow: 0 0 12px rgba(255, 138, 61, 0.45);
+}
+
+.iw-about__contact-row a:focus-visible
+{
+    outline: 1px solid var(--iw-about-accent);
+    outline-offset: 3px;
 }
 
 .iw-about__connect-button

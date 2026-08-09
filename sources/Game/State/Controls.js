@@ -169,6 +169,8 @@ export default class Controls
         this.pointer.down = false
         this.pointer.deltaTemp = { x: 0, y: 0 }
         this.pointer.delta = { x: 0, y: 0 }
+        this.pointer.wheelTemp = 0
+        this.pointer.wheel = 0
 
         window.addEventListener('pointerdown', (event) =>
         {
@@ -185,6 +187,15 @@ export default class Controls
         {
             this.pointer.down = false
         })
+
+        window.addEventListener('wheel', (event) =>
+        {
+            if(!this.inputEnabled)
+                return
+
+            event.preventDefault()
+            this.pointer.wheelTemp += event.deltaY
+        }, { passive: false })
     }
 
     update()
@@ -194,5 +205,8 @@ export default class Controls
 
         this.pointer.deltaTemp.x = 0
         this.pointer.deltaTemp.y = 0
+
+        this.pointer.wheel = this.pointer.wheelTemp
+        this.pointer.wheelTemp = 0
     }
 }

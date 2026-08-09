@@ -17,6 +17,7 @@ export default class CameraThirdPerson
         this.position = vec3.create()
         this.quaternion = quat2.create()
         this.distance = 15
+        this.distanceLimits = { min: 4, max: 24 }
         this.phi = Math.PI * 0.45
         this.theta = - Math.PI * 0.25
         this.aboveOffset = 2
@@ -60,6 +61,14 @@ export default class CameraThirdPerson
                 this.phi = this.phiLimits.min
             if(this.phi > this.phiLimits.max)
                 this.phi = this.phiLimits.max
+        }
+
+        // Scroll toward the character to zoom in and away to zoom out.
+        // Limits preserve a useful third-person view and avoid camera clipping.
+        if(this.controls.inputEnabled && this.controls.pointer.wheel)
+        {
+            this.distance += this.controls.pointer.wheel * 0.01
+            this.distance = Math.min(this.distanceLimits.max, Math.max(this.distanceLimits.min, this.distance))
         }
         
         // Position

@@ -7,7 +7,7 @@ defineProps({
     activePanel: { type: String, default: null }
 })
 
-const emit = defineEmits([ 'open-panel' ])
+const emit = defineEmits([ 'open-panel', 'return-to-spawn' ])
 
 const items = [
     { id: 'work', label: 'Work' },
@@ -43,6 +43,9 @@ onMounted(() =>
                 @click="emit('open-panel', item.id)"
             >
                 {{ item.label }}
+            </button>
+            <button class="iw-topbar__link" type="button" @click="emit('return-to-spawn')">
+                Spawn
             </button>
         </nav>
     </div>

@@ -4,6 +4,7 @@ import gsap from 'gsap'
 const props = defineProps({
     title: { type: String, required: true },
     subtitle: { type: String, default: '' },
+    showHeaderCopy: { type: Boolean, default: true },
     // 'card' (default) is a centered card over a translucent backdrop that
     // still shows the 3D scene behind it -- used for Work/Resume. 'fullscreen'
     // is a wider (max 980px) glass HUD card over a fully transparent backdrop
@@ -63,8 +64,8 @@ function onPanelLeave(el, done)
                     aria-modal="true"
                     :aria-label="title"
                 >
-                    <header class="iw-panel__header">
-                        <div>
+                    <header class="iw-panel__header" :class="{ 'iw-panel__header--actions-only': !showHeaderCopy }">
+                        <div v-if="showHeaderCopy">
                             <h2 class="iw-panel__title">{{ title }}</h2>
                             <p v-if="subtitle" class="iw-panel__subtitle">{{ subtitle }}</p>
                         </div>
@@ -153,6 +154,7 @@ function onPanelLeave(el, done)
 .iw-panel--fullscreen .iw-panel__header
 {
     padding: 18px 28px;
+    border-bottom: none;
     position: sticky;
     top: 0;
     background: rgba(4, 6, 12, 0.5);
@@ -200,6 +202,11 @@ function onPanelLeave(el, done)
     display: flex;
     align-items: center;
     gap: 14px;
+}
+
+.iw-panel__header--actions-only .iw-panel__header-right
+{
+    margin-left: auto;
 }
 
 .iw-panel__close

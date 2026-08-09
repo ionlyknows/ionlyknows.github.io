@@ -1,4 +1,4 @@
-// Content for the About panel (sources/UI/components/panels/AboutPanel.vue)
+﻿// Content for the About panel (sources/UI/components/panels/AboutPanel.vue)
 // and, for name/role only, the Resume panel. Source of truth for layout is
 // the Figma "Build Now" About Me HUD design -- see AboutPanel.vue.
 
@@ -10,108 +10,159 @@ export default {
     hero: {
         greeting: 'Hello!',
         bio: [
-            'I\'m a Computer Science student and creative developer interested in building interactive websites, applications, and digital experiences.',
-            'I enjoy combining programming, design, and interactive technologies to create projects that are both functional and engaging.'
+            'I\'m a Computer Science student and creative developer passionate about building interactive digital experiences that blend technology, design, and storytelling. I focus on frontend development, 3D experiences, and intuitive user interfaces, turning ideas into engaging and meaningful web experiences.',
+            'I enjoy experimenting with modern web technologies, motion, and immersive visuals to create projects that are not only functional, but also feel polished, expressive, and memorable. I\'m always learning, exploring new ideas, and finding better ways to bring concepts to life through code.'
         ],
-        avatarCaption: 'CS Student'
+        avatarImage: '/avatar.jpg'
     },
 
     quickInfo: [
         { label: 'Location', value: 'Philippines' },
-        { label: 'Education', value: 'Bachelor of Science in Computer Science' },
-        { label: 'Focus', tags: [ 'Web Development', 'Interactive Experiences', 'UI/UX', 'Creative Technology' ] }
+        { label: 'Education', value: 'BS Computer Science' },
+        { label: 'Focus', tags: [ 'Web Development', 'Interactive UX', '3D Web', 'Creative Tech' ] }
     ],
 
     skills: [
-        { group: 'development', items: [ 'JavaScript', 'HTML', 'CSS', 'Java', 'Vue.js' ] },
-        { group: '3d / interactive', items: [ 'Three.js', 'WebGL', 'WebGPU', 'GSAP' ] },
-        { group: 'tools', items: [ 'Git', 'GitHub', 'VS Code', 'Figma' ] }
+        { group: 'programming languages', items: [ 'Java', 'JavaScript', 'HTML5', 'CSS3', 'SQL (Basic)' ] },
+        { group: 'tools & platforms', items: [ 'Git', 'GitHub', 'VS Code', 'Figma', 'Canva', 'Photoshop' ] },
+        { group: 'networking & IT', items: [ 'Computer Hardware Servicing', 'LAN/WAN Configuration', 'Network Troubleshooting', 'Software Installation', 'System Maintenance', 'Technical Support' ] },
+        { group: 'professional skills', items: [ 'UI/UX Design', 'Quality Assurance (QA)', 'Responsive Web Design', 'Problem Solving', 'Communication', 'Photo Editor' ] }
     ],
 
-    // Independent from sources/UI/data/projects.js (which drives the Work
-    // billboard) -- About tells the same story in its own scrollable list,
-    // per the Figma design. Swap `image` for local screenshots when ready;
-    // these are placeholder Unsplash photos carried over from the design file.
-    //
-    // liveUrl / repoUrl: PLACEHOLDERS. Leave as '' until you have the real
-    // link -- AboutPanel.vue hides a project's Live Site / Repository button
-    // whenever its URL is empty (renders a disabled state instead), so an
-    // empty string never produces a dead or fake link. Fill these in with
-    // your actual deployed URL and GitHub repo URL when ready.
     projects: [
         {
             num: 'Project 01',
-            title: '3D Interactive Portfolio',
-            desc: 'An immersive 3D portfolio experience designed around exploration and interaction.',
-            tags: [ 'Three.js', 'WebGL', 'JavaScript' ],
-            image: 'https://images.unsplash.com/photo-1760008486593-a85315610136?w=600&h=360&fit=crop&auto=format',
-            imageAlt: '3D abstract shapes representing an interactive portfolio',
-            liveUrl: '',
-            repoUrl: ''
+            title: 'Interactive 3D Portfolio',
+            desc: 'A custom portfolio experience built with 3D visuals, animated transitions, and interactive navigation.',
+            tags: [ 'Three.js', 'Vue.js', 'GSAP' ],
+            image: '/3D.png',
+            imageAlt: 'Screenshot of the custom 3D portfolio experience',
+            liveUrl: 'https://yknowjeff.github.io/',
+            repoUrl: 'https://github.com/Yknowjeff/Yknowjeff.github.io'
         },
         {
             num: 'Project 02',
             title: 'Onsite Event Registration System',
-            desc: 'Desktop application for managing walk-in registration and attendee check-ins.',
+            desc: 'A desktop app for walk-in event registration, attendee check-in, and queue management.',
             tags: [ 'Java', 'Swing', 'JSON' ],
             image: '/projects/onsite-event-registration-system.png',
-            imageAlt: 'Onsite Event Registration System - Event Manager screen listing events with registration counts',
+            imageAlt: 'Screenshot of an event registration desktop app',
             liveUrl: '',
             repoUrl: 'https://github.com/ionlyknows/OnsiteRegistrationSystem-2025'
         },
         {
             num: 'Project 03',
-            title: 'Canteen Ordering System',
-            desc: 'Desktop ordering application designed to simplify canteen transactions.',
-            tags: [ 'Java', 'GUI' ],
-            image: 'https://images.unsplash.com/photo-1760888549280-4aef010720bd?w=600&h=360&fit=crop&auto=format',
-            imageAlt: 'Food ordering app on a smartphone',
-            liveUrl: '',
-            repoUrl: 'https://github.com/ionlyknows/OnsiteRegistrationSystem-2025'
+            title: 'GDG on Campus Website QA',
+            desc: 'Performed pre-launch QA to identify UI inconsistencies, usability issues, and functional bugs.',
+            tags: [ 'Manual Testing', 'Figma', 'Browser DevTools' ],
+            image: '/Guilds.png',
+            imageAlt: 'Screenshot of the GDG on Campus website QA project',
+            liveUrl: 'https://guilds.uic.edu.ph/',
+            repoUrl: ''
         }
     ],
 
-        activities: [
+    activities: [
         {
             num: '01',
             title: 'Fashion Blog',
             role: 'Developer',
             year: '2026',
-            desc: 'Built a fashion blog page covering New York Fashion Week, structured with semantic HTML for articles, related content, and a contact section.',
-            url: '/Prelim/Fashion%20Blog/'
+            desc: 'Created a fashion blog page to showcase editorial content with structured layout and visual hierarchy.',
+            url: 'https://yknowjeff.github.io/Prelim/Fashion%20Blog/'
         },
         {
             num: '02',
-            title: 'Wine Festival',
+            title: 'Wine Festival Schedule',
             role: 'Developer',
             year: '2026',
-            desc: 'Built an event schedule page for a family wine festival, laying out session times and activities in a structured table.',
-            url: '/Prelim/Wine%20Festival%20Schedule/'
+            desc: 'Built a schedule page for a wine festival, presenting sessions and event details in a clean, accessible format.',
+            url: 'https://yknowjeff.github.io/Prelim/Wine%20Festival%20Schedule/'
         },
         {
             num: '03',
-            title: 'Davies Burger',
+            title: 'Davies Burger Menu',
             role: 'Developer',
             year: '2026',
-            desc: 'Built a restaurant menu page for a signature burger item, including a styled nutrition facts breakdown and navigation.',
-            url: '/Prelim/Davies%20Burger/'
-        }
-    ],experience: [
-        {
-            period: '2026 — Present',
-            title: 'Computer Science Student',
-            place: 'University of the Immaculate Conception',
-            desc: 'Developing software projects and studying programming, algorithms, data structures, web development, and software engineering.'
+            desc: 'Designed a restaurant menu page for a burger concept with a polished product presentation and navigation.',
+            url: 'https://yknowjeff.github.io/Prelim/Davies%20Burger/'
         }
     ],
 
-    // Placeholders, per the Figma spec ("use placeholders where actual
-    // information is unavailable, do not invent achievements").
+    experience: [
+        {
+            period: '2025 — Present',
+            title: 'Computer Science Student',
+            place: 'University of the Immaculate Conception',
+            desc: 'Studying software development, algorithms, data structures, web systems, and project design while building practical applications.'
+        },
+        {
+            period: '2026 — Present',
+            title: 'Secretary',
+            place: 'Google Developer Groups on Campus (GDG on Campus) — University of the Immaculate Conception',
+            bullets: [
+                'Maintain organizational records, meeting minutes, documents, and official communications.',
+                'Coordinate schedules, announcements, and correspondence for events, workshops, and team activities.',
+                'Support the planning and documentation of technical events and collaborative activities within the campus developer community.'
+            ]
+        },
+        {
+            period: '2026 — Present',
+            title: 'Core QA Team',
+            place: 'Google Developer Groups on Campus (QA Team) — University of the Immaculate Conception',
+            bullets: [
+                'Conduct website testing to identify UI inconsistencies, usability issues, and functional bugs.',
+                'Support quality improvements and ensure a smooth user experience before launch.'
+            ]
+        }
+    ],
+
     achievements: [
-        { year: '2026', label: 'Programming / Academic Achievement' },
-        { year: '2026', label: 'Project Recognition' },
-        { year: '2026', label: 'Competition / Event' },
-        { year: '2026', label: 'Certification' }
+        {
+            year: '2026',
+            label: 'Introduction to Generative AI',
+            imageUrl: '/certificates/introduction-to-generative-ai.jpg',
+            imageAlt: 'Introduction to Generative AI certificate',
+            issuer: 'Google Cloud',
+            credentialId: 'LNHLUKO4UAKP',
+            credentialUrl: 'https://www.coursera.org/account/accomplishments/verify/LNHLUKO4UAKP?utm_source=ln&utm_medium=certificate&utm_content=cert_image&utm_campaign=sharing_cta&utm_product=course'
+        },
+        {
+            year: '2026',
+            label: 'Generative AI for Everyone',
+            imageUrl: '/certificates/generative-ai-for-everyone.jpg',
+            imageAlt: 'Generative AI certificate',
+            issuer: 'DeepLearning.AI',
+            credentialId: 'ZP56F8AY9LKP',
+            credentialUrl: 'https://www.coursera.org/account/accomplishments/verify/ZP56F8AY9LKP?utm_source=ln&utm_medium=certificate&utm_content=cert_image&utm_campaign=sharing_cta&utm_product=course'
+        },
+        {
+            year: '2026',
+            label: 'Foundations of Cybersecurity',
+            imageUrl: '/certificates/foundations-of-cybersecurity.jpg',
+            imageAlt: 'Cybersecurity certificate',
+            issuer: 'Google',
+            credentialId: 'X5JDV6EK6IWR',
+            credentialUrl: 'https://www.coursera.org/account/accomplishments/verify/X5JDV6EK6IWR?utm_source=ln&utm_medium=certificate&utm_content=cert_image&utm_campaign=sharing_cta&utm_product=course'
+        },
+        {
+            year: '2026',
+            label: 'Connect and Protect',
+            imageUrl: '/certificates/connect-and-protect.jpg',
+            imageAlt: 'Connect and Protect certificate',
+            issuer: 'Google',
+            credentialId: '5FIDD6BW4BZB',
+            credentialUrl: 'https://www.coursera.org/account/accomplishments/verify/5FIDD6BW4BZB?utm_source=ln&utm_medium=certificate&utm_content=cert_image&utm_campaign=sharing_cta&utm_product=course'
+        },
+        {
+            year: '2026',
+            label: 'Artificial Intelligence',
+            imageUrl: '/certificates/introduction-to-ai.jpg',
+            imageAlt: 'Artificial Intelligence certificate',
+            issuer: 'IBM',
+            credentialId: '6BKXRXP9DO25',
+            credentialUrl: 'https://www.coursera.org/account/accomplishments/verify/6BKXRXP9DO25?utm_source=ln&utm_medium=certificate&utm_content=cert_image&utm_campaign=sharing_cta&utm_product=course'
+        }
     ],
 
     education: {
@@ -122,7 +173,7 @@ export default {
 
     resumeCta: {
         heading: 'Want the complete picture?',
-        text: 'Download my resume for a concise overview of my education, skills, projects, activities, achievements, and experience.',
+        text: 'Download my resume for a concise overview of my skills, projects, experience, and academic background.',
         buttonLabel: 'Download Resume',
         path: '/resume.pdf'
     },
@@ -130,8 +181,9 @@ export default {
     contact: {
         heading: 'Let\'s Build Something.',
         subheading: 'Have an idea? Let\'s talk.',
-        email: 'your-email@example.com',
-        github: 'https://github.com/yourusername',
-        linkedin: 'https://linkedin.com/in/yourusername'
+        email: 'its.jeffersonlaspinas@gmail.com',
+        github: 'https://github.com/ionlyknows',
+        linkedin: 'https://linkedin.com/in/yourusername',
+        facebook: 'https://facebook.com/yourusername'
     }
 }

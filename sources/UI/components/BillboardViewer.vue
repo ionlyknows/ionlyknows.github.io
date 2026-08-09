@@ -1,45 +1,19 @@
 ﻿<script setup>
-import { computed } from 'vue'
-import projects from '../data/projects.js'
-
 const props = defineProps({
-    bridge: { type: Object, required: true },
-    projectIndex: { type: Number, default: 0 }
+    bridge: { type: Object, required: true }
 })
 
-// Kept only for the aria-labels below -- title/description/GitHub link are
-// now drawn directly onto the billboard's own screen texture (title +
-// INFO/VIEW REPO buttons -- see Billboard.js#drawScreen), not duplicated
-// here as a separate DOM panel.
-const project = computed(() => projects[props.projectIndex] || projects[0])
-
-function previous() { props.bridge.emit('billboardPrevious') }
-function next() { props.bridge.emit('billboardNext') }
 function close() { props.bridge.emit('closeWorkBillboard') }
 </script>
 
 <template>
     <section class="iw-billboard-controls" aria-label="Billboard project controls">
-        <button
-            type="button"
-            class="iw-billboard-controls__arrow"
-            :aria-label="`Previous project (currently ${project?.title})`"
-            @click="previous"
-        >←</button>
-
         <!-- Small, secondary -- ESC is the primary way to exit (see
              App.vue/index.js), this just covers devices without a real
              Escape key (touch/mobile). -->
         <button type="button" class="iw-billboard-controls__close" aria-label="Close billboard view" @click="close">
             ESC
         </button>
-
-        <button
-            type="button"
-            class="iw-billboard-controls__arrow"
-            :aria-label="`Next project (currently ${project?.title})`"
-            @click="next"
-        >→</button>
     </section>
 </template>
 

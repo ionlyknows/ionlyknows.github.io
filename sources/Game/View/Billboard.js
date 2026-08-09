@@ -135,8 +135,9 @@ export default class Billboard
         }
         else if(this._pointInRect(x, y, this.hitRects.repo))
         {
-            if(this.project?.github)
-                window.open(this.project.github, '_blank', 'noopener,noreferrer')
+            const actionUrl = this.getAction(this.project).url
+            if(actionUrl)
+                window.open(actionUrl, '_blank', 'noopener,noreferrer')
         }
         else if(this.infoOpen)
         {
@@ -148,6 +149,15 @@ export default class Billboard
     _pointInRect(x, y, rect)
     {
         return !!rect && x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h
+    }
+
+    getAction(project)
+    {
+        const useRepository = project?.billboardAction === 'github'
+        const url = useRepository ? project?.github : project?.demo || project?.github
+        const label = useRepository || !project?.demo ? 'VIEW REPO' : 'LIVE SITE'
+
+        return { url, label }
     }
 
     _handleMouseMove(event)
@@ -238,9 +248,18 @@ export default class Billboard
 
         this.screen = new THREE.Mesh(
             new THREE.PlaneGeometry(SCREEN_WIDTH, SCREEN_HEIGHT),
-            new THREE.MeshBasicMaterial({ map: this.texture, toneMapped: false })
+            new THREE.MeshBasicMaterial({
+                map: this.texture,
+                toneMapped: false,
+                polygonOffset: true,
+                polygonOffsetFactor: -2,
+                polygonOffsetUnits: -2
+            })
         )
-        this.screen.position.set(0, SCREEN_HEIGHT * 0.5 + BASE_ELEVATION, frameHalfDepth + 0.03)
+        // Keep the canvas screen well in front of its black housing. The old
+        // 0.03 offset lost depth precision at a distance and caused flicker.
+        this.screen.position.set(0, SCREEN_HEIGHT * 0.5 + BASE_ELEVATION, frameHalfDepth + 0.25)
+        this.screen.renderOrder = 1
         this.group.add(this.screen)
 
         this.glow = new THREE.Mesh(
@@ -254,7 +273,7 @@ export default class Billboard
         this.drawScreen()
     }
 
-    drawScreen(glitch = false)
+    drawScreen()
     {
         const { context: ctx, canvas } = this
         const width = canvas.width
@@ -331,7 +350,11 @@ export default class Billboard
         ctx.font = '700 26px monospace'
         ctx.fillText('LIVE // WORK ARCHIVE', 92, 112)
         ctx.fillStyle = '#ff174f'
-        ctx.fillText(`DISPLAY ${BILLBOARD.displayResolution}  |  SIGNAL LOCKED`, width - 650, 112)
+        ctx.fillText(`STATUS // ${(project.status || 'ACTIVE').toUpperCase()}`, width - 510, 112)
+
+        ctx.fillStyle = 'rgba(233, 255, 255, 0.82)'
+        ctx.font = '700 20px monospace'
+        ctx.fillText(`ROLE // ${(project.role || 'Creative Developer').toUpperCase()}`, 100, 158)
 
         if(!hasMedia)
         {
@@ -347,6 +370,20 @@ export default class Billboard
         ctx.save()
         ctx.globalAlpha = alpha
         ctx.translate(0, riseOffset)
+
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'
+        ctx.shadowBlur = 22
+        const featureText = project.keyFeatures?.length
+            ? `KEY FEATURES // ${project.keyFeatures.join('  •  ')}`
+            : ''
+        if(featureText)
+        {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.75)'
+            ctx.shadowBlur = 14
+            ctx.fillStyle = '#8ffbff'
+            ctx.font = '700 20px monospace'
+            this.wrapText(featureText, margin, height - 390, width - margin * 2, 28)
+        }
 
         ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'
         ctx.shadowBlur = 22
@@ -373,20 +410,21 @@ export default class Billboard
         ctx.fillStyle = this.infoOpen ? '#0a0a0f' : '#ffe8ee'
         ctx.fillText(infoLabel, infoRect.x + 36, infoRect.y + buttonHeight * 0.64)
 
-        const repoAvailable = !!this.project?.github
-        const repoLabel = 'VIEW REPO'
-        const repoWidth = ctx.measureText(repoLabel).width + 72
-        const repoRect = { x: infoRect.x + infoRect.w + 20, y: buttonY, w: repoWidth, h: buttonHeight }
-        this._roundRectPath(ctx, repoRect.x, repoRect.y, repoRect.w, repoRect.h, buttonHeight * 0.5)
-        ctx.fillStyle = repoAvailable ? 'rgba(53, 246, 255, 0.16)' : 'rgba(160, 170, 175, 0.08)'
+        const action = this.getAction(this.project)
+        const actionAvailable = !!action.url
+        const actionLabel = action.label
+        const actionWidth = ctx.measureText(actionLabel).width + 72
+        const actionRect = { x: infoRect.x + infoRect.w + 20, y: buttonY, w: actionWidth, h: buttonHeight }
+        this._roundRectPath(ctx, actionRect.x, actionRect.y, actionRect.w, actionRect.h, buttonHeight * 0.5)
+        ctx.fillStyle = actionAvailable ? 'rgba(53, 246, 255, 0.16)' : 'rgba(160, 170, 175, 0.08)'
         ctx.fill()
-        ctx.strokeStyle = repoAvailable ? '#35f6ff' : 'rgba(160, 170, 175, 0.4)'
+        ctx.strokeStyle = actionAvailable ? '#35f6ff' : 'rgba(160, 170, 175, 0.4)'
         ctx.stroke()
-        ctx.fillStyle = repoAvailable ? '#e9ffff' : 'rgba(220, 225, 228, 0.45)'
-        ctx.fillText(repoLabel, repoRect.x + 36, repoRect.y + buttonHeight * 0.64)
+        ctx.fillStyle = actionAvailable ? '#e9ffff' : 'rgba(220, 225, 228, 0.45)'
+        ctx.fillText(actionLabel, actionRect.x + 36, actionRect.y + buttonHeight * 0.64)
 
         this.hitRects.info = infoRect
-        this.hitRects.repo = repoAvailable ? repoRect : null
+        this.hitRects.repo = actionAvailable ? actionRect : null
 
         ctx.restore()
 
@@ -400,14 +438,6 @@ export default class Billboard
         ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'
         for(let y = 0; y < height; y += 5)
             ctx.fillRect(0, y, width, 2)
-
-        if(glitch)
-        {
-            ctx.fillStyle = 'rgba(255, 23, 79, 0.65)'
-            ctx.fillRect(0, height * 0.32, width, 14)
-            ctx.fillStyle = 'rgba(53, 246, 255, 0.55)'
-            ctx.fillRect(0, height * 0.68, width, 8)
-        }
 
         this.texture.needsUpdate = true
     }
@@ -472,7 +502,7 @@ export default class Billboard
     {
         this.active = true
         this.setProject(project)
-        this.drawScreen(true)
+        this.drawScreen()
         gsap.fromTo(this.group.scale, { x: 0.96, y: 0.96, z: 0.96 }, { x: 1, y: 1, z: 1, duration: 0.55, ease: 'power3.out' })
         gsap.to(this.glow.material, { opacity: 0.17, duration: 0.35, yoyo: true, repeat: 1 })
         gsap.delayedCall(0.16, () => this.drawScreen())
@@ -483,7 +513,7 @@ export default class Billboard
         this.project = project
         this._setInfoOpen(false)
         this.loadMedia(project?.media)
-        this.drawScreen(true)
+        this.drawScreen()
         this._playTransition()
         gsap.delayedCall(0.14, () => this.drawScreen())
     }
@@ -533,7 +563,6 @@ export default class Billboard
     exitInteraction()
     {
         this.active = false
-        this.project = null
         this._setInfoOpen(false)
         if(this.transitionTween)
         {

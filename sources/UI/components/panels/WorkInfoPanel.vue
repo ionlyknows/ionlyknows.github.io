@@ -30,6 +30,34 @@ function close() { emit('close') }
             <hr class="iw-work-info__divider">
 
             <section>
+                <p class="iw-work-info__slug">// contribution</p>
+                <h3 class="iw-work-info__heading">My Contribution</h3>
+                <dl class="iw-work-info__quick-info">
+                    <div class="iw-work-info__quick-row">
+                        <dt>Role</dt>
+                        <dd>{{ project.role || 'Not specified yet.' }}</dd>
+                    </div>
+                    <div class="iw-work-info__quick-row">
+                        <dt>Status</dt>
+                        <dd>{{ project.status || 'Not specified yet.' }}</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <hr class="iw-work-info__divider">
+
+            <section>
+                <p class="iw-work-info__slug">// key features</p>
+                <h3 class="iw-work-info__heading">What It Does</h3>
+                <ul v-if="project.keyFeatures?.length" class="iw-work-info__features">
+                    <li v-for="feature in project.keyFeatures" :key="feature">{{ feature }}</li>
+                </ul>
+                <p v-else class="iw-work-info__muted">Not specified yet.</p>
+            </section>
+
+            <hr class="iw-work-info__divider">
+
+            <section>
                 <p class="iw-work-info__slug">// description</p>
                 <h3 class="iw-work-info__heading">Project Overview</h3>
                 <p class="iw-work-info__desc">
@@ -152,6 +180,36 @@ function close() { emit('close') }
     margin: 0;
 }
 
+.iw-work-info__features
+{
+    display: grid;
+    gap: 10px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.iw-work-info__features li
+{
+    position: relative;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--iw-work-info-text-2);
+}
+
+.iw-work-info__features li::before
+{
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--iw-work-info-accent);
+}
+
 .iw-work-info__tag-row
 {
     display: flex;
@@ -175,7 +233,6 @@ function close() { emit('close') }
 
 .iw-work-info__quick-info
 {
-    border-top: 1px solid var(--iw-border);
     margin: 0;
 }
 
@@ -185,7 +242,6 @@ function close() { emit('close') }
     align-items: flex-start;
     gap: 16px;
     padding: 12px 0;
-    border-bottom: 1px solid var(--iw-border);
     margin: 0;
 }
 
