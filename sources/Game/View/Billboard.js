@@ -1,11 +1,28 @@
-import * as THREE from 'three'
+﻿import * as THREE from 'three'
 import gsap from 'gsap'
 
 import State from '@/State/State.js'
 
-const SCREEN_WIDTH = 30
-const SCREEN_HEIGHT = 16.875
-const FRAME_MARGIN = 1.4
+// Billboard is 3x its original footprint (aspect ratio unchanged: 16:9).
+const SCALE = 3
+const SCREEN_WIDTH = 30 * SCALE
+const SCREEN_HEIGHT = 16.875 * SCALE
+const FRAME_MARGIN = 0   // was 1.4 * SCALE -- housing now matches the
+                          // screen plane exactly, so no bezel is visible
+                          // around the media (housing sits directly behind
+                          // the screen and is invisible from the front).
+
+// Housing depth is intentionally NOT scaled with SCALE -- keeping it a
+// small fixed value (instead of the old 1.1) is what gives the enlarged
+// billboard a thin, holographic-panel look instead of a bulky physical
+// sign. Screen/glow z-offsets below are derived from this so they stay
+// correctly seated against the housing's front face regardless of scale.
+const FRAME_DEPTH = 0.18
+
+// Local Y lift (on top of the terrain-resolved ground height) applied to
+// both the housing and the screen so the whole billboard reads as clearly
+// floating in the sky rather than sitting on the hill.
+const BASE_ELEVATION = 16
 
 export const BILLBOARD = {
     structurePosition: [ 10, 0, -45 ],
@@ -20,7 +37,7 @@ export const BILLBOARD = {
         phi: Math.PI * 0.5,
         orbitDistance: 6,
         framingPadding: 1.2,
-        maxStandoffDistance: 55
+        maxStandoffDistance: 55 * SCALE
     },
     color: 0x00e5ff
 }
@@ -58,6 +75,9 @@ export default class Billboard
 
         this._handleClick = this._handleClick.bind(this)
         window.addEventListener('click', this._handleClick)
+
+        this._handleMouseMove = this._handleMouseMove.bind(this)
+        window.addEventListener('mousemove', this._handleMouseMove)
     }
 
     get groundElevation()
@@ -130,6 +150,40 @@ export default class Billboard
         return !!rect && x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h
     }
 
+    _handleMouseMove(event)
+    {
+        if(!this.renderer?.instance?.domElement)
+            return
+
+        const canvasEl = this.renderer.instance.domElement
+
+        if(!this.active || event.target !== canvasEl)
+        {
+            canvasEl.style.cursor = 'default'
+            return
+        }
+
+        const rect = canvasEl.getBoundingClientRect()
+        if(rect.width === 0 || rect.height === 0)
+            return
+
+        this.pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+        this.pointerNDC.y = - ((event.clientY - rect.top) / rect.height) * 2 + 1
+
+        this.raycaster.setFromCamera(this.pointerNDC, this.camera.instance)
+        const hit = this.raycaster.intersectObject(this.screen, false)[0]
+
+        let hovering = false
+        if(hit?.uv)
+        {
+            const x = hit.uv.x * this.canvas.width
+            const y = (1 - hit.uv.y) * this.canvas.height
+            hovering = this._pointInRect(x, y, this.hitRects.info) || this._pointInRect(x, y, this.hitRects.repo)
+        }
+
+        canvasEl.style.cursor = hovering ? 'pointer' : 'default'
+    }
+
     _setInfoOpen(open)
     {
         if(this.infoOpen === open)
@@ -163,12 +217,10 @@ export default class Billboard
         const width = SCREEN_WIDTH + FRAME_MARGIN
         const height = SCREEN_HEIGHT + FRAME_MARGIN
 
-        const housing = new THREE.Mesh(new THREE.BoxGeometry(width, height, 1.1), shell)
-        housing.position.y = height * 0.5 + 3.5
+        const housing = new THREE.Mesh(new THREE.BoxGeometry(width, height, FRAME_DEPTH), shell)
+        housing.position.y = height * 0.5 + BASE_ELEVATION
         housing.frustumCulled = true
         this.group.add(housing)
-
-
     }
 
     buildScreen()
@@ -182,18 +234,20 @@ export default class Billboard
         this.texture.minFilter = THREE.LinearFilter
         this.texture.generateMipmaps = false
 
+        const frameHalfDepth = FRAME_DEPTH * 0.5
+
         this.screen = new THREE.Mesh(
             new THREE.PlaneGeometry(SCREEN_WIDTH, SCREEN_HEIGHT),
             new THREE.MeshBasicMaterial({ map: this.texture, toneMapped: false })
         )
-        this.screen.position.set(0, SCREEN_HEIGHT * 0.5 + 3.5, 0.58)
+        this.screen.position.set(0, SCREEN_HEIGHT * 0.5 + BASE_ELEVATION, frameHalfDepth + 0.03)
         this.group.add(this.screen)
 
         this.glow = new THREE.Mesh(
-            new THREE.PlaneGeometry(SCREEN_WIDTH + 0.5, SCREEN_HEIGHT + 0.5),
+            new THREE.PlaneGeometry(SCREEN_WIDTH + 0.5 * SCALE, SCREEN_HEIGHT + 0.5 * SCALE),
             new THREE.MeshBasicMaterial({ color: BILLBOARD.color, transparent: true, opacity: 0.06, depthWrite: false })
         )
-        this.glow.position.z = 0.54
+        this.glow.position.z = frameHalfDepth - 0.01
         this.glow.position.y = this.screen.position.y
         this.group.add(this.glow)
 
@@ -252,9 +306,12 @@ export default class Billboard
                 const cropY = (sourceHeight - cropHeight) * 0.5
 
                 ctx.drawImage(this.mediaElement, cropX, cropY, cropWidth, cropHeight, 0, 0, width, height)
+                ctx.fillStyle = 'rgba(3, 6, 12, 0.28)'
+                ctx.fillRect(0, 0, width, height)
             }
             catch(error)
             {
+                // Media not decodable yet -- keep the idle background
             }
         }
 
@@ -487,6 +544,9 @@ export default class Billboard
         this.transition.scale = 1
         this.drawScreen()
         gsap.to(this.group.scale, { x: 1, y: 1, z: 1, duration: 0.3 })
+
+        if(this.renderer?.instance?.domElement)
+            this.renderer.instance.domElement.style.cursor = 'default'
     }
 
     update(elapsedTime)
