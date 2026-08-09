@@ -365,7 +365,7 @@ usePanelEscape(close)
 .iw-about__eyebrow
 {
     font-family: var(--iw-about-mono);
-    font-size: 10px;
+    font-size: 16px;
     color: var(--iw-about-text-3);
     letter-spacing: 0.14em;
     margin: 0 0 8px;
@@ -403,6 +403,11 @@ usePanelEscape(close)
     line-height: 1.8;
     color: var(--iw-about-text-2);
     margin: 0 0 10px;
+}
+
+.iw-about__hero .iw-about__bio
+{
+    text-align: justify;
 }
 
 .iw-about__quick-info
@@ -1173,6 +1178,18 @@ usePanelEscape(close)
     {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .iw-about__achievement-row
+    {
+        grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+        gap: 14px;
+    }
+
+    .iw-about__achievement-credential-button
+    {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
 }
 
 @media (max-width: 520px)
@@ -1192,6 +1209,19 @@ usePanelEscape(close)
     {
         flex-direction: column;
         gap: 4px;
+    }
+
+    .iw-about__achievement-row
+    {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 16px 0;
+    }
+
+    .iw-about__achievement-credential-button
+    {
+        width: 100%;
+        min-width: 0;
     }
 }
 </style>

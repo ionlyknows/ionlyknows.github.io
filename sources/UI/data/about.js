@@ -4,22 +4,23 @@
 
 export default {
     name: 'Jefferson F. Laspiñas',
-    role: 'Creative Developer',
+    role: 'Frontend-Backend Developer',
     status: 'Available',
 
     hero: {
         greeting: 'Hello!',
         bio: [
-            'I\'m a Computer Science student and creative developer passionate about building interactive digital experiences that blend technology, design, and storytelling. I focus on frontend development, 3D experiences, and intuitive user interfaces, turning ideas into engaging and meaningful web experiences.',
-            'I enjoy experimenting with modern web technologies, motion, and immersive visuals to create projects that are not only functional, but also feel polished, expressive, and memorable. I\'m always learning, exploring new ideas, and finding better ways to bring concepts to life through code.'
+            'I\'m a Computer Science student at the University of the Immaculate Conception (UIC) who enjoys turning ideas into meaningful tech experiences. I\'m passionate about software development, web technologies, 3D and interactive experiences, and emerging technologies. My love for games also inspires me to explore immersive interfaces and create projects that are engaging, intuitive, and fun to use.',
+            'I\'m continuously learning about artificial intelligence, cybersecurity, and blockchain while exploring new technologies and building projects that challenge my skills and creativity. For me, development is more than just writing code—it\'s about creating, experimenting, solving problems, and bringing ideas to life.'
         ],
         avatarImage: '/avatar.jpg'
     },
 
     quickInfo: [
         { label: 'Location', value: 'Philippines' },
-        { label: 'Education', value: 'BS Computer Science' },
-        { label: 'Focus', tags: [ 'Web Development', 'Interactive UX', '3D Web', 'Creative Tech' ] }
+        { label: 'School', value: 'University of the Immaculate Conception' },
+        { label: 'College Year', value: '2nd Year' },
+        { label: 'Education', value: 'BS Computer Science' }
     ],
 
     skills: [
@@ -183,7 +184,7 @@ export default {
         subheading: 'Have an idea? Let\'s talk.',
         email: 'its.jeffersonlaspinas@gmail.com',
         github: 'https://github.com/ionlyknows',
-        linkedin: 'https://linkedin.com/in/yourusername',
-        facebook: 'https://facebook.com/yourusername'
+        linkedin: 'https://www.linkedin.com/in/jefferson-laspi%C3%B1as-b5463139a/',
+        facebook: 'https://www.facebook.com/its.laspinasjefferson'
     }
 }

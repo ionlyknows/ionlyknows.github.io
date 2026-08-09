@@ -168,6 +168,11 @@ export default class PlayerModel
 
         const previousAction = this.currentAction
 
+        // A player can switch quickly between walk, sprint, and jump. Cancel any
+        // fade still scheduled for either action first; otherwise repeated input
+        // changes can leave several clips partially weighted at once, which bends
+        // the VRM skin with conflicting bone poses.
+        nextAction.stopFading()
         nextAction.reset()
 
         // Phase-sync two looping clips (e.g. Running <-> Fast Run, Idle <-> Dancing)
@@ -189,7 +194,10 @@ export default class PlayerModel
         nextAction.fadeIn(CROSSFADE_DURATION).play()
 
         if(previousAction && previousAction !== nextAction)
+        {
+            previousAction.stopFading()
             previousAction.fadeOut(CROSSFADE_DURATION)
+        }
 
         this.currentAction = nextAction
         this.currentState = name
