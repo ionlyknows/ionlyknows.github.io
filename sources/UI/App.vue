@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, provide, watch, onUnmounted } from 'vue'
 import { UI_BRIDGE_KEY } from './composables/useUIBridge.js'
 import { GAME_KEY } from './composables/useGame.js'
@@ -33,11 +33,23 @@ if(!props.bridge)
 // pauses gameplay: null means "exploring", any string means a panel is open.
 const activePanel = ref(null)
 const workActive = ref(false)
+// True from the instant "Work" is clicked until the fly-in settles (either
+// into the billboard interface, or straight back out if ESC arrived mid
+// flight -- see index.js's closeRequested handling). Navigation hides on
+// this immediately, rather than waiting for the full flight to resolve, so
+// About/Resume can't be opened while the Work camera tween is still running
+// and left index.js's workOpen state out of sync with what's on screen.
+const workTransitioning = ref(false)
 const projectIndex = ref(0)
 
 const stopBillboardState = props.bridge.on('billboardInteractionChanged', (active) =>
 {
     workActive.value = active
+})
+
+const stopBillboardTransition = props.bridge.on('billboardTransitionChanged', (transitioning) =>
+{
+    workTransitioning.value = transitioning
 })
 
 const stopProjectState = props.bridge.on('billboardProjectChanged', (index) =>
@@ -48,6 +60,7 @@ const stopProjectState = props.bridge.on('billboardProjectChanged', (index) =>
 onUnmounted(() =>
 {
     stopBillboardState()
+    stopBillboardTransition()
     stopProjectState()
 })
 
@@ -65,9 +78,21 @@ function openPanel(name)
 {
     if(name === 'work')
     {
+        // Belt-and-braces alongside index.js's own workOpen/isBusy() guard:
+        // stops a rapid double click from emitting a second request while
+        // the first is still being decided.
+        if(workTransitioning.value || workActive.value)
+            return
+
+        workTransitioning.value = true
         props.bridge.emit('openWorkBillboard')
         return
     }
+
+    // Work owns the camera/controls until its own transition settles --
+    // About/Resume can't cut in mid-flight.
+    if(workTransitioning.value)
+        return
 
     if(activePanel.value === name)
         return
@@ -83,12 +108,12 @@ function closePanel()
 
 <template>
     <Navigation
-        v-if="!activePanel && !workActive"
+        v-if="!activePanel && !workActive && !workTransitioning"
         :active-panel="activePanel"
         @open-panel="openPanel"
     />
 
-    <ExploreHUD v-if="!activePanel && !workActive" />
+    <ExploreHUD v-if="!activePanel && !workActive && !workTransitioning" />
 
     <!-- No outer <Transition> here: PanelShell (rendered by each panel)
          already owns real enter/leave animation via its own nested

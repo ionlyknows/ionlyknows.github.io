@@ -3,7 +3,7 @@
 // the Figma "Build Now" About Me HUD design -- see AboutPanel.vue.
 
 export default {
-    name: 'Jefferson F. LaspiÃ±as',
+    name: 'Jefferson F. LaspiÃƒÂ±as',
     role: 'Creative Developer',
     status: 'Available',
 
@@ -51,13 +51,13 @@ export default {
         },
         {
             num: 'Project 02',
-            title: 'Event Registration System',
+            title: 'Onsite Event Registration System',
             desc: 'Desktop application for managing walk-in registration and attendee check-ins.',
             tags: [ 'Java', 'Swing', 'JSON' ],
-            image: 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?w=600&h=360&fit=crop&auto=format',
-            imageAlt: 'Dashboard monitoring screen for event management',
+            image: '/projects/onsite-event-registration-system.png',
+            imageAlt: 'Onsite Event Registration System - Event Manager screen listing events with registration counts',
             liveUrl: '',
-            repoUrl: ''
+            repoUrl: 'https://github.com/ionlyknows/OnsiteRegistrationSystem-2025'
         },
         {
             num: 'Project 03',
@@ -67,35 +67,36 @@ export default {
             image: 'https://images.unsplash.com/photo-1760888549280-4aef010720bd?w=600&h=360&fit=crop&auto=format',
             imageAlt: 'Food ordering app on a smartphone',
             liveUrl: '',
-            repoUrl: ''
+            repoUrl: 'https://github.com/ionlyknows/OnsiteRegistrationSystem-2025'
         }
     ],
 
-    activities: [
+        activities: [
         {
             num: '01',
-            title: 'University Event',
-            role: 'Organizer / Contributor',
+            title: 'Fashion Blog',
+            role: 'Developer',
             year: '2026',
-            desc: 'Participated in planning and coordinating university activities while working with different teams.'
+            desc: 'Built a fashion blog page covering New York Fashion Week, structured with semantic HTML for articles, related content, and a contact section.',
+            url: '/Prelim/Fashion%20Blog/'
         },
         {
             num: '02',
-            title: 'Programming Activity',
-            role: 'Participant / Developer',
+            title: 'Wine Festival',
+            role: 'Developer',
             year: '2026',
-            desc: 'Participated in programming activities involving problem solving, development, and collaboration.'
+            desc: 'Built an event schedule page for a family wine festival, laying out session times and activities in a structured table.',
+            url: '/Prelim/Wine%20Festival%20Schedule/'
         },
         {
             num: '03',
-            title: 'Community Activity',
-            role: 'Participant',
+            title: 'Davies Burger',
+            role: 'Developer',
             year: '2026',
-            desc: 'Participated in collaborative school and community-oriented activities.'
+            desc: 'Built a restaurant menu page for a signature burger item, including a styled nutrition facts breakdown and navigation.',
+            url: '/Prelim/Davies%20Burger/'
         }
-    ],
-
-    experience: [
+    ],experience: [
         {
             period: '2026 â€” Present',
             title: 'Computer Science Student',

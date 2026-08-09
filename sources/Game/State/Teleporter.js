@@ -1,7 +1,8 @@
-import gsap from 'gsap'
+﻿import gsap from 'gsap'
 
 import Game from '@/Game.js'
 import State from '@/State/State.js'
+import Camera from './Camera.js'
 import { BILLBOARD } from '@/View/Billboard.js'
 
 export default class Teleporter
@@ -13,7 +14,7 @@ export default class Teleporter
         // Plain tween target -- never touch player.position.current directly
         // from GSAP's own ticker except inside onUpdate, so there's exactly
         // one place that writes to game state each tick.
-        this.tween = { x: 0, z: 0, rotation: 0, theta: 0, phi: 0, distance: 0, aboveOffset: 0 }
+        this.tween = { x: 0, z: 0, rotation: 0, theta: 0, phi: 0, distance: 0, aboveOffset: 0, heightOffset: 0 }
         this.activeTween = null
         this.origin = null // where to fly back to on close
     }
@@ -25,6 +26,35 @@ export default class Teleporter
 
     flyToWork(duration = 1.6)
     {
+        const player = this.state.player
+
+        // The Work shot is only ever scripted through CameraThirdPerson's
+        // theta/phi/distance/aboveOffset/heightOffset. If the player happens
+        // to be in fly-cam mode (V), Camera#update() would keep rendering
+        // CameraFly's position instead and the framing below would silently
+        // have no visible effect.
+        if(player.camera.mode !== Camera.MODE_THIRDPERSON)
+        {
+            player.camera.fly.deactivate()
+            player.camera.thirdPerson.activate()
+            player.camera.mode = Camera.MODE_THIRDPERSON
+        }
+
+        // Snapshot exactly what "restore on ESC" means, captured fresh on
+        // every visit (not just the first -- see the note on _flyTo() about
+        // why this can no longer be left to an implicit null-check there).
+        const camera = player.camera.thirdPerson
+        this.origin = {
+            x: player.position.current[0],
+            z: player.position.current[2],
+            rotation: player.rotation,
+            theta: camera.theta,
+            phi: camera.phi,
+            distance: camera.distance,
+            aboveOffset: camera.aboveOffset,
+            heightOffset: camera.heightOffset
+        }
+
         return this._flyTo(this._computeWorkViewpoint(), duration)
     }
 
@@ -49,20 +79,20 @@ export default class Teleporter
         const billboardX = BILLBOARD.structurePosition[0]
         const billboardZ = BILLBOARD.structurePosition[2]
         const screenCenterY = billboard.screenCenterY
-        const billboardGroundElevation = billboard.groundElevation
 
-        // Distance needed for the full screen (width AND height, since on a
+        // Distance needed for the full housing -- frame + beacons, not just
+        // the inner screen plane -- (width AND height, since on a
         // narrow/portrait viewport the horizontal FOV is the tighter
-        // constraint even though the screen itself is wider than it is tall)
-        // to fit inside the camera's FOV, with a comfortable margin.
+        // constraint even though the structure is wider than it is tall) to
+        // fit inside the camera's FOV, with a comfortable margin.
         const aspect = Number.isFinite(cameraInstance.aspect) && cameraInstance.aspect > 0
             ? cameraInstance.aspect
             : 16 / 9
         const verticalFov = cameraInstance.fov * Math.PI / 180
         const horizontalFov = 2 * Math.atan(Math.tan(verticalFov * 0.5) * aspect)
 
-        const halfHeight = (BILLBOARD.screenHeight * 0.5) * config.framingPadding
-        const halfWidth = (BILLBOARD.screenWidth * 0.5) * config.framingPadding
+        const halfHeight = (BILLBOARD.frameHeight * 0.5) * config.framingPadding
+        const halfWidth = (BILLBOARD.frameWidth * 0.5) * config.framingPadding
 
         const distanceForHeight = halfHeight / Math.tan(verticalFov * 0.5)
         const distanceForWidth = halfWidth / Math.tan(horizontalFov * 0.5)
@@ -71,39 +101,27 @@ export default class Teleporter
             config.maxStandoffDistance
         )
 
-        // Split that straight-line distance into a horizontal (Z) run and the
-        // screen's own vertical offset above the ground, Pythagorean-style.
-        // The ground elevation at the player's *future* spot isn't known yet
-        // here (it depends on where we're about to place them), so this step
-        // approximates it with the billboard's own ground height -- over the
-        // handful of metres involved that's well inside the framing padding's
-        // margin. The exact vertical aim below does not rely on this
-        // approximation, only the standoff distance's rough sizing does.
-        const approxVerticalGap = screenCenterY - billboardGroundElevation
+        // The player stands back far enough that, combined with the camera's
+        // own orbitDistance behind them, the total camera-to-billboard
+        // distance equals requiredDistance.
         const minZGap = config.orbitDistance * 2
-        const zGap = approxVerticalGap < requiredDistance
-            ? Math.max(Math.sqrt(requiredDistance ** 2 - approxVerticalGap ** 2), minZGap)
-            : Math.max(requiredDistance, minZGap)
-
+        const zGap = Math.max(requiredDistance, minZGap)
         const viewpointZ = billboardZ + zGap - config.orbitDistance
 
         const rawElevation = chunks.getElevationForPosition(billboardX, viewpointZ)
-        const playerGroundElevation = typeof rawElevation === 'number' ? rawElevation : billboardGroundElevation
+        const playerGroundElevation = typeof rawElevation === 'number' ? rawElevation : billboard.groundElevation
 
-        // Exact vertical aim. CameraThirdPerson always looks at
-        // (player.x, player.y + aboveOffset, player.z) -- never at an
-        // arbitrary world point -- so precise framing has to work within that
-        // constraint rather than around it. With phi locked to Math.PI * 0.5,
-        // the camera sits exactly `orbitDistance` beyond the player along Z at
-        // the player's own ground height (no vertical component from the
-        // orbit itself). That makes the player-to-target rise and the
-        // player-to-screen rise similar triangles sharing the same camera apex,
-        // so aboveOffset solves out exactly -- the screen lands centred
-        // regardless of any terrain-height mismatch between the player's spot
-        // and the billboard's.
-        const cameraToScreenZGap = zGap
-        const triangleRatio = cameraToScreenZGap / config.orbitDistance
-        const aboveOffset = Math.max((screenCenterY - playerGroundElevation) / triangleRatio, 1)
+        // Vertical aim. CameraThirdPerson always looks at
+        // (player.x, player.y + aboveOffset, player.z) and positions the
+        // camera at (player position + orbit offset + heightOffset) -- so
+        // rather than leaving the camera at the player's ground height and
+        // tilting the look target way up (which distorts the FOV-based
+        // requiredDistance above, since that math assumes a level shot), the
+        // camera itself is raised to the target's height too. aboveOffset and
+        // heightOffset therefore end up equal: both the camera and its look
+        // target sit at the screen's own centre height, giving a level,
+        // fully-framed shot at (roughly) the requested camera height.
+        const aboveOffset = Math.max(screenCenterY - playerGroundElevation, 1)
 
         return {
             x: billboardX,
@@ -112,7 +130,8 @@ export default class Teleporter
             theta: config.theta,
             phi: config.phi,
             distance: config.orbitDistance,
-            aboveOffset
+            aboveOffset,
+            heightOffset: aboveOffset
         }
     }
 
@@ -136,19 +155,6 @@ export default class Teleporter
         // the scripted camera framing while it's mid-tween or a panel is open.
         this.state.viewport.pointerLock.deactivate()
 
-        if(!this.origin)
-        {
-            this.origin = {
-                x: player.position.current[0],
-                z: player.position.current[2],
-                rotation: player.rotation,
-                theta: camera.theta,
-                phi: camera.phi,
-                distance: camera.distance,
-                aboveOffset: camera.aboveOffset
-            }
-        }
-
         this.tween.x = player.position.current[0]
         this.tween.z = player.position.current[2]
         this.tween.rotation = player.rotation
@@ -156,6 +162,7 @@ export default class Teleporter
         this.tween.phi = camera.phi
         this.tween.distance = camera.distance
         this.tween.aboveOffset = camera.aboveOffset
+        this.tween.heightOffset = camera.heightOffset
 
         if(this.activeTween)
             this.activeTween.kill()
@@ -170,6 +177,7 @@ export default class Teleporter
                 phi: target.phi,
                 distance: target.distance,
                 aboveOffset: target.aboveOffset,
+                heightOffset: target.heightOffset ?? 0,
                 duration,
                 ease: 'power3.inOut',
                 onUpdate: () =>
@@ -181,6 +189,7 @@ export default class Teleporter
                     camera.phi = this.tween.phi
                     camera.distance = this.tween.distance
                     camera.aboveOffset = this.tween.aboveOffset
+                    camera.heightOffset = this.tween.heightOffset
                 },
                 onComplete: () =>
                 {

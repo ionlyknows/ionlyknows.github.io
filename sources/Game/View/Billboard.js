@@ -1,10 +1,14 @@
-import * as THREE from 'three'
+﻿import * as THREE from 'three'
 import gsap from 'gsap'
 
 import State from '@/State/State.js'
 
 const SCREEN_WIDTH = 30
 const SCREEN_HEIGHT = 16.875
+// Bezel margin added around the screen to get the outer housing footprint
+// (see buildFrame()) -- shared here so Teleporter can size the "Work" camera
+// shot to the whole structure, not just the inner screen plane.
+const FRAME_MARGIN = 1.4
 
 // The display is intentionally a world landmark: the canvas is texture-capped
 // for memory/bandwidth, while its UI is authored as an 8K display design.
@@ -17,6 +21,11 @@ export const BILLBOARD = {
     displayResolution: '7680 x 4320',
     screenWidth: SCREEN_WIDTH,
     screenHeight: SCREEN_HEIGHT,
+    // Outer housing footprint (screen + bezel) -- what "frame the entire
+    // billboard" actually needs to fit inside the camera's FOV, as opposed
+    // to screenWidth/screenHeight which only cover the inner screen plane.
+    frameWidth: SCREEN_WIDTH + FRAME_MARGIN,
+    frameHeight: SCREEN_HEIGHT + FRAME_MARGIN,
     // Tuning knobs for Teleporter#_computeWorkViewpoint(). x/z are no longer
     // stored here: the player's standoff position is solved at fly-time from
     // these plus the live viewport aspect + camera FOV, so the framing stays
@@ -24,7 +33,7 @@ export const BILLBOARD = {
     viewpoint: {
         rotation: 0,
         theta: 0,
-        phi: Math.PI * 0.5, // camera orbits level with the player's own ground height
+        phi: Math.PI * 0.5, // keeps the orbit level (no vertical component from distance/phi); heightOffset does the actual vertical placement
         orbitDistance: 6, // how far the camera sits behind the player, third-person style
         framingPadding: 1.2, // extra margin so the screen doesn't touch the frame edges
         maxStandoffDistance: 55 // hard cap so extreme (e.g. narrow mobile) aspects can't fling the player away
@@ -32,6 +41,12 @@ export const BILLBOARD = {
     color: 0x00e5ff
 }
 
+// -- everything below this point (class Billboard: constructor, buildFrame(),
+// buildScreen(), drawScreen(), wrapText(), startIdleAnimation(),
+// enterInteraction(), setProject(), loadMedia(), exitInteraction(), update())
+// is UNCHANGED from your current file. Only buildFrame()'s local width/height
+// vars now read `SCREEN_WIDTH + FRAME_MARGIN` / `SCREEN_HEIGHT + FRAME_MARGIN`
+// instead of the old inline `+ 1.4` literals -- same numbers, shared constant.
 export default class Billboard
 {
     constructor(scene)
@@ -403,3 +418,4 @@ export default class Billboard
         }
     }
 }
+
