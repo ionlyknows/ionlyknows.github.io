@@ -88,7 +88,7 @@ usePanelEscape(close)
                         <div class="iw-about__project-body">
                             <div class="iw-about__project-head">
                                 <span class="iw-about__project-title">{{ project.title }}</span>
-                                <span class="iw-about__project-view">View â†’</span>
+                                <span class="iw-about__project-view">View →</span>
                             </div>
                             <p class="iw-about__project-desc">{{ project.desc }}</p>
                             <div class="iw-about__tag-row">
@@ -160,11 +160,11 @@ usePanelEscape(close)
                 <article v-for="activity in about.activities" :key="activity.title" class="iw-about__activity">
                     <div class="iw-about__activity-head">
                         <div>
-                            <p class="iw-about__activity-meta">{{ activity.num }} Â· {{ activity.year }}</p>
+                            <p class="iw-about__activity-meta">{{ activity.num }} · {{ activity.year }}</p>
                             <p class="iw-about__activity-title">{{ activity.title }}</p>
                             <p class="iw-about__activity-role">{{ activity.role }}</p>
                         </div>
-                        <span class="iw-about__activity-details">Details â†’</span>
+                        <span class="iw-about__activity-details">Details →</span>
                     </div>
                     <p class="iw-about__activity-desc">{{ activity.desc }}</p>
                 </article>

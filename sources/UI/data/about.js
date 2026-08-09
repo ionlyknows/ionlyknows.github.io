@@ -3,7 +3,7 @@
 // the Figma "Build Now" About Me HUD design -- see AboutPanel.vue.
 
 export default {
-    name: 'Jefferson F. LaspiÃƒÂ±as',
+    name: 'Jefferson F. Laspiñas',
     role: 'Creative Developer',
     status: 'Available',
 
@@ -98,7 +98,7 @@ export default {
         }
     ],experience: [
         {
-            period: '2026 â€” Present',
+            period: '2026 — Present',
             title: 'Computer Science Student',
             place: 'University of the Immaculate Conception',
             desc: 'Developing software projects and studying programming, algorithms, data structures, web development, and software engineering.'
@@ -117,7 +117,7 @@ export default {
     education: {
         school: 'University of the Immaculate Conception',
         degree: 'Bachelor of Science in Computer Science',
-        period: '2025 â€” Present'
+        period: '2025 — Present'
     },
 
     resumeCta: {
