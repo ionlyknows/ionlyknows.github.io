@@ -30,7 +30,7 @@ export default class Renderer
         // Renderer
         this.instance = new THREE.WebGLRenderer({
             alpha: false,
-            antialias: true
+            antialias: !this.viewport.isMobile
         })
         
         this.instance.sortObjects = false

@@ -3,9 +3,50 @@ import { vec3 } from 'gl-matrix'
 
 let elevationRandom = null
 
+// The platform is deliberately local to the player's fixed spawn point. Its
+// outer radius is small compared with a terrain chunk (64 units at maximum
+// detail), so every mountain and all terrain beyond this immediate area keeps
+// the procedural height field unchanged.
+const SPAWN_X = 10
+const SPAWN_Z = 1
+const SPAWN_PLATFORM_CORE_RADIUS = 28
+const SPAWN_PLATFORM_OUTER_RADIUS = 48
+const SPAWN_PLATFORM_ELEVATION = 1.75
+const SPAWN_PLATFORM_CROWN = 0.12
+
 const linearStep = (edgeMin, edgeMax, value) =>
 {
     return Math.max(0.0, Math.min(1.0, (value - edgeMin) / (edgeMax - edgeMin)))
+}
+
+const smoothStep = (edgeMin, edgeMax, value) =>
+{
+    const t = linearStep(edgeMin, edgeMax, value)
+    return t * t * (3 - 2 * t)
+}
+
+// Creates a comfortable, nearly level spawn surface with a very subtle crown
+// rather than a visibly artificial, perfectly flat disc. The blend reaches
+// zero with a zero slope at the outer radius, preventing a rim or cliff where
+// it meets the untouched procedural terrain.
+const applySpawnPlatform = (x, z, elevation) =>
+{
+    const offsetX = x - SPAWN_X
+    const offsetZ = z - SPAWN_Z
+
+    if(Math.abs(offsetX) >= SPAWN_PLATFORM_OUTER_RADIUS || Math.abs(offsetZ) >= SPAWN_PLATFORM_OUTER_RADIUS)
+        return elevation
+
+    const distance = Math.hypot(offsetX, offsetZ)
+
+    if(distance >= SPAWN_PLATFORM_OUTER_RADIUS)
+        return elevation
+
+    const coreProgress = linearStep(0, SPAWN_PLATFORM_CORE_RADIUS, distance)
+    const platformElevation = SPAWN_PLATFORM_ELEVATION + SPAWN_PLATFORM_CROWN * Math.pow(1 - coreProgress, 2)
+    const blend = 1 - smoothStep(SPAWN_PLATFORM_CORE_RADIUS, SPAWN_PLATFORM_OUTER_RADIUS, distance)
+
+    return elevation + (platformElevation - elevation) * blend
 }
 
 const getElevation = (x, y, lacunarity, persistence, iterations, baseFrequency, baseAmplitude, power, elevationOffset, iterationsOffsets) =>
@@ -30,7 +71,7 @@ const getElevation = (x, y, lacunarity, persistence, iterations, baseFrequency, 
     elevation *= baseAmplitude
     elevation += elevationOffset
 
-    return elevation
+    return applySpawnPlatform(x, y, elevation)
 }
 
 onmessage = function(event)

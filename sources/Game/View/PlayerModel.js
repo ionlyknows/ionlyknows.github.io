@@ -42,6 +42,7 @@ export default class PlayerModel
 
         this.idleTimer = 0
         this.idleFidgetDelay = this.getRandomIdleFidgetDelay()
+        this.deferSecondaryAnimations = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches
 
         this.load()
     }
@@ -60,7 +61,16 @@ export default class PlayerModel
 
             this.mixer = new THREE.AnimationMixer(this.vrm.scene)
 
-            await this.setupAnimations()
+            if(this.deferSecondaryAnimations)
+            {
+                // Mobile can enter the world as soon as the idle pose is
+                // available. The remaining movement clips are loaded in the
+                // background and become available automatically on arrival.
+                await this.setupInitialAnimation()
+                this.setupSecondaryAnimations()
+            }
+            else
+                await this.setupAnimations()
 
             this.ready = true
         }
@@ -157,6 +167,46 @@ export default class PlayerModel
             this.actions.idle.play()
             this.currentAction = this.actions.idle
         }
+    }
+
+    async setupInitialAnimation()
+    {
+        const idle = await loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.idle}`, this.vrm)
+
+        if(!idle)
+            return
+
+        idle.name = 'idle'
+        this.actions.idle = this.mixer.clipAction(idle)
+        this.actions.idle.play()
+        this.currentAction = this.actions.idle
+    }
+
+    setupSecondaryAnimations()
+    {
+        Promise.all([
+            loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.dancing}`, this.vrm),
+            loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.running}`, this.vrm),
+            loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.fastRun}`, this.vrm),
+            loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.runningJump}`, this.vrm)
+        ])
+            .then(([ dancing, running, fastRun, runningJump ]) =>
+            {
+                const clips = { dancing, running, fastRun, runningJump }
+
+                for(const [ name, clip ] of Object.entries(clips))
+                {
+                    if(!clip)
+                        continue
+
+                    clip.name = name
+                    this.actions[name] = this.mixer.clipAction(clip)
+                }
+
+                if(this.actions.runningJump)
+                    this.actions.runningJump.setLoop(THREE.LoopOnce, 1).clampWhenFinished = true
+            })
+            .catch((error) => console.error('[PlayerModel] Failed to load secondary animations', error))
     }
 
     setState(name)

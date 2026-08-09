@@ -16,6 +16,7 @@ export default class Viewport
         this.biggestSide = null
         this.pixelRatio = null
         this.clampedPixelRatio = null
+        this.isMobile = false
 
         this.setPointerLock()
         this.setFullscreen()
@@ -107,6 +108,10 @@ export default class Viewport
         this.smallestSide = this.width < this.height ? this.width : this.height
         this.biggestSide = this.width > this.height ? this.width : this.height
         this.pixelRatio = window.devicePixelRatio
-        this.clampedPixelRatio = Math.min(this.pixelRatio, 2)
+        this.isMobile = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches
+        // A full 2x render target is especially expensive on high-density
+        // mobile screens. Keep desktop quality unchanged while reducing the
+        // initial GPU work required to show the world on phones/tablets.
+        this.clampedPixelRatio = Math.min(this.pixelRatio, this.isMobile ? 1 : 2)
     }
 }

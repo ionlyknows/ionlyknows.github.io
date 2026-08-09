@@ -1,5 +1,6 @@
 ﻿import Billboard from './Billboard.js'
 import Camera from './Camera.js'
+import CertificateBillboards from './CertificateBillboards.js'
 import Chunks from './Chunks.js'
 import Grass from './Grass.js'
 import Noises from './Noises.js'
@@ -39,6 +40,7 @@ export default class View
         this.chunks = new Chunks()
         this.player = new Player()
         this.grass = new Grass()
+        this.certificateBillboards = new CertificateBillboards(this.scene)
 
         this.state = State.getInstance()
         this.billboard = new Billboard(this.scene, this.camera, this.renderer)
@@ -60,6 +62,7 @@ export default class View
         this.chunks.update()
         this.player.update()
         this.grass.update()
+        this.certificateBillboards.update()
         this.billboard.update(this.state.time.elapsed)
         this.camera.update()
         this.renderer.update()
