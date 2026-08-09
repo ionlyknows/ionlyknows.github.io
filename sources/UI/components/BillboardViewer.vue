@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue'
 import projects from '../data/projects.js'
 
@@ -7,6 +7,10 @@ const props = defineProps({
     projectIndex: { type: Number, default: 0 }
 })
 
+// Kept only for the aria-labels below -- title/description/GitHub link are
+// now drawn directly onto the billboard's own screen texture (title +
+// INFO/VIEW REPO buttons -- see Billboard.js#drawScreen), not duplicated
+// here as a separate DOM panel.
 const project = computed(() => projects[props.projectIndex] || projects[0])
 
 function previous() { props.bridge.emit('billboardPrevious') }
@@ -16,20 +20,26 @@ function close() { props.bridge.emit('closeWorkBillboard') }
 
 <template>
     <section class="iw-billboard-controls" aria-label="Billboard project controls">
-        <button type="button" class="iw-billboard-controls__arrow" aria-label="Previous project" @click="previous">←</button>
+        <button
+            type="button"
+            class="iw-billboard-controls__arrow"
+            :aria-label="`Previous project (currently ${project?.title})`"
+            @click="previous"
+        >←</button>
 
-        <div class="iw-billboard-controls__meta">
-            <span>WORK ARCHIVE</span>
-            <strong>{{ project?.title }}</strong>
-        </div>
+        <!-- Small, secondary -- ESC is the primary way to exit (see
+             App.vue/index.js), this just covers devices without a real
+             Escape key (touch/mobile). -->
+        <button type="button" class="iw-billboard-controls__close" aria-label="Close billboard view" @click="close">
+            ESC
+        </button>
 
-        <div class="iw-billboard-controls__links">
-            <a v-if="project?.github" :href="project.github" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a v-if="project?.demo" :href="project.demo" target="_blank" rel="noopener noreferrer">Live Demo</a>
-            <button type="button" @click="close">Close / Esc</button>
-        </div>
-
-        <button type="button" class="iw-billboard-controls__arrow" aria-label="Next project" @click="next">→</button>
+        <button
+            type="button"
+            class="iw-billboard-controls__arrow"
+            :aria-label="`Next project (currently ${project?.title})`"
+            @click="next"
+        >→</button>
     </section>
 </template>
 
@@ -38,7 +48,7 @@ function close() { props.bridge.emit('closeWorkBillboard') }
 {
     position: fixed;
     left: 50%;
-    bottom: 7vh;
+    bottom: 5vh;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
@@ -50,16 +60,14 @@ function close() { props.bridge.emit('closeWorkBillboard') }
 }
 
 .iw-billboard-controls__arrow,
-.iw-billboard-controls__links a,
-.iw-billboard-controls__links button
+.iw-billboard-controls__close
 {
     min-height: 38px;
     padding: 9px 14px;
     border: 1px solid #35f6ff;
     border-radius: 2px;
-    background: rgba(3, 10, 18, 0.84);
+    background: rgba(3, 10, 18, 0.7);
     color: inherit;
-    text-decoration: none;
     font: inherit;
     font-size: 11px;
     text-transform: uppercase;
@@ -73,24 +81,14 @@ function close() { props.bridge.emit('closeWorkBillboard') }
     font-size: 22px;
 }
 
-.iw-billboard-controls__meta
+.iw-billboard-controls__close
 {
-    min-width: 180px;
-    display: grid;
-    gap: 3px;
-    text-transform: uppercase;
-    font-size: 10px;
-    letter-spacing: 0.12em;
+    border-color: #ff174f;
+    color: #ff174f;
 }
-
-.iw-billboard-controls__meta span { color: #35f6ff; }
-.iw-billboard-controls__meta strong { color: #ffffff; font-size: 12px; }
-.iw-billboard-controls__links { display: flex; gap: 7px; }
-.iw-billboard-controls__links button { border-color: #ff174f; }
 
 @media (max-width: 720px)
 {
-    .iw-billboard-controls { bottom: 18px; gap: 6px; }
-    .iw-billboard-controls__meta, .iw-billboard-controls__links a { display: none; }
+    .iw-billboard-controls { bottom: 14px; gap: 8px; }
 }
 </style>

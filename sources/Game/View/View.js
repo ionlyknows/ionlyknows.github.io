@@ -1,4 +1,4 @@
-import Billboard from './Billboard.js'
+﻿import Billboard from './Billboard.js'
 import Camera from './Camera.js'
 import Chunks from './Chunks.js'
 import Grass from './Grass.js'
@@ -41,7 +41,7 @@ export default class View
         this.grass = new Grass()
 
         this.state = State.getInstance()
-        this.billboard = new Billboard(this.scene)
+        this.billboard = new Billboard(this.scene, this.camera, this.renderer)
     }
 
     resize()
