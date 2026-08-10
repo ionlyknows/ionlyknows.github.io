@@ -87,6 +87,20 @@ Yknowjeff.github.io/
         └── data/                     # About & project content data
 ```
 
+## 🧱 HTML5 / CSS3 & Responsive Implementation
+
+This portfolio renders as a single-page WebGL/Vue application, so most of the HTML5/CSS3 work isn't in the root `index.html` shell — it lives inside the Vue components that make up the UI layer. For anyone reviewing the implementation directly:
+
+| Technique | Where to find it |
+|---|---|
+| Semantic markup (`<nav>`, `aria-*` attributes) | `sources/UI/components/Navigation.vue`, panel components under `sources/UI/components/panels/` |
+| CSS Grid | `WorkInfoPanel.vue`, `AboutPanel.vue`, `SettingsPanel.vue`, `LoadingScreen.vue` |
+| CSS Flexbox | `sources/style.css`, `Navigation.vue`, and every panel component |
+| Responsive `@media` breakpoints | `sources/style.css`, `Navigation.vue`, `BillboardViewer.vue`, `CertificateHint.vue`, `WorkInfoPanel.vue`, `AboutPanel.vue`, `SettingsPanel.vue` |
+| CSS custom properties / design tokens | `sources/UI/styles/tokens.css` |
+
+The root `index.html` stays intentionally minimal — it only bootstraps the canvas and the movement-key hint overlay — because the interactive UI (navigation, panels, billboards) is mounted into it at runtime by Vue.
+
 ## 🚀 Running Locally
 
 ```powershell
@@ -108,7 +122,9 @@ This outputs a production-ready build to the `dist/` folder.
 
 ## 🚢 Deployment
 
-This project is deployed on **Vercel**. The production site is available at [field-notes-xi-eight.vercel.app](https://field-notes-xi-eight.vercel.app/).
+The primary live deployment is on **Vercel**: [field-notes-xi-eight.vercel.app](https://field-notes-xi-eight.vercel.app/) — this is the link shared on my resume and profiles.
+
+A secondary mirror auto-deploys to **GitHub Pages** on every push to `main` via GitHub Actions ([workflow](.github/workflows/deploy.yml)): [ionlyknows.github.io](https://ionlyknows.github.io/).
 
 ## 🙏 Credits / Inspiration
 
