@@ -1,6 +1,7 @@
 ﻿import gsap from 'gsap'
 
 import Game from '@/Game.js'
+import * as THREE from 'three'
 import State from '@/State/State.js'
 import Camera from './Camera.js'
 import { BILLBOARD } from '@/View/Billboard.js'
@@ -144,6 +145,57 @@ export default class Teleporter
         this.origin = null
 
         return this._flyTo(target, duration)
+    }
+
+    flyToCertificate(board, duration = 1.35)
+    {
+        const player = this.state.player
+        if(player.camera.mode !== Camera.MODE_THIRDPERSON)
+        {
+            player.camera.fly.deactivate()
+            player.camera.thirdPerson.activate()
+            player.camera.mode = Camera.MODE_THIRDPERSON
+        }
+
+        const camera = player.camera.thirdPerson
+        this.origin = {
+            x: player.position.current[0], z: player.position.current[2], rotation: player.rotation,
+            theta: camera.theta, phi: camera.phi, distance: camera.distance,
+            aboveOffset: camera.aboveOffset, heightOffset: camera.heightOffset
+        }
+
+        const game = Game.getInstance()
+        const cameraInstance = game.view.camera.instance
+        const screenPosition = board.screen.getWorldPosition(new THREE.Vector3())
+        const front = board.root.getWorldDirection(new THREE.Vector3()).normalize()
+        const aspect = cameraInstance.aspect > 0 ? cameraInstance.aspect : 16 / 9
+        const verticalFov = cameraInstance.fov * Math.PI / 180
+        const horizontalFov = 2 * Math.atan(Math.tan(verticalFov * 0.5) * aspect)
+        const halfHeight = 15 * 0.58
+        const halfWidth = board.screen.geometry.parameters.width * 0.58
+        const viewDistance = Math.max(
+            halfHeight / Math.tan(verticalFov * 0.5),
+            halfWidth / Math.tan(horizontalFov * 0.5),
+            10
+        )
+        const orbitDistance = 6
+        const playerDistance = Math.max(viewDistance - orbitDistance, 2)
+        const x = screenPosition.x + front.x * playerDistance
+        const z = screenPosition.z + front.z * playerDistance
+        const ground = this.state.chunks.getElevationForPosition(x, z)
+        const groundY = typeof ground === 'number' ? ground : player.position.current[1]
+        const aboveOffset = Math.max(screenPosition.y - groundY, 1)
+
+        return this._flyTo({
+            x,
+            z,
+            rotation: Math.atan2(front.x, front.z),
+            theta: Math.atan2(front.x, front.z),
+            phi: Math.PI * 0.5,
+            distance: orbitDistance,
+            aboveOffset,
+            heightOffset: aboveOffset
+        }, duration)
     }
 
     returnToSpawn(duration = 0.8)

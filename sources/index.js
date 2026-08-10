@@ -14,11 +14,14 @@ try
     createUIApp(bridge, game)
 
     game.view.billboard.onInfoChange = (open) => bridge.emit('billboardInfoChanged', open)
+    game.view.certificateBillboards.onProximityChange = (nearby) => bridge.emit('certificateProximityChanged', nearby)
 
     let projectIndex = 0
     let workOpen = false
+    let certificateOpen = false
     let closeRequested = false
     let flyToWorkInProgress = false
+    let flyToCertificateInProgress = false
     let autoplayTimer = null
 
     const clearAutoplay = () =>
@@ -86,12 +89,41 @@ try
             return
         }
 
-        game.view.billboard.enterInteraction(projects[projectIndex] || projects[0])
+        game.view.billboard.enterInteraction()
         bridge.emit('billboardInteractionChanged', true)
+        // Render the project once. Calling setProject in enterInteraction and
+        // again here replayed the screen fade and made the billboard pop.
         showProject()
     }
 
     bridge.on('openWorkBillboard', openWorkBillboard)
+
+    const openCertificateBillboard = async (board) =>
+    {
+        if(workOpen || certificateOpen || flyToCertificateInProgress || game.state.teleporter.isBusy())
+            return
+
+        certificateOpen = true
+        flyToCertificateInProgress = true
+        game.state.controls.setInputEnabled(false)
+
+        try
+        {
+            await game.state.teleporter.flyToCertificate(board)
+        }
+        catch(error)
+        {
+            console.error('[Certificates] Failed to frame certificate:', error)
+            certificateOpen = false
+            game.state.controls.setInputEnabled(true)
+        }
+        finally
+        {
+            flyToCertificateInProgress = false
+        }
+    }
+
+    game.view.certificateBillboards.onSelect = openCertificateBillboard
 
     bridge.on('billboardPrevious', () =>
     {
@@ -156,17 +188,37 @@ try
 
     bridge.on('closeWorkBillboard', closeWorkBillboard)
 
+    const closeCertificateBillboard = async () =>
+    {
+        if(!certificateOpen || game.state.teleporter.isBusy())
+            return
+
+        await game.state.teleporter.flyBack()
+        game.state.controls.setInputEnabled(true)
+        certificateOpen = false
+    }
+
     bridge.on('closeBillboardInfo', () =>
     {
         game.view.billboard.closeInfo()
     })
 
     showProject()
+    // The first project begins loading above. Defer the remaining image
+    // decodes until the browser has idle time so terrain/world startup wins
+    // the first few frames after deployment.
+    const preloadProjectMedia = () => game.view.billboard.preloadMedia(projects)
+    if('requestIdleCallback' in window)
+        window.requestIdleCallback(preloadProjectMedia, { timeout: 3000 })
+    else
+        window.setTimeout(preloadProjectMedia, 1500)
 
     game.state.controls.events.on('escapeDown', () =>
     {
         if(workOpen)
             closeWorkBillboard()
+        else if(certificateOpen)
+            closeCertificateBillboard()
         else
             bridge.emit('escapePressed')
     })

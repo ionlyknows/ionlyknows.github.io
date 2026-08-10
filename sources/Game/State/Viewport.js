@@ -109,9 +109,9 @@ export default class Viewport
         this.biggestSide = this.width > this.height ? this.width : this.height
         this.pixelRatio = window.devicePixelRatio
         this.isMobile = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches
-        // A full 2x render target is especially expensive on high-density
-        // mobile screens. Keep desktop quality unchanged while reducing the
-        // initial GPU work required to show the world on phones/tablets.
-        this.clampedPixelRatio = Math.min(this.pixelRatio, this.isMobile ? 1 : 2)
+        // Rendering at a 2x device pixel ratio requires four times as many
+        // pixels as 1x. A 1.5 cap keeps the world sharp on desktop while
+        // avoiding frame-time spikes on high-DPI laptops; mobile stays at 1x.
+        this.clampedPixelRatio = Math.min(this.pixelRatio, this.isMobile ? 1 : 1.5)
     }
 }

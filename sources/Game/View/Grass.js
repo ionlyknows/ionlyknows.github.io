@@ -17,15 +17,15 @@ export default class Grass
         this.scene = this.view.scene
         this.noises = this.view.noises
 
-        this.details = 260
+        // Keep the dense field on desktop, but avoid spending most of a
+        // phone/tablet GPU budget on off-screen grass vertices.
+        this.details = this.state.viewport.isMobile ? 150 : 230
         this.size = this.state.chunks.minSize
         this.count = this.details * this.details
         this.fragmentSize = this.size / this.details
         // Slightly taller than lawn-height, with subtle (not extreme)
-        // height variation, and a 1.69x density increase (200 -> 260 grid
-        // resolution = 40,000 -> 67,600 blades). Single draw call, so this
-        // only adds proportional vertex-shader work - trivial for desktop
-        // GPUs (this project already flags itself as desktop-only).
+        // height variation. This remains one draw call, with 52,900 blades
+        // on desktop and 22,500 on mobile to preserve smoother frame times.
         this.bladeWidthRatio = 1.0
         this.bladeHeightRatio = 1.6
         this.bladeHeightRandomness = 0.35
@@ -172,7 +172,7 @@ export default class Grass
                 )
             }
 
-            const dChunkSate = bChunkSate.neighbours.get(chunkPositionRatioZ < 0.5 ? 'n' : 's')
+            const dChunkSate = bChunkSate?.neighbours?.get(chunkPositionRatioZ < 0.5 ? 'n' : 's')
 
             if(dChunkSate && dChunkSate.terrain && dChunkSate.terrain.renderInstance.texture)
             {

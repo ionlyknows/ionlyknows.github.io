@@ -40,7 +40,7 @@ export default class View
         this.chunks = new Chunks()
         this.player = new Player()
         this.grass = new Grass()
-        this.certificateBillboards = new CertificateBillboards(this.scene)
+        this.certificateBillboards = new CertificateBillboards(this.scene, this.camera, this.renderer)
 
         this.state = State.getInstance()
         this.billboard = new Billboard(this.scene, this.camera, this.renderer)

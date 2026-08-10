@@ -4,7 +4,7 @@
 
 Built on top of Bruno Simon's *Infinite World* concept and extended into a full personal portfolio — walk a controllable character through a procedurally generated world where projects, resume, and achievements live as objects in the environment itself.
 
-[**🌐 Live Portfolio**](https://yknowjeff.github.io/) · [**📦 Repository**](https://github.com/Yknowjeff/Yknowjeff.github.io)
+[**🌐 Live Portfolio**](https://field-notes-xi-eight.vercel.app/) · [**📦 Repository**](https://github.com/ionlyknows/ionlyknows.github.io) · [**💻 GitHub Profile**](https://github.com/ionlyknows)
 
 ![Interactive 3D Portfolio Screenshot](public/projects/3D.png "Jeff Portfolio — interactive 3D world screenshot")
 
@@ -90,8 +90,8 @@ Yknowjeff.github.io/
 ## 🚀 Running Locally
 
 ```powershell
-git clone https://github.com/Yknowjeff/Yknowjeff.github.io.git
-cd Yknowjeff.github.io
+git clone https://github.com/ionlyknows/ionlyknows.github.io.git
+cd ionlyknows.github.io
 
 npm install
 
@@ -108,13 +108,7 @@ This outputs a production-ready build to the `dist/` folder.
 
 ## 🚢 Deployment
 
-This project deploys automatically to **GitHub Pages** via a GitHub Actions workflow (`.github/workflows/deploy.yml`):
-
-1. On every push to `main`, the workflow checks out the repo and installs dependencies with `npm ci`.
-2. It builds the project with `npm run build` (Vite).
-3. The resulting `dist/` folder is uploaded and published to GitHub Pages.
-
-The live site is available at **https://yknowjeff.github.io/**.
+This project is deployed on **Vercel**. The production site is available at [field-notes-xi-eight.vercel.app](https://field-notes-xi-eight.vercel.app/).
 
 ## 🙏 Credits / Inspiration
 
@@ -126,5 +120,5 @@ The live site is available at **https://yknowjeff.github.io/**.
 **Jefferson F. Laspiñas**
 Computer Science student
 
-- 🌐 Portfolio: [yknowjeff.github.io](https://yknowjeff.github.io/)
-- 💻 GitHub: [@Yknowjeff](https://github.com/Yknowjeff)
+- 🌐 Portfolio: [Jeff Portfolio](https://field-notes-xi-eight.vercel.app/)
+- 💻 GitHub: [@ionlyknows](https://github.com/ionlyknows)

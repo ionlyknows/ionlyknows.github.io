@@ -25,6 +25,9 @@ const CERTIFICATE_AREA = [
 const SCREEN_HEIGHT = 15
 const FRAME_DEPTH = 0.18
 const DEFAULT_ASPECT = 16 / 10
+// Interaction uses horizontal distance so floating certificate height does
+// not make a nearby board unexpectedly unclickable.
+const INTERACTION_DISTANCE = 125
 
 const frameMaterial = new THREE.MeshBasicMaterial({ color: 0x070b13 })
 const glowMaterial = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.075, depthWrite: false })
@@ -44,11 +47,23 @@ function setBoardAspect(housing, screen, glow, aspect)
 
 export default class CertificateBillboards
 {
-    constructor(scene)
+    constructor(scene, camera, renderer)
     {
         this.scene = scene
+        this.camera = camera
+        this.renderer = renderer
         this.state = State.getInstance()
+        this.onSelect = null
+        this.onProximityChange = null
+        this.certificateNearby = false
+        this.raycaster = new THREE.Raycaster()
+        this.pointerNDC = new THREE.Vector2()
         this.boards = CERTIFICATE_AREA.map((certificate, index) => this.createBoard(certificate, index))
+
+        this._handleClick = this._handleClick.bind(this)
+        this._handleMouseMove = this._handleMouseMove.bind(this)
+        window.addEventListener('click', this._handleClick)
+        window.addEventListener('mousemove', this._handleMouseMove)
     }
 
     createBoard(certificate, index)
@@ -103,7 +118,51 @@ export default class CertificateBillboards
             onUpdate: () => { hoverGroup.position.y = certificate.y + floatState.y }
         })
 
-        return { root, certificate, groundResolved: false }
+        return { root, hoverGroup, screen, certificate, width: initialWidth, groundResolved: false }
+    }
+
+    _getBoardAtPointer(event)
+    {
+        const canvas = this.renderer?.instance?.domElement
+        if(event.target !== canvas)
+            return null
+
+        const rect = canvas.getBoundingClientRect()
+        if(!rect.width || !rect.height)
+            return null
+
+        this.pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+        this.pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+        this.raycaster.setFromCamera(this.pointerNDC, this.camera.instance)
+
+        const screens = this.boards.map((board) => board.screen)
+        const hit = this.raycaster.intersectObjects(screens, false)[0]
+        const board = hit ? this.boards.find((item) => item.screen === hit.object) : null
+        return board && this._isNear(board) ? board : null
+    }
+
+    _isNear(board)
+    {
+        const [ playerX, , playerZ ] = this.state.player.position.current
+        const xDistance = playerX - board.root.position.x
+        const zDistance = playerZ - board.root.position.z
+        return xDistance * xDistance + zDistance * zDistance <= INTERACTION_DISTANCE * INTERACTION_DISTANCE
+    }
+
+    _handleClick(event)
+    {
+        const board = this._getBoardAtPointer(event)
+        if(board)
+            this.onSelect?.(board)
+    }
+
+    _handleMouseMove(event)
+    {
+        const canvas = this.renderer?.instance?.domElement
+        if(!canvas || event.target !== canvas)
+            return
+
+        canvas.style.cursor = this._getBoardAtPointer(event) ? 'pointer' : 'default'
     }
 
     update()
@@ -123,6 +182,13 @@ export default class CertificateBillboards
             // moves through the world.
             board.root.lookAt(SPAWN_POSITION)
             board.groundResolved = true
+        }
+
+        const nearby = this.boards.some((board) => board.groundResolved && this._isNear(board))
+        if(nearby !== this.certificateNearby)
+        {
+            this.certificateNearby = nearby
+            this.onProximityChange?.(nearby)
         }
     }
 }

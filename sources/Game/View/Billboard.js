@@ -53,6 +53,8 @@ export default class Billboard
         this.project = null
         this.mediaElement = null
         this.mediaSource = null
+        this.mediaCache = new Map()
+        this.mediaRequestId = 0
         this.lastVideoFrame = 0
         this.infoOpen = false
         this.onInfoChange = null
@@ -167,7 +169,10 @@ export default class Billboard
 
         const canvasEl = this.renderer.instance.domElement
 
-        if(!this.active || event.target !== canvasEl)
+        if(!this.active)
+            return
+
+        if(event.target !== canvasEl)
         {
             canvasEl.style.cursor = 'default'
             return
@@ -251,6 +256,7 @@ export default class Billboard
             new THREE.MeshBasicMaterial({
                 map: this.texture,
                 toneMapped: false,
+                transparent: true,
                 polygonOffset: true,
                 polygonOffsetFactor: -2,
                 polygonOffsetUnits: -2
@@ -325,7 +331,9 @@ export default class Billboard
                 const cropY = (sourceHeight - cropHeight) * 0.5
 
                 ctx.drawImage(this.mediaElement, cropX, cropY, cropWidth, cropHeight, 0, 0, width, height)
-                ctx.fillStyle = 'rgba(3, 6, 12, 0.28)'
+                // Keep media bright and glass-clear. The labels remain legible
+                // through their own scrims instead of darkening the whole image.
+                ctx.fillStyle = 'rgba(3, 6, 12, 0.04)'
                 ctx.fillRect(0, 0, width, height)
             }
             catch(error)
@@ -335,14 +343,14 @@ export default class Billboard
         }
 
         const topScrim = ctx.createLinearGradient(0, 0, 0, height * 0.22)
-        topScrim.addColorStop(0, 'rgba(2, 4, 8, 0.82)')
+        topScrim.addColorStop(0, 'rgba(2, 4, 8, 0.48)')
         topScrim.addColorStop(1, 'rgba(2, 4, 8, 0)')
         ctx.fillStyle = topScrim
         ctx.fillRect(0, 0, width, height * 0.22)
 
         const bottomScrim = ctx.createLinearGradient(0, height * 0.5, 0, height)
         bottomScrim.addColorStop(0, 'rgba(2, 4, 8, 0)')
-        bottomScrim.addColorStop(1, 'rgba(2, 4, 8, 0.92)')
+        bottomScrim.addColorStop(1, 'rgba(2, 4, 8, 0.58)')
         ctx.fillStyle = bottomScrim
         ctx.fillRect(0, height * 0.5, width, height * 0.5)
 
@@ -435,7 +443,7 @@ export default class Billboard
         ctx.fillStyle = 'rgba(255, 23, 79, 0.85)'
         ctx.fillText(this.active ? 'ESC // EXIT' : 'WORK // CONNECT', width * 0.5 - 110, height - 26)
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.025)'
         for(let y = 0; y < height; y += 5)
             ctx.fillRect(0, y, width, 2)
 
@@ -486,36 +494,95 @@ export default class Billboard
         if(this.transitionTween)
             this.transitionTween.kill()
 
-        this.transition.alpha = 0
-        this.transition.scale = 0.9
-        this.transitionTween = gsap.to(this.transition, {
-            alpha: 1,
-            scale: 1,
-            duration: 0.5,
+        // Animate the Three.js material, not the source canvas. Repainting a
+        // 2K canvas every GSAP tick forced a texture upload and caused visible
+        // stutter when changing projects.
+        this.screen.material.opacity = 0
+        this.screen.scale.set(0.985, 0.985, 1)
+        this.transitionTween = gsap.to(this.screen.material, {
+            opacity: 1,
+            duration: 0.28,
             ease: 'power3.out',
-            onUpdate: () => this.drawScreen(),
             onComplete: () => { this.transitionTween = null }
+        })
+        gsap.to(this.screen.scale, {
+            x: 1,
+            y: 1,
+            duration: 0.34,
+            ease: 'power3.out'
         })
     }
 
-    enterInteraction(project)
+    enterInteraction()
     {
         this.active = true
-        this.setProject(project)
-        this.drawScreen()
-        gsap.fromTo(this.group.scale, { x: 0.96, y: 0.96, z: 0.96 }, { x: 1, y: 1, z: 1, duration: 0.55, ease: 'power3.out' })
+        // The billboard is already visible before Work is clicked. Keep its
+        // screen and transform unchanged as interaction begins, rather than
+        // making it pop or replay the project transition.
+        this.group.scale.set(1, 1, 1)
         gsap.to(this.glow.material, { opacity: 0.17, duration: 0.35, yoyo: true, repeat: 1 })
-        gsap.delayedCall(0.16, () => this.drawScreen())
     }
 
     setProject(project)
     {
+        const isCurrentProject = project === this.project && project?.media?.src === this.mediaSource
+        if(isCurrentProject)
+        {
+            this.drawScreen()
+            return
+        }
+
         this.project = project
         this._setInfoOpen(false)
         this.loadMedia(project?.media)
         this.drawScreen()
         this._playTransition()
-        gsap.delayedCall(0.14, () => this.drawScreen())
+    }
+
+    preloadMedia(projects)
+    {
+        projects?.forEach((project) => this._getMedia(project?.media))
+    }
+
+    _getMedia(media)
+    {
+        const source = media?.src
+        if(!source)
+            return Promise.resolve(null)
+
+        const cached = this.mediaCache.get(source)
+        if(cached)
+            return cached
+
+        const isVideo = media.type === 'video' || /\.(mp4|webm|ogg)(\?.*)?$/i.test(source)
+        const request = new Promise((resolve) =>
+        {
+            if(isVideo)
+            {
+                const video = document.createElement('video')
+                video.preload = 'auto'
+                video.muted = true
+                video.loop = true
+                video.playsInline = true
+                video.addEventListener('canplay', () => resolve(video), { once: true })
+                video.addEventListener('error', () => resolve(null), { once: true })
+                video.src = source
+                video.load()
+                return
+            }
+
+            const image = new Image()
+            image.decoding = 'async'
+            image.addEventListener('load', async () =>
+            {
+                try { await image.decode() } catch(error) { /* already usable */ }
+                resolve(image)
+            }, { once: true })
+            image.addEventListener('error', () => resolve(null), { once: true })
+            image.src = source
+        })
+        this.mediaCache.set(source, request)
+        return request
     }
 
     loadMedia(media)
@@ -532,32 +599,18 @@ export default class Billboard
             return
 
         this.mediaSource = source
-        this.mediaElement = null
-        const isVideo = media.type === 'video' || /\.(mp4|webm|ogg)(\?.*)?$/i.test(source)
-
-        if(isVideo)
+        const requestId = ++this.mediaRequestId
+        this._getMedia(media).then((element) =>
         {
-            const video = document.createElement('video')
-            video.src = source
-            video.muted = true
-            video.loop = true
-            video.playsInline = true
-            video.addEventListener('canplay', () =>
-            {
-                this.mediaElement = video
-                video.play().catch(() => {})
-                this.drawScreen()
-            }, { once: true })
-            return
-        }
+            // Ignore media that completed after the user already moved on.
+            if(requestId !== this.mediaRequestId || source !== this.mediaSource || !element)
+                return
 
-        const image = new Image()
-        image.addEventListener('load', () =>
-        {
-            this.mediaElement = image
+            this.mediaElement = element
+            if(element instanceof HTMLVideoElement)
+                element.play().catch(() => {})
             this.drawScreen()
-        }, { once: true })
-        image.src = source
+        })
     }
 
     exitInteraction()
@@ -571,6 +624,8 @@ export default class Billboard
         }
         this.transition.alpha = 1
         this.transition.scale = 1
+        this.screen.material.opacity = 1
+        this.screen.scale.set(1, 1, 1)
         this.drawScreen()
         gsap.to(this.group.scale, { x: 1, y: 1, z: 1, duration: 0.3 })
 

@@ -16,8 +16,16 @@ export default defineConfig({
     plugins:
     [
         vue(),
-        glsl({ watch: true })
+        // File watching is only useful during local development.
+        glsl({ watch: process.env.NODE_ENV !== 'production' })
     ],
+    build:
+    {
+        target: 'es2020',
+        sourcemap: false,
+        cssCodeSplit: true,
+        reportCompressedSize: false
+    },
     server:
     {
         host: true,
