@@ -6,7 +6,7 @@ Built on top of Bruno Simon's *Infinite World* concept and extended into a full 
 
 [**🌐 Live Portfolio**](https://yknowjeff.github.io/) · [**📦 Repository**](https://github.com/Yknowjeff/Yknowjeff.github.io)
 
-![Interactive 3D Portfolio Screenshot](public/3D.png "Jeff Portfolio — interactive 3D world screenshot")
+![Interactive 3D Portfolio Screenshot](public/projects/3D.png "Jeff Portfolio — interactive 3D world screenshot")
 
 ---
 

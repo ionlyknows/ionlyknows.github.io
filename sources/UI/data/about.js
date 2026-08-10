@@ -13,7 +13,7 @@ export default {
             'I\'m a Computer Science student at the University of the Immaculate Conception (UIC) who enjoys turning ideas into meaningful tech experiences. I\'m passionate about software development, web technologies, 3D and interactive experiences, and emerging technologies. My love for games also inspires me to explore immersive interfaces and create projects that are engaging, intuitive, and fun to use.',
             'I\'m continuously learning about artificial intelligence, cybersecurity, and blockchain while exploring new technologies and building projects that challenge my skills and creativity. For me, development is more than just writing code—it\'s about creating, experimenting, solving problems, and bringing ideas to life.'
         ],
-        avatarImage: '/avatar.jpg'
+        avatarImage: '/social/avatar.jpg'
     },
 
     quickInfo: [
@@ -36,7 +36,7 @@ export default {
             title: 'Interactive 3D Portfolio',
             desc: 'A custom portfolio experience built with 3D visuals, animated transitions, and interactive navigation.',
             tags: [ 'Three.js', 'Vue.js', 'GSAP' ],
-            image: '/3D.png',
+            image: '/projects/3D.png',
             imageAlt: 'Screenshot of the custom 3D portfolio experience',
             liveUrl: 'https://yknowjeff.github.io/',
             repoUrl: 'https://github.com/Yknowjeff/Yknowjeff.github.io'
@@ -56,7 +56,7 @@ export default {
             title: 'GDG on Campus Website QA',
             desc: 'Performed pre-launch QA to identify UI inconsistencies, usability issues, and functional bugs.',
             tags: [ 'Manual Testing', 'Figma', 'Browser DevTools' ],
-            image: '/Guilds.png',
+            image: '/projects/Guilds.png',
             imageAlt: 'Screenshot of the GDG on Campus website QA project',
             liveUrl: 'https://guilds.uic.edu.ph/',
             repoUrl: ''

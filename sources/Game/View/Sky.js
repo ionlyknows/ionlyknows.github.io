@@ -77,13 +77,13 @@ export default class Sky
         this.sphere.update = () =>
         {
             const geometry = new THREE.SphereGeometry(10, this.sphere.widthSegments, this.sphere.heightSegments)
-            if(this.sphere.geometry)
-            {
-                this.sphere.geometry.dispose()
-                this.sphere.mesh.geometry = this.sphere.geometry
-            }
-                
+            const previousGeometry = this.sphere.geometry
             this.sphere.geometry = geometry
+            if(previousGeometry)
+            {
+                previousGeometry.dispose()
+                this.sphere.mesh.geometry = geometry
+            }
         }
         this.sphere.material = new SkySphereMaterial()
         
@@ -156,13 +156,13 @@ export default class Sky
             geometry.setAttribute('aColor', new THREE.Float32BufferAttribute(colorArray, 3))
             
             // Dispose of old one
-            if(this.stars.geometry)
-            {
-                this.stars.geometry.dispose()
-                this.stars.points.geometry = this.stars.geometry
-            }
-                
+            const previousGeometry = this.stars.geometry
             this.stars.geometry = geometry
+            if(previousGeometry)
+            {
+                previousGeometry.dispose()
+                this.stars.points.geometry = geometry
+            }
         }
 
         // Geometry

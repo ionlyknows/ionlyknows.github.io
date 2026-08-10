@@ -128,6 +128,9 @@ export default class Terrains
 
     recreate()
     {
+        this.segments = this.subdivisions + 1
+        this.ensureIterationsOffsets()
+
         for(const [key, terrain] of this.terrains)
         {
             // this.create(terrain.size, terrain.x, terrain.z)
@@ -151,6 +154,12 @@ export default class Terrains
                 iterationsOffsets: this.iterationsOffsets
             })
         }
+    }
+
+    ensureIterationsOffsets()
+    {
+        while(this.iterationsOffsets.length < this.maxIterations)
+            this.iterationsOffsets.push([(this.random() - 0.5) * 200000, (this.random() - 0.5) * 200000])
     }
 
     setDebug()

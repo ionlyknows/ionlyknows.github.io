@@ -1,6 +1,7 @@
 import Debug from '@/Debug/Debug.js'
 import State from '@/State/State.js'
 import View from '@/View/View.js'
+import Settings from '@/Settings.js'
 
 export default class Game
 {
@@ -22,6 +23,7 @@ export default class Game
         this.debug = new Debug()
         this.state = new State()
         this.view = new View()
+        this.settings = new Settings(this)
         
         window.addEventListener('resize', () =>
         {

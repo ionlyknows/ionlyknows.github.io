@@ -35,22 +35,28 @@ export default class Camera
 
         this.controls.events.on('cameraModeDown', () =>
         {
-            if(this.mode === Camera.MODE_THIRDPERSON)
-            {
-                this.mode = Camera.MODE_FLY
-                this.fly.activate(this.position, this.quaternion)
-                this.thirdPerson.deactivate()
-            }
-            
-            else if(this.mode === Camera.MODE_FLY)
-            {
-                this.mode = Camera.MODE_THIRDPERSON
-                this.fly.deactivate()
-                this.thirdPerson.activate()
-            }
+            this.setMode(this.mode === Camera.MODE_THIRDPERSON ? Camera.MODE_FLY : Camera.MODE_THIRDPERSON)
         })
 
         this.setDebug()
+    }
+
+    setMode(mode)
+    {
+        if(mode === this.mode || ![ Camera.MODE_THIRDPERSON, Camera.MODE_FLY ].includes(mode))
+            return
+
+        this.mode = mode
+        if(this.mode === Camera.MODE_THIRDPERSON)
+        {
+            this.fly.deactivate()
+            this.thirdPerson.activate()
+        }
+        else
+        {
+            this.fly.activate(this.position, this.quaternion)
+            this.thirdPerson.deactivate()
+        }
     }
 
     update()

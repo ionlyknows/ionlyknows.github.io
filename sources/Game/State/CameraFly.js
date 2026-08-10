@@ -81,7 +81,7 @@ export default class CameraFly
             return
             
         // Rotation X and Y
-        if(this.controls.pointer.down || this.viewport.pointerLock.active)
+        if(this.controls.inputEnabled && (this.controls.pointer.down || this.viewport.pointerLock.active))
         {
             const normalisedPointer = this.viewport.normalise(this.controls.pointer.delta)
             this.rotateX -= normalisedPointer.y * 2

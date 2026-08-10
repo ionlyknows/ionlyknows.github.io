@@ -9,6 +9,7 @@ import BillboardViewer from './components/BillboardViewer.vue'
 import WorkInfoPanel from './components/panels/WorkInfoPanel.vue'
 import AboutPanel from './components/panels/AboutPanel.vue'
 import ResumePanel from './components/panels/ResumePanel.vue'
+import SettingsPanel from './components/panels/SettingsPanel.vue'
 import LoadingScreen from './components/LoadingScreen.vue'
 
 const props = defineProps({
@@ -31,6 +32,33 @@ const infoOpen = ref(false)
 const worldReady = ref(false)
 let loadingFrame = null
 
+function toggleSettings()
+{
+    if(workActive.value || workTransitioning.value || returningToSpawn.value)
+        return
+
+    if(activePanel.value === 'settings')
+    {
+        closePanel()
+        return
+    }
+
+    if(activePanel.value)
+        return
+
+    props.game.state.viewport.pointerLock.deactivate()
+    activePanel.value = 'settings'
+}
+
+function onKeydown(event)
+{
+    if(event.code !== 'KeyB' || event.repeat)
+        return
+
+    event.preventDefault()
+    toggleSettings()
+}
+
 function waitForWorldReady()
 {
     if(props.game.view.player.model.ready)
@@ -46,6 +74,7 @@ function waitForWorldReady()
 onMounted(() =>
 {
     waitForWorldReady()
+    window.addEventListener('keydown', onKeydown)
 })
 
 const stopBillboardState = props.bridge.on('billboardInteractionChanged', (active) =>
@@ -68,15 +97,24 @@ const stopBillboardInfo = props.bridge.on('billboardInfoChanged', (open) =>
     infoOpen.value = open
 })
 
+const stopEscape = props.bridge.on('escapePressed', () =>
+{
+    if(activePanel.value === 'settings')
+        closePanel()
+})
+
 onUnmounted(() =>
 {
     if(loadingFrame)
         window.cancelAnimationFrame(loadingFrame)
 
+    window.removeEventListener('keydown', onKeydown)
+
     stopBillboardState()
     stopBillboardTransition()
     stopProjectState()
     stopBillboardInfo()
+    stopEscape()
 })
 
 const inputEnabled = computed(() => !activePanel.value && !workActive.value && !workTransitioning.value && !returningToSpawn.value)
@@ -153,6 +191,7 @@ async function returnToSpawn()
     <BillboardViewer v-if="workActive" :bridge="bridge" :project-index="projectIndex" />
     <AboutPanel v-else-if="activePanel === 'about'" @close="closePanel" />
     <ResumePanel v-else-if="activePanel === 'resume'" @close="closePanel" />
+    <SettingsPanel v-else-if="activePanel === 'settings'" :settings="game.settings" @close="closePanel" />
 
     <WorkInfoPanel v-if="workActive && infoOpen" :project-index="projectIndex" @close="closeInfo" />
 </template>

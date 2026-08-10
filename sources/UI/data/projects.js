@@ -28,7 +28,7 @@
         status: 'Live',
         keyFeatures: [ 'UI review', 'Usability testing', 'Functional validation' ],
         media: {
-            src: '/Guilds.png',
+            src: '/projects/Guilds.png',
             alt: 'GDG on Campus website QA screenshot',
             type: 'image'
         },
@@ -45,7 +45,7 @@
         status: 'Live',
         keyFeatures: [ '3D world exploration', 'Animated transitions', 'Interactive navigation' ],
         media: {
-            src: '/3D.png',
+            src: '/projects/3D.png',
             alt: 'Interactive 3D Portfolio project screenshot',
             type: 'image'
         },

@@ -21,15 +21,6 @@ export default class Controls
         this.setKeys()
         this.setPointer()
 
-        this.events.on('debugDown', () =>
-        {
-            if(location.hash === '#debug')
-                location.hash = ''
-            else
-                location.hash = 'debug'
-
-            location.reload()
-        })
     }
 
     setKeys()
@@ -65,10 +56,6 @@ export default class Controls
             {
                 codes: [ 'KeyV' ],
                 name: 'cameraMode'
-            },
-            {
-                codes: [ 'KeyB' ],
-                name: 'debug'
             },
             {
                 codes: [ 'KeyF' ],

@@ -39,6 +39,22 @@ export default class Terrain
             this.geometry.index = new THREE.BufferAttribute(this.terrainState.indices, 1, false)
         
             this.mesh.geometry = this.geometry
+            this.texture.dispose()
+            this.texture = new THREE.DataTexture(
+                this.terrainState.texture,
+                terrainsState.segments,
+                terrainsState.segments,
+                THREE.RGBAFormat,
+                THREE.FloatType,
+                THREE.UVMapping,
+                THREE.ClampToEdgeWrapping,
+                THREE.ClampToEdgeWrapping,
+                THREE.LinearFilter,
+                THREE.LinearFilter
+            )
+            this.texture.flipY = false
+            this.texture.needsUpdate = true
+            this.mesh.userData.texture = this.texture
         }
 
         // Create
