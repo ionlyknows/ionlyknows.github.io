@@ -13,4 +13,3 @@ node_modules
 *.sw?
 *.bak
 *.bak2
-public/projects/*.mp4
