@@ -106,6 +106,7 @@ export default class Terrain
         if(this.created)
         {
             this.geometry.dispose()
+            this.texture.dispose()
             this.scene.remove(this.mesh)
         }
     }

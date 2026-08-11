@@ -5,7 +5,7 @@ import path from 'path'
 
 const dirname = path.resolve()
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
     resolve:
     {
         alias:
@@ -16,8 +16,9 @@ export default defineConfig({
     plugins:
     [
         vue(),
-        // File watching is only useful during local development.
-        glsl({ watch: process.env.NODE_ENV !== 'production' })
+        // File watching is only useful during local development. Keeping it
+        // off for builds also avoids recursively scanning unrelated folders.
+        glsl({ watch: command === 'serve' })
     ],
     build:
     {
@@ -31,4 +32,4 @@ export default defineConfig({
         host: true,
         open: true
     }
-})
+}))

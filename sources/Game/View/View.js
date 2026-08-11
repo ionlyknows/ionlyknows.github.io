@@ -44,6 +44,26 @@ export default class View
 
         this.state = State.getInstance()
         this.billboard = new Billboard(this.scene, this.camera, this.renderer)
+        this.workFocus = false
+    }
+
+    setWorkFocus(active)
+    {
+        if(this.workFocus === active)
+            return
+
+        this.workFocus = active
+        this.state.setWorkFocus(active)
+
+        // The Work camera only frames the main billboard. Hide world-only
+        // geometry and skip its update/render-target work; it is restored
+        // before the return flight, so normal gameplay is unchanged.
+        this.grass.mesh.visible = !active
+        this.player.setVisible(!active)
+        this.certificateBillboards.setVisible(!active)
+        // Keep the terrain/sky backdrop visible around the billboard frame
+        // in Work mode; only its costly state updates are paused below.
+        this.terrains.setVisible(true)
     }
 
     resize()
@@ -56,13 +76,16 @@ export default class View
 
     update()
     {
-        this.sky.update()
-        this.water.update()
-        this.terrains.update()
-        this.chunks.update()
-        this.player.update()
-        this.grass.update()
-        this.certificateBillboards.update()
+        if(!this.workFocus)
+        {
+            this.sky.update()
+            this.water.update()
+            this.terrains.update()
+            this.chunks.update()
+            this.player.update()
+            this.grass.update()
+            this.certificateBillboards.update()
+        }
         this.billboard.update(this.state.time.elapsed)
         this.camera.update()
         this.renderer.update()

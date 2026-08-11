@@ -9,7 +9,6 @@ import BillboardViewer from './components/BillboardViewer.vue'
 import CertificateHint from './components/CertificateHint.vue'
 import WorkInfoPanel from './components/panels/WorkInfoPanel.vue'
 import AboutPanel from './components/panels/AboutPanel.vue'
-import ResumePanel from './components/panels/ResumePanel.vue'
 import SettingsPanel from './components/panels/SettingsPanel.vue'
 import LoadingScreen from './components/LoadingScreen.vue'
 
@@ -258,7 +257,6 @@ async function returnToSpawn()
 
     <BillboardViewer v-if="workActive" :bridge="bridge" :project-index="projectIndex" />
     <AboutPanel v-else-if="activePanel === 'about'" @close="closePanel" />
-    <ResumePanel v-else-if="activePanel === 'resume'" @close="closePanel" />
     <SettingsPanel v-else-if="activePanel === 'settings'" :settings="game.settings" @close="closePanel" />
 
     <WorkInfoPanel v-if="workActive && infoOpen" :project-index="projectIndex" @close="closeInfo" />

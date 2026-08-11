@@ -33,6 +33,7 @@ export default class State
         this.terrains = new Terrains()
         this.chunks = new Chunks()
         this.teleporter = new Teleporter()
+        this.workFocus = false
     }
 
     resize()
@@ -44,9 +45,27 @@ export default class State
     {
         this.time.update()
         this.controls.update()
+
+        // The Work camera is a fixed, scripted view. While it is active the
+        // player cannot move, so updating player physics, terrain chunks and
+        // the day cycle only burns CPU and can trigger terrain work that is
+        // completely hidden by the billboard view.
+        if(this.workFocus)
+        {
+            // Keep the fixed Work camera synchronized with the final
+            // teleporter pose without running movement, physics or chunks.
+            this.player.camera.update()
+            return
+        }
+
         this.day.update()
         this.sun.update()
         this.player.update()
         this.chunks.update()
+    }
+
+    setWorkFocus(active)
+    {
+        this.workFocus = active
     }
 }

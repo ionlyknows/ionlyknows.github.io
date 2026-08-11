@@ -11,8 +11,7 @@ const emit = defineEmits([ 'open-panel', 'return-to-spawn' ])
 
 const items = [
     { id: 'work', label: 'Work' },
-    { id: 'about', label: 'About' },
-    { id: 'resume', label: 'Resume' }
+    { id: 'about', label: 'About' }
 ]
 
 const rootEl = ref(null)

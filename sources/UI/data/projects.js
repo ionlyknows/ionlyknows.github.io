@@ -11,12 +11,13 @@
         status: 'Completed',
         keyFeatures: [ 'Attendee registration', 'Check-in tracking', 'Record management' ],
         media: {
-            src: '/projects/onsite-event-registration-system.png',
-            alt: 'Onsite Event Registration System - Event Manager screen listing events with registration counts',
-            type: 'image'
+            src: '/projects/Onsite.mp4',
+            alt: 'Onsite Event Registration System demonstration',
+            type: 'video'
         },
         github: 'https://github.com/ionlyknows/OnsiteRegistrationSystem-2025',
-        demo: ''
+        demo: 'https://drive.google.com/file/d/1sMgAcB-Ov99gvSC_WX1v8r-GWxa8QfVJ/view',
+        billboardLabel: 'LIVE DEMO'
     },
     {
         id: 'gdg-qa',
@@ -28,12 +29,13 @@
         status: 'Live',
         keyFeatures: [ 'UI review', 'Usability testing', 'Functional validation' ],
         media: {
-            src: '/projects/Guilds.png',
-            alt: 'GDG on Campus website QA screenshot',
-            type: 'image'
+            src: '/projects/QA TCI.mp4',
+            alt: 'GDG on Campus website QA demonstration',
+            type: 'video'
         },
         github: '',
-        demo: 'https://guilds.uic.edu.ph/'
+        demo: 'https://drive.google.com/file/d/1taHoPhAJQBGC4hRNDBNudTvpGzq68a5g/view',
+        billboardLabel: 'LIVE DEMO'
     },
     {
         id: 'interactive-3d-portfolio',
@@ -45,9 +47,9 @@
         status: 'Live',
         keyFeatures: [ '3D world exploration', 'Animated transitions', 'Interactive navigation' ],
         media: {
-            src: '/projects/3D.png',
-            alt: 'Interactive 3D Portfolio project screenshot',
-            type: 'image'
+            src: '/projects/World.mp4',
+            alt: 'Interactive 3D Portfolio world demonstration',
+            type: 'video'
         },
         github: 'https://github.com/Yknowjeff/Yknowjeff.github.io',
         demo: 'https://yknowjeff.github.io/',

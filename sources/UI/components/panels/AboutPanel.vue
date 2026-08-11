@@ -122,14 +122,14 @@ usePanelEscape(close)
                                         <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                                         <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
-                                    Live Site
+                                    {{ project.liveLabel || 'Live Site' }}
                                 </a>
                                 <span v-else class="iw-about__project-link iw-about__project-link--disabled" aria-disabled="true" title="Live site link coming soon">
                                     <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                                         <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                                         <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
-                                    Live Site
+                                    {{ project.liveLabel || 'Live Site' }}
                                 </span>
 
                                 <a
@@ -144,13 +144,13 @@ usePanelEscape(close)
                                     <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                         <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
                                     </svg>
-                                    Repository
+                                    {{ project.repoLabel || 'Repository' }}
                                 </a>
                                 <span v-else class="iw-about__project-link iw-about__project-link--disabled" aria-disabled="true" title="Repository link coming soon">
                                     <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                         <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
                                     </svg>
-                                    Repository
+                                    {{ project.repoLabel || 'Repository' }}
                                 </span>
                             </div>
                         </div>
@@ -280,7 +280,7 @@ usePanelEscape(close)
 <style scoped>
 /* Google Fonts import is a plain CSS @import, so it isn't selector-scoped by
    Vue -- it loads once, globally, but only About's rules below reference
-   these families, so Work/Resume keep their existing system-font look. */
+   these families. */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
 .iw-about
@@ -290,7 +290,7 @@ usePanelEscape(close)
        near-identical color. Only the cooler secondary/tertiary text tones
        and font families are genuinely new, so those get their own scoped
        variables instead of overloading global --iw-text-dim (which Work/
-       Resume still rely on with different alpha semantics). */
+       other panels with different alpha semantics). */
     --iw-about-font: 'Inter', var(--iw-font);
     --iw-about-mono: 'JetBrains Mono', var(--iw-font-mono);
     --iw-about-accent: var(--iw-accent);
@@ -464,9 +464,12 @@ usePanelEscape(close)
 
 .iw-about__avatar-image
 {
+    position: relative;
+    z-index: 1;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 34%;
     display: block;
 }
 
@@ -477,6 +480,7 @@ usePanelEscape(close)
     border-radius: 50%;
     background: radial-gradient(circle, var(--iw-about-accent-faint) 0%, rgba(255, 100, 20, 0.15) 45%, transparent 70%);
     filter: blur(8px);
+    pointer-events: none;
 }
 
 .iw-about__avatar-icon
@@ -1063,31 +1067,6 @@ usePanelEscape(close)
     color: var(--iw-about-accent-dim);
     letter-spacing: 0.1em;
     margin: 0;
-}
-
-/* -- Resume CTA -- */
-.iw-about__resume-button
-{
-    display: inline-flex;
-    align-items: center;
-    font-family: var(--iw-about-mono);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--iw-text);
-    background: var(--iw-about-accent-faint);
-    border: 1px solid var(--iw-about-border-accent);
-    border-radius: 6px;
-    padding: 12px 24px;
-    text-decoration: none;
-    transition: background 0.2s var(--iw-ease), border-color 0.2s var(--iw-ease);
-}
-
-.iw-about__resume-button:hover
-{
-    background: rgba(255, 138, 61, 0.2);
-    border-color: var(--iw-about-accent);
 }
 
 /* -- Contact -- */

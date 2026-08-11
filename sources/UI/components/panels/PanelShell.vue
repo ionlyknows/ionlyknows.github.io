@@ -6,7 +6,7 @@ const props = defineProps({
     subtitle: { type: String, default: '' },
     showHeaderCopy: { type: Boolean, default: true },
     // 'card' (default) is a centered card over a translucent backdrop that
-    // still shows the 3D scene behind it -- used for Work/Resume. 'fullscreen'
+    // still shows the 3D scene behind it -- used for Work. 'fullscreen'
     // is a wider (max 980px) glass HUD card over a fully transparent backdrop
     // with its own scrollable body -- used for About. Per the Figma source of
     // truth, the 3D world must stay visible behind it at all times, so this
@@ -71,7 +71,7 @@ function onPanelLeave(el, done)
                         </div>
                         <div class="iw-panel__header-right">
                             <!-- Optional per-panel extra (e.g. About's "AVAILABLE" status dot).
-                                 Empty by default, so Work/Resume render exactly as before. -->
+                                 Empty by default, so Work renders exactly as before. -->
                             <slot name="header-meta" />
                             <button class="iw-panel__close" type="button" @click="emit('close')" aria-label="Close">
                                 <span>Close</span>

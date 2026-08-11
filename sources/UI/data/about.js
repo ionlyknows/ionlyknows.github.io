@@ -1,6 +1,5 @@
 ﻿// Content for the About panel (sources/UI/components/panels/AboutPanel.vue)
-// and, for name/role only, the Resume panel. Source of truth for layout is
-// the Figma "Build Now" About Me HUD design -- see AboutPanel.vue.
+// Source of truth for layout is the Figma "Build Now" About Me HUD design.
 
 export default {
     name: 'Jefferson F. Laspiñas',
@@ -48,7 +47,8 @@ export default {
             tags: [ 'Java', 'Swing', 'JSON' ],
             image: '/projects/onsite-event-registration-system.png',
             imageAlt: 'Screenshot of an event registration desktop app',
-            liveUrl: '',
+            liveUrl: 'https://drive.google.com/file/d/1sMgAcB-Ov99gvSC_WX1v8r-GWxa8QfVJ/view',
+            liveLabel: 'Live Demo',
             repoUrl: 'https://github.com/ionlyknows/OnsiteRegistrationSystem-2025'
         },
         {
@@ -58,8 +58,10 @@ export default {
             tags: [ 'Manual Testing', 'Figma', 'Browser DevTools' ],
             image: '/projects/Guilds.png',
             imageAlt: 'Screenshot of the GDG on Campus website QA project',
-            liveUrl: 'https://guilds.uic.edu.ph/',
-            repoUrl: ''
+            liveUrl: 'https://drive.google.com/file/d/1taHoPhAJQBGC4hRNDBNudTvpGzq68a5g/view',
+            liveLabel: 'Live Demo',
+            repoUrl: '',
+            repoLabel: 'View File'
         }
     ],
 
@@ -170,13 +172,6 @@ export default {
         school: 'University of the Immaculate Conception',
         degree: 'Bachelor of Science in Computer Science',
         period: '2025 — Present'
-    },
-
-    resumeCta: {
-        heading: 'Want the complete picture?',
-        text: 'Download my resume for a concise overview of my skills, projects, experience, and academic background.',
-        buttonLabel: 'Download Resume',
-        path: '/resume.pdf'
     },
 
     contact: {

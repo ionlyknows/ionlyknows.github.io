@@ -18,6 +18,7 @@ export default class Terrains
 
         this.viewport = this.state.viewport
         this.sky =  this.view.sky
+        this.instances = new Set()
 
         this.setGradient()
         this.setMaterial()
@@ -26,10 +27,12 @@ export default class Terrains
         this.state.terrains.events.on('create', (engineTerrain) =>
         {
             const terrain = new Terrain(this, engineTerrain)
+            this.instances.add(terrain)
 
             engineTerrain.events.on('destroy', () =>
             {
                 terrain.destroy()
+                this.instances.delete(terrain)
             })
         })
     }
@@ -115,6 +118,15 @@ export default class Terrains
 
         this.material.uniforms.uPlayerPosition.value.set(playerPosition[0], playerPosition[1], playerPosition[2])
         this.material.uniforms.uSunPosition.value.set(sunState.position.x, sunState.position.y, sunState.position.z)
+    }
+
+    setVisible(visible)
+    {
+        for(const terrain of this.instances)
+        {
+            if(terrain.mesh)
+                terrain.mesh.visible = visible
+        }
     }
 
     resize()

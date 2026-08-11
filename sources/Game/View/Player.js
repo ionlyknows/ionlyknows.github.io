@@ -66,6 +66,14 @@ export default class Player
         this.group.add(this.model.group)
     }
 
+    setVisible(visible)
+    {
+        this.group.visible = visible
+        this.sunLight.visible = visible
+        this.sunLight.target.visible = visible
+        this.fillLight.visible = visible
+    }
+
     setDebug()
     {
         if(!this.debug.active)

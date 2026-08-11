@@ -2,7 +2,7 @@
 
 **An interactive 3D portfolio you explore, not just scroll.**
 
-Built on top of Bruno Simon's *Infinite World* concept and extended into a full personal portfolio — walk a controllable character through a procedurally generated world where projects, resume, and achievements live as objects in the environment itself.
+Built on top of Bruno Simon's *Infinite World* concept and extended into a full personal portfolio — walk a controllable character through a procedurally generated world where projects and achievements live as objects in the environment itself.
 
 [**🌐 Live Portfolio**](https://field-notes-xi-eight.vercel.app/) · [**📦 Repository**](https://github.com/ionlyknows/ionlyknows.github.io) · [**💻 GitHub Profile**](https://github.com/ionlyknows)
 
@@ -12,7 +12,7 @@ Built on top of Bruno Simon's *Infinite World* concept and extended into a full 
 
 ## 🧭 About the Portfolio
 
-Instead of a traditional scrolling website, this portfolio is a small 3D world you move through with a controllable character. Project showcases, an "About Me" hub, resume details, activities, and achievement certificates are all placed as interactive elements inside that world — floating billboards, teleporters, and panels — rather than separate static pages.
+Instead of a traditional scrolling website, this portfolio is a small 3D world you move through with a controllable character. Project showcases, an "About Me" hub, activities, and achievement certificates are all placed as interactive elements inside that world — floating billboards, teleporters, and panels — rather than separate static pages.
 
 The goal is to make browsing a portfolio feel like *exploring*, while still surfacing the same information a recruiter or visitor would expect from a conventional site.
 
@@ -24,7 +24,6 @@ The goal is to make browsing a portfolio feel like *exploring*, while still surf
 - 🔁 **Automatic project showcase** — projects cycle/rotate for discovery
 - 🧭 **Project navigation** — move between showcased projects directly in the world
 - 👤 **About Me interface** — bio, skills, and quick-info panel
-- 📄 **Resume interface** — dedicated resume panel
 - 🗂️ **Activities section** — organizational and campus activity highlights
 - 🏆 **Achievement / certificate billboards** — certificates displayed as in-world billboards
 - 🖼️ **Interactive certificate viewing** — inspect certificates up close
@@ -39,7 +38,6 @@ The goal is to make browsing a portfolio feel like *exploring*, while still surf
 |---|---|
 | **Work** | Interactive project showcase — browse featured and past projects in the 3D world |
 | **About** | Biography, education, skills, and contact info |
-| **Resume** | Professional / resume-focused information |
 | **Activities** | Organizational involvement and campus/community activities |
 | **Achievements** | Certificates and credentials, shown as viewable in-world billboards |
 
@@ -82,7 +80,7 @@ Yknowjeff.github.io/
         ├── App.vue                # UI root
         ├── UIBridge.js             # Bridge between the 3D world and Vue UI
         ├── components/              # Navigation, HUD, billboard viewer, panels
-        │   └── panels/                # About / Resume / Work info panels
+        │   └── panels/                # About / Work info panels
         ├── composables/              # Vue composables (game hook, escape handling, UI bridge)
         └── data/                     # About & project content data
 ```
@@ -122,14 +120,14 @@ This outputs a production-ready build to the `dist/` folder.
 
 ## 🚢 Deployment
 
-The primary live deployment is on **Vercel**: [field-notes-xi-eight.vercel.app](https://field-notes-xi-eight.vercel.app/) — this is the link shared on my resume and profiles.
+The primary live deployment is on **Vercel**: [field-notes-xi-eight.vercel.app](https://field-notes-xi-eight.vercel.app/).
 
 A secondary mirror auto-deploys to **GitHub Pages** on every push to `main` via GitHub Actions ([workflow](.github/workflows/deploy.yml)): [ionlyknows.github.io](https://ionlyknows.github.io/).
 
 ## 🙏 Credits / Inspiration
 
 - Built on the concept and foundation of [**Infinite World**](https://github.com/brunosimon/infinite-world) by [Bruno Simon](https://bruno-simon.com/), an infinite procedurally generated world built with Three.js.
-- Extended and customized with an original portfolio UI, project/resume/activities/achievements content, and interaction design specific to this project.
+- Extended and customized with an original portfolio UI, project, activities, and achievements content, plus interaction design specific to this project.
 
 ## 👤 Author
 

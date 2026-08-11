@@ -18,6 +18,14 @@ const FRAME_MARGIN = 0   // was 1.4 * SCALE -- housing now matches the
 // sign. Screen/glow z-offsets below are derived from this so they stay
 // correctly seated against the housing's front face regardless of scale.
 const FRAME_DEPTH = 0.18
+// A 16:9 texture that remains sharp at the Work camera distance while
+// substantially reducing the CPU-to-GPU upload cost of each video frame.
+// A 720p texture remains sharp at the fixed Work camera distance while using
+// 44% less upload bandwidth than the previous 1536 x 864 canvas.
+const CANVAS_WIDTH = 1280
+const CANVAS_HEIGHT = 720
+const VIDEO_FRAME_INTERVAL = 1 / 24
+const DISPLAY_VIDEO_FRAME_INTERVAL = 1 / 12
 
 // Local Y lift (on top of the terrain-resolved ground height) applied to
 // both the housing and the screen so the whole billboard reads as clearly
@@ -54,11 +62,15 @@ export default class Billboard
         this.mediaElement = null
         this.mediaSource = null
         this.mediaCache = new Map()
+        this.metadataCache = new Map()
         this.mediaRequestId = 0
         this.lastVideoFrame = 0
+        this.videoFrameToken = 0
         this.infoOpen = false
         this.onInfoChange = null
-        this.hitRects = { info: null, repo: null }
+        this.onNavigate = null
+        this.lastNavigationAt = 0
+        this.hitRects = { info: null, repo: null, previous: null, next: null }
         this.raycaster = new THREE.Raycaster()
         this.pointerNDC = new THREE.Vector2()
         this.transition = { alpha: 1, scale: 1 }
@@ -130,7 +142,15 @@ export default class Billboard
         const x = hit.uv.x * this.canvas.width
         const y = (1 - hit.uv.y) * this.canvas.height
 
-        if(this._pointInRect(x, y, this.hitRects.info))
+        if(this._pointInRect(x, y, this.hitRects.previous))
+        {
+            this._navigate(-1)
+        }
+        else if(this._pointInRect(x, y, this.hitRects.next))
+        {
+            this._navigate(1)
+        }
+        else if(this._pointInRect(x, y, this.hitRects.info))
         {
             this._setInfoOpen(!this.infoOpen)
             this.drawScreen()
@@ -153,11 +173,21 @@ export default class Billboard
         return !!rect && x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h
     }
 
+    _navigate(direction)
+    {
+        const now = performance.now()
+        if(now - this.lastNavigationAt < 180)
+            return
+
+        this.lastNavigationAt = now
+        this.onNavigate?.(direction)
+    }
+
     getAction(project)
     {
         const useRepository = project?.billboardAction === 'github'
         const url = useRepository ? project?.github : project?.demo || project?.github
-        const label = useRepository || !project?.demo ? 'VIEW REPO' : 'LIVE SITE'
+        const label = project?.billboardLabel || (useRepository || !project?.demo ? 'VIEW REPO' : 'LIVE SITE')
 
         return { url, label }
     }
@@ -193,7 +223,10 @@ export default class Billboard
         {
             const x = hit.uv.x * this.canvas.width
             const y = (1 - hit.uv.y) * this.canvas.height
-            hovering = this._pointInRect(x, y, this.hitRects.info) || this._pointInRect(x, y, this.hitRects.repo)
+            hovering = this._pointInRect(x, y, this.hitRects.info)
+                || this._pointInRect(x, y, this.hitRects.repo)
+                || this._pointInRect(x, y, this.hitRects.previous)
+                || this._pointInRect(x, y, this.hitRects.next)
         }
 
         canvasEl.style.cursor = hovering ? 'pointer' : 'default'
@@ -241,8 +274,8 @@ export default class Billboard
     buildScreen()
     {
         this.canvas = document.createElement('canvas')
-        this.canvas.width = 2048
-        this.canvas.height = 1152
+        this.canvas.width = CANVAS_WIDTH
+        this.canvas.height = CANVAS_HEIGHT
         this.context = this.canvas.getContext('2d')
         this.texture = new THREE.CanvasTexture(this.canvas)
         this.texture.colorSpace = THREE.SRGBColorSpace
@@ -342,27 +375,11 @@ export default class Billboard
             }
         }
 
-        const topScrim = ctx.createLinearGradient(0, 0, 0, height * 0.22)
-        topScrim.addColorStop(0, 'rgba(2, 4, 8, 0.48)')
-        topScrim.addColorStop(1, 'rgba(2, 4, 8, 0)')
-        ctx.fillStyle = topScrim
-        ctx.fillRect(0, 0, width, height * 0.22)
-
         const bottomScrim = ctx.createLinearGradient(0, height * 0.5, 0, height)
         bottomScrim.addColorStop(0, 'rgba(2, 4, 8, 0)')
         bottomScrim.addColorStop(1, 'rgba(2, 4, 8, 0.58)')
         ctx.fillStyle = bottomScrim
         ctx.fillRect(0, height * 0.5, width, height * 0.5)
-
-        ctx.fillStyle = '#8ffbff'
-        ctx.font = '700 26px monospace'
-        ctx.fillText('LIVE // WORK ARCHIVE', 92, 112)
-        ctx.fillStyle = '#ff174f'
-        ctx.fillText(`STATUS // ${(project.status || 'ACTIVE').toUpperCase()}`, width - 510, 112)
-
-        ctx.fillStyle = 'rgba(233, 255, 255, 0.82)'
-        ctx.font = '700 20px monospace'
-        ctx.fillText(`ROLE // ${(project.role || 'Creative Developer').toUpperCase()}`, 100, 158)
 
         if(!hasMedia)
         {
@@ -381,33 +398,23 @@ export default class Billboard
 
         ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'
         ctx.shadowBlur = 22
-        const featureText = project.keyFeatures?.length
-            ? `KEY FEATURES // ${project.keyFeatures.join('  •  ')}`
-            : ''
-        if(featureText)
-        {
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.75)'
-            ctx.shadowBlur = 14
-            ctx.fillStyle = '#8ffbff'
-            ctx.font = '700 20px monospace'
-            this.wrapText(featureText, margin, height - 390, width - margin * 2, 28)
-        }
-
         ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'
         ctx.shadowBlur = 22
         ctx.fillStyle = '#ff2e63'
-        ctx.font = '800 76px sans-serif'
-        const titleY = height - 300
-        const afterTitleY = this.wrapText(project.title || 'UNTITLED PROJECT', margin, titleY, width - margin * 2 - 420, 82)
+        ctx.font = '800 48px sans-serif'
+        const titleY = height - 154
+        const afterTitleY = this.wrapText(project.title || 'UNTITLED PROJECT', margin, titleY, width - margin * 2, 56)
         ctx.shadowColor = 'transparent'
         ctx.shadowBlur = 0
 
-        const buttonY = afterTitleY + 6
-        const buttonHeight = 64
-        ctx.font = '700 26px monospace'
+        // Keep the actions clear of the persistent PREV/NEXT footer even
+        // when a project title wraps onto a second line.
+        const buttonY = afterTitleY - 14
+        const buttonHeight = 48
+        ctx.font = '700 21px monospace'
 
         const infoLabel = 'INFO'
-        const infoWidth = ctx.measureText(infoLabel).width + 72
+        const infoWidth = ctx.measureText(infoLabel).width + 52
         const infoRect = { x: margin, y: buttonY, w: infoWidth, h: buttonHeight }
         this._roundRectPath(ctx, infoRect.x, infoRect.y, infoRect.w, infoRect.h, buttonHeight * 0.5)
         ctx.fillStyle = this.infoOpen ? 'rgba(255, 46, 99, 0.9)' : 'rgba(255, 46, 99, 0.16)'
@@ -416,12 +423,12 @@ export default class Billboard
         ctx.lineWidth = 2
         ctx.stroke()
         ctx.fillStyle = this.infoOpen ? '#0a0a0f' : '#ffe8ee'
-        ctx.fillText(infoLabel, infoRect.x + 36, infoRect.y + buttonHeight * 0.64)
+        ctx.fillText(infoLabel, infoRect.x + 26, infoRect.y + buttonHeight * 0.66)
 
         const action = this.getAction(this.project)
         const actionAvailable = !!action.url
         const actionLabel = action.label
-        const actionWidth = ctx.measureText(actionLabel).width + 72
+        const actionWidth = ctx.measureText(actionLabel).width + 52
         const actionRect = { x: infoRect.x + infoRect.w + 20, y: buttonY, w: actionWidth, h: buttonHeight }
         this._roundRectPath(ctx, actionRect.x, actionRect.y, actionRect.w, actionRect.h, buttonHeight * 0.5)
         ctx.fillStyle = actionAvailable ? 'rgba(53, 246, 255, 0.16)' : 'rgba(160, 170, 175, 0.08)'
@@ -429,7 +436,7 @@ export default class Billboard
         ctx.strokeStyle = actionAvailable ? '#35f6ff' : 'rgba(160, 170, 175, 0.4)'
         ctx.stroke()
         ctx.fillStyle = actionAvailable ? '#e9ffff' : 'rgba(220, 225, 228, 0.45)'
-        ctx.fillText(actionLabel, actionRect.x + 36, actionRect.y + buttonHeight * 0.64)
+        ctx.fillText(actionLabel, actionRect.x + 26, actionRect.y + buttonHeight * 0.66)
 
         this.hitRects.info = infoRect
         this.hitRects.repo = actionAvailable ? actionRect : null
@@ -438,8 +445,15 @@ export default class Billboard
 
         ctx.fillStyle = 'rgba(233, 255, 255, 0.8)'
         ctx.font = '700 24px monospace'
-        ctx.fillText('<- PREV', 46, height - 26)
-        ctx.fillText('NEXT ->', width - 170, height - 26)
+        const previousLabel = '<- PREV'
+        const nextLabel = 'NEXT ->'
+        const footerBaseline = height - 26
+        const previousX = 46
+        const nextX = width - 170
+        ctx.fillText(previousLabel, previousX, footerBaseline)
+        ctx.fillText(nextLabel, nextX, footerBaseline)
+        this.hitRects.previous = { x: previousX - 20, y: footerBaseline - 38, w: ctx.measureText(previousLabel).width + 40, h: 52 }
+        this.hitRects.next = { x: nextX - 20, y: footerBaseline - 38, w: ctx.measureText(nextLabel).width + 40, h: 52 }
         ctx.fillStyle = 'rgba(255, 23, 79, 0.85)'
         ctx.fillText(this.active ? 'ESC // EXIT' : 'WORK // CONNECT', width * 0.5 - 110, height - 26)
 
@@ -521,6 +535,7 @@ export default class Billboard
         // making it pop or replay the project transition.
         this.group.scale.set(1, 1, 1)
         gsap.to(this.glow.material, { opacity: 0.17, duration: 0.35, yoyo: true, repeat: 1 })
+        this._playVideo()
     }
 
     setProject(project)
@@ -539,9 +554,43 @@ export default class Billboard
         this._playTransition()
     }
 
-    preloadMedia(projects)
+    async preloadMedia(projects)
     {
-        projects?.forEach((project) => this._getMedia(project?.media))
+        // The active video is loaded by setProject. Warm only metadata for
+        // the others, sequentially, so startup does not create extra video
+        // decoders or download every large MP4 before the visitor needs it.
+        const activeSource = this.mediaSource
+        const queuedProjects = [
+            ...(projects || []).filter((project) => project?.media?.src !== activeSource)
+        ]
+
+        for(const project of queuedProjects)
+            await this._preloadMediaMetadata(project?.media)
+    }
+
+    _preloadMediaMetadata(media)
+    {
+        const source = media?.src
+        const isVideo = media?.type === 'video' || /\.(mp4|webm|ogg)(\?.*)?$/i.test(source || '')
+        if(!source || !isVideo || this.metadataCache.has(source))
+            return this.metadataCache.get(source) || Promise.resolve()
+
+        const request = new Promise((resolve) =>
+        {
+            const video = document.createElement('video')
+            video.preload = 'metadata'
+            const settle = () =>
+            {
+                video.removeAttribute('src')
+                video.load()
+                resolve()
+            }
+            video.addEventListener('loadedmetadata', settle, { once: true })
+            video.addEventListener('error', settle, { once: true })
+            video.src = source
+        })
+        this.metadataCache.set(source, request)
+        return request
     }
 
     _getMedia(media)
@@ -560,12 +609,35 @@ export default class Billboard
             if(isVideo)
             {
                 const video = document.createElement('video')
+                // The screen draws from the video element, so it needs an
+                // actual decoded frame rather than metadata alone. With
+                // `preload = metadata`, many browsers never dispatch
+                // `loadeddata` until playback begins; the promise below then
+                // never resolves and the billboard remains on its loading
+                // screen. Let the browser buffer enough data for playback.
                 video.preload = 'auto'
                 video.muted = true
                 video.loop = true
                 video.playsInline = true
-                video.addEventListener('canplay', () => resolve(video), { once: true })
-                video.addEventListener('error', () => resolve(null), { once: true })
+                video.setAttribute('muted', '')
+                video.setAttribute('playsinline', '')
+
+                let settled = false
+                const settle = (element) =>
+                {
+                    if(settled)
+                        return
+
+                    settled = true
+                    resolve(element)
+                }
+
+                // `loadeddata` is the first event at which drawImage can use
+                // the video. `canplay` covers browsers that skip directly to
+                // a playable state from a cached response.
+                video.addEventListener('loadeddata', () => settle(video), { once: true })
+                video.addEventListener('canplay', () => settle(video), { once: true })
+                video.addEventListener('error', () => settle(null), { once: true })
                 video.src = source
                 video.load()
                 return
@@ -598,6 +670,11 @@ export default class Billboard
         if(source === this.mediaSource)
             return
 
+        if(this.mediaElement instanceof HTMLVideoElement)
+        {
+            this.mediaElement.pause()
+        }
+
         this.mediaSource = source
         const requestId = ++this.mediaRequestId
         this._getMedia(media).then((element) =>
@@ -608,9 +685,49 @@ export default class Billboard
 
             this.mediaElement = element
             if(element instanceof HTMLVideoElement)
-                element.play().catch(() => {})
+            {
+                try { element.currentTime = 0 } catch(error) { /* metadata may not be available yet */ }
+                this._playVideo()
+            }
             this.drawScreen()
         })
+    }
+
+    _playVideo()
+    {
+        const video = this.mediaElement
+        if(!(video instanceof HTMLVideoElement))
+            return
+
+        video.play()
+            .then(() => this._watchVideoFrames(video))
+            .catch(() => {})
+    }
+
+    _watchVideoFrames(video)
+    {
+        if(typeof video.requestVideoFrameCallback !== 'function')
+            return
+
+        const token = ++this.videoFrameToken
+        const renderNextFrame = () =>
+        {
+            video.requestVideoFrameCallback(() =>
+            {
+                if(token !== this.videoFrameToken || video !== this.mediaElement)
+                    return
+
+                const now = performance.now() / 1000
+                const frameInterval = this.active ? VIDEO_FRAME_INTERVAL : DISPLAY_VIDEO_FRAME_INTERVAL
+                if(now - this.lastVideoFrame >= frameInterval)
+                {
+                    this.lastVideoFrame = now
+                    this.drawScreen()
+                }
+                renderNextFrame()
+            })
+        }
+        renderNextFrame()
     }
 
     exitInteraction()
@@ -642,10 +759,16 @@ export default class Billboard
 
         this.glow.material.opacity = (this.active ? 0.1 : 0.045) + Math.sin(elapsedTime * 2.4) * 0.018
 
-        if(this.active && this.mediaElement instanceof HTMLVideoElement && elapsedTime - this.lastVideoFrame > 0.12)
+        // Browsers with requestVideoFrameCallback redraw only when a decoded
+        // frame arrives. This fallback keeps the world-facing display alive
+        // in older browsers at a lower, less expensive refresh rate.
+        if(this.mediaElement instanceof HTMLVideoElement
+            && typeof this.mediaElement.requestVideoFrameCallback !== 'function'
+            && elapsedTime - this.lastVideoFrame > (this.active ? VIDEO_FRAME_INTERVAL : DISPLAY_VIDEO_FRAME_INTERVAL))
         {
             this.lastVideoFrame = elapsedTime
             this.drawScreen()
         }
+
     }
 }

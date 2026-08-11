@@ -56,9 +56,15 @@ export default class CertificateBillboards
         this.onSelect = null
         this.onProximityChange = null
         this.certificateNearby = false
+        this.textureLoader = new THREE.TextureLoader()
         this.raycaster = new THREE.Raycaster()
         this.pointerNDC = new THREE.Vector2()
         this.boards = CERTIFICATE_AREA.map((certificate, index) => this.createBoard(certificate, index))
+
+        // These boards are visible from the spawn area, well before the
+        // player reaches the interaction radius. Preload the small, local
+        // certificate set so their screens never appear as blank panels.
+        this.boards.forEach((board) => this._loadBoardTexture(board))
 
         this._handleClick = this._handleClick.bind(this)
         this._handleMouseMove = this._handleMouseMove.bind(this)
@@ -91,20 +97,6 @@ export default class CertificateBillboards
         glow.position.z = -FRAME_DEPTH * 0.5 - 0.01
         hoverGroup.add(glow)
 
-        // The screen itself becomes the certificate: no canvas frame, labels,
-        // or overlays. Resizing the geometry to the source aspect ratio avoids
-        // both letterboxing and cropping without distorting the image.
-        new THREE.TextureLoader().load(certificate.image, (texture) =>
-        {
-            texture.colorSpace = THREE.SRGBColorSpace
-            texture.minFilter = THREE.LinearFilter
-            texture.magFilter = THREE.LinearFilter
-            texture.generateMipmaps = false
-            screenMaterial.map = texture
-            screenMaterial.needsUpdate = true
-            setBoardAspect(housing, screen, glow, texture.image.width / texture.image.height)
-        })
-
         this.scene.add(root)
 
         const floatState = { y: 0 }
@@ -118,7 +110,37 @@ export default class CertificateBillboards
             onUpdate: () => { hoverGroup.position.y = certificate.y + floatState.y }
         })
 
-        return { root, hoverGroup, screen, certificate, width: initialWidth, groundResolved: false }
+        return { root, hoverGroup, screen, screenMaterial, housing, glow, certificate, width: initialWidth, groundResolved: false, textureRequested: false }
+    }
+
+    _loadBoardTexture(board)
+    {
+        if(board.textureRequested)
+            return
+
+        board.textureRequested = true
+        // Retain the loaded texture for the lifetime of the scene.
+        this.textureLoader.load(
+            board.certificate.image,
+            (texture) =>
+            {
+                texture.colorSpace = THREE.SRGBColorSpace
+                texture.minFilter = THREE.LinearFilter
+                texture.magFilter = THREE.LinearFilter
+                texture.generateMipmaps = false
+                texture.needsUpdate = true
+                board.screenMaterial.map = texture
+                board.screenMaterial.needsUpdate = true
+                setBoardAspect(board.housing, board.screen, board.glow, texture.image.width / texture.image.height)
+            },
+            undefined,
+            () => { board.textureRequested = false }
+        )
+    }
+
+    setVisible(visible)
+    {
+        this.boards.forEach((board) => { board.root.visible = visible })
     }
 
     _getBoardAtPointer(event)
@@ -153,7 +175,13 @@ export default class CertificateBillboards
     {
         const board = this._getBoardAtPointer(event)
         if(board)
+        {
+            // Start the texture request from the same interaction that opens
+            // the board, guaranteeing the framed view does not remain blank
+            // if the player arrived before the proximity check ran.
+            this._loadBoardTexture(board)
             this.onSelect?.(board)
+        }
     }
 
     _handleMouseMove(event)
@@ -185,6 +213,11 @@ export default class CertificateBillboards
         }
 
         const nearby = this.boards.some((board) => board.groundResolved && this._isNear(board))
+        for(const board of this.boards)
+        {
+            if(board.groundResolved && this._isNear(board))
+                this._loadBoardTexture(board)
+        }
         if(nearby !== this.certificateNearby)
         {
             this.certificateNearby = nearby

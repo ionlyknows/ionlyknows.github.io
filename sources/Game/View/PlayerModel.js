@@ -20,6 +20,7 @@ const ANIMATION_FILES = {
 const TARGET_HEIGHT = 1.8
 const CROSSFADE_DURATION = 0.25
 const MODEL_FORWARD_OFFSET = Math.PI
+const MAX_ANIMATION_DELTA = 1 / 30
 
 const IDLE_FIDGET_DELAY_MIN = 8
 const IDLE_FIDGET_DELAY_MAX = 16
@@ -42,8 +43,6 @@ export default class PlayerModel
 
         this.idleTimer = 0
         this.idleFidgetDelay = this.getRandomIdleFidgetDelay()
-        this.deferSecondaryAnimations = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches
-
         this.load()
     }
 
@@ -60,19 +59,14 @@ export default class PlayerModel
             this.setupModel()
 
             this.mixer = new THREE.AnimationMixer(this.vrm.scene)
-
-            if(this.deferSecondaryAnimations)
-            {
-                // Mobile can enter the world as soon as the idle pose is
-                // available. The remaining movement clips are loaded in the
-                // background and become available automatically on arrival.
-                await this.setupInitialAnimation()
-                this.setupSecondaryAnimations()
-            }
-            else
-                await this.setupAnimations()
-
+            // The model itself is the only character asset required for the
+            // first visible scene. Animation FBX files (notably the 30 MB
+            // idle clip) now load after the world is usable instead of
+            // keeping the loading screen up on desktop.
             this.ready = true
+            this.setupInitialAnimation()
+                .then(() => this.setupSecondaryAnimations())
+                .catch((error) => console.error('[PlayerModel] Failed to load animations', error))
         }
         catch(error)
         {
@@ -182,31 +176,22 @@ export default class PlayerModel
         this.currentAction = this.actions.idle
     }
 
-    setupSecondaryAnimations()
+    async setupSecondaryAnimations()
     {
-        Promise.all([
-            loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.dancing}`, this.vrm),
-            loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.running}`, this.vrm),
-            loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.fastRun}`, this.vrm),
-            loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES.runningJump}`, this.vrm)
-        ])
-            .then(([ dancing, running, fastRun, runningJump ]) =>
-            {
-                const clips = { dancing, running, fastRun, runningJump }
+        // Fetch one secondary clip at a time. Parallel FBX parsing competed
+        // with terrain generation and project-media startup on desktop.
+        for(const name of [ 'dancing', 'running', 'fastRun', 'runningJump' ])
+        {
+            const clip = await loadMixamoAnimationForVRM(`${ANIMATION_ASSET_PATH}${ANIMATION_FILES[name]}`, this.vrm)
+            if(!clip)
+                continue
 
-                for(const [ name, clip ] of Object.entries(clips))
-                {
-                    if(!clip)
-                        continue
+            clip.name = name
+            this.actions[name] = this.mixer.clipAction(clip)
+        }
 
-                    clip.name = name
-                    this.actions[name] = this.mixer.clipAction(clip)
-                }
-
-                if(this.actions.runningJump)
-                    this.actions.runningJump.setLoop(THREE.LoopOnce, 1).clampWhenFinished = true
-            })
-            .catch((error) => console.error('[PlayerModel] Failed to load secondary animations', error))
+        if(this.actions.runningJump)
+            this.actions.runningJump.setLoop(THREE.LoopOnce, 1).clampWhenFinished = true
     }
 
     setState(name)
@@ -296,7 +281,10 @@ export default class PlayerModel
 
         this.updateAnimationState(playerState, delta)
 
-        this.mixer.update(delta)
-        this.vrm.update(delta)
+        // Large render-frame deltas destabilize VRM skin/spring-bone updates
+        // during fast movement. Keep animation stepping bounded.
+        const animationDelta = Math.min(delta, MAX_ANIMATION_DELTA)
+        this.mixer.update(animationDelta)
+        this.vrm.update(animationDelta)
     }
 }

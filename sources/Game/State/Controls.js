@@ -13,7 +13,7 @@ export default class Controls
         this.events = new EventsEmitter()
 
         // Gameplay input gate. The UI layer (App.vue) flips this off while a
-        // panel (Work/About/Resume) is open and back on when it closes -- see
+        // panel (Work/About) is open and back on when it closes -- see
         // setInputEnabled() below. Defaults to enabled so the world is always
         // playable even if the UI layer fails to initialise.
         this.inputEnabled = true

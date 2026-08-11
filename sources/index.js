@@ -14,9 +14,15 @@ try
     createUIApp(bridge, game)
 
     game.view.billboard.onInfoChange = (open) => bridge.emit('billboardInfoChanged', open)
+    game.view.billboard.onNavigate = (direction) => bridge.emit(direction < 0 ? 'billboardPrevious' : 'billboardNext')
     game.view.certificateBillboards.onProximityChange = (nearby) => bridge.emit('certificateProximityChanged', nearby)
 
-    let projectIndex = 0
+    // The world-facing display has a deliberate story order independent of
+    // the existing Work navigation order.
+    const worldProjectOrder = [ 'gdg-qa', 'onsite-event-registration-system', 'interactive-3d-portfolio' ]
+        .map((id) => projects.findIndex((project) => project.id === id))
+        .filter((index) => index >= 0)
+    let projectIndex = worldProjectOrder[0] ?? 0
     let workOpen = false
     let certificateOpen = false
     let closeRequested = false
@@ -33,18 +39,24 @@ try
         }
     }
 
-    const resetAutoplay = () =>
+    const startWorldAutoplay = () =>
     {
         clearAutoplay()
 
-        if(projects.length <= 1)
+        if(workOpen || flyToWorkInProgress || projects.length <= 1)
             return
 
         autoplayTimer = window.setTimeout(() =>
         {
-            projectIndex = (projectIndex + 1) % projects.length
+            autoplayTimer = null
+            if(workOpen || flyToWorkInProgress)
+                return
+
+            const currentWorldIndex = worldProjectOrder.indexOf(projectIndex)
+            projectIndex = worldProjectOrder[(currentWorldIndex + 1) % worldProjectOrder.length] ?? (projectIndex + 1) % projects.length
             showProject()
-        }, 20000)
+            startWorldAutoplay()
+        }, 30000)
     }
 
     const showProject = () =>
@@ -52,7 +64,6 @@ try
         const project = projects[projectIndex] || projects[0]
         game.view.billboard.setProject(project)
         bridge.emit('billboardProjectChanged', projectIndex)
-        resetAutoplay()
     }
 
     const openWorkBillboard = async () =>
@@ -63,6 +74,7 @@ try
         workOpen = true
         flyToWorkInProgress = true
         closeRequested = false
+        clearAutoplay()
         game.state.controls.setInputEnabled(false)
         bridge.emit('billboardTransitionChanged', true)
 
@@ -90,6 +102,7 @@ try
         }
 
         game.view.billboard.enterInteraction()
+        game.view.setWorkFocus(true)
         bridge.emit('billboardInteractionChanged', true)
         // Render the project once. Calling setProject in enterInteraction and
         // again here replayed the screen fade and made the billboard pop.
@@ -177,6 +190,7 @@ try
         }
 
         game.view.billboard.exitInteraction()
+        game.view.setWorkFocus(false)
         bridge.emit('billboardInteractionChanged', false)
         bridge.emit('billboardTransitionChanged', false)
         await game.state.teleporter.flyBack()
@@ -184,6 +198,7 @@ try
         workOpen = false
         flyToWorkInProgress = false
         closeRequested = false
+        startWorldAutoplay()
     }
 
     bridge.on('closeWorkBillboard', closeWorkBillboard)
@@ -204,6 +219,7 @@ try
     })
 
     showProject()
+    startWorldAutoplay()
     // The first project begins loading above. Defer the remaining image
     // decodes until the browser has idle time so terrain/world startup wins
     // the first few frames after deployment.
