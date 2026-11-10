@@ -74,8 +74,10 @@ Installed third-party skills (general reference only; **CLAUDE.md and the projec
 - Jefferson does the real QA by testing on localhost.
 
 ## Workflow
-- One branch per milestone (e.g. `m0-cleanup`). Never commit directly to `main`.
-- **Never `git commit` or `git push` without Jefferson's explicit approval.** Leave changes uncommitted, show a short summary, and wait for him to say "approved". Then commit (and push only if he asks).
+- One branch per milestone (e.g. `m1-planet`), created from the previous milestone's branch. Nothing is merged into `main` until M2 (main = the live site).
+- **Jefferson is the only committer and contributor.** You must NEVER run `git commit`, `git commit --amend`, `git push`, `git merge`, `git rebase`, `git reset`, or `git filter-repo`, even if approved. Never add `Co-Authored-By` lines or any AI attribution to commit messages, code, or docs.
+- You may edit files, run npm commands, and run read-only git commands (`status`, `diff`, `log`), and create/switch branches (`git switch`, `git switch -c`). Leave all changes uncommitted.
+- When work is ready: give a short summary, a suggested commit message (no attribution lines), and the exact git commands for Jefferson to run himself.
 - **Testing is on localhost.** Jefferson tests with `npm run dev` (http://localhost:5173), and checks the production build with `npm run build` then `npx vite preview` (http://localhost:4173) before merging. Vercel is only for the public site (deploys from `main`).
 - At the end of a task: run `npm run build`, tick the milestone checklist, update `docs/audit.md` (findings status + change log), and list what changed and anything left open.
 
