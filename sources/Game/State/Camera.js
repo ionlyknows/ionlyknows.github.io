@@ -70,8 +70,8 @@ export default class Camera
 
         if(this.mode === Camera.MODE_THIRDPERSON)
         {
-            vec3.copy(this.position, this.thirdPerson.position)
-            quat2.copy(this.quaternion, this.thirdPerson.quaternion)
+            this.thirdPerson.position.toArray(this.position)
+            this.thirdPerson.quaternion.toArray(this.quaternion)
         }
 
         else if(this.mode === Camera.MODE_FLY)

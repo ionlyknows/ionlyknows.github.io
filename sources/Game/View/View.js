@@ -1,5 +1,7 @@
-﻿import Camera from './Camera.js'
-import Player from './Player.js'
+import Camera from './Camera.js'
+import Lights from './Lights.js'
+import Planet from './Planet.js'
+import PlayerModel from './PlayerModel.js'
 import Renderer from './Renderer.js'
 import Space from './Space.js'
 
@@ -26,7 +28,9 @@ export default class View
         this.camera = new Camera()
         this.renderer = new Renderer()
         this.space = new Space()
-        this.player = new Player()
+        this.lights = new Lights()
+        this.planet = new Planet()
+        this.player = new PlayerModel()
     }
 
     resize()
@@ -39,7 +43,9 @@ export default class View
     update()
     {
         this.space.update()
+        this.planet.update()
         this.player.update()
+        this.lights.update()
         this.camera.update()
         this.renderer.update()
     }

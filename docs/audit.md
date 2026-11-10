@@ -7,7 +7,7 @@
 ---
 
 ## 1. Snapshot at audit time
-- **Stack:** Three.js r0.184 (WebGL), Vue 3.5, GSAP 3, Vite 4, GLSL via `vite-plugin-glsl`, `@pixiv/three-vrm` 3, `simplex-noise`, `seedrandom`, `gl-matrix`, `lil-gui`, `stats.js`, `events`
+- **Stack:** Three.js r0.184 (WebGL), Vue 3.5, GSAP 3, Vite 4, GLSL via `vite-plugin-glsl`, `@pixiv/three-vrm` 3 (removed M1), `simplex-noise`, `seedrandom`, `gl-matrix`, `lil-gui`, `stats.js`, `events`
 - **Size:** ~210 MB, 120 files (excluding `node_modules`)
 - **Origin:** built on Bruno Simon's *Infinite World* (procedural terrain, chunks, grass, water, sky, day cycle, terrain web workers)
 - **Architecture:** `sources/Game/State` (logic) / `sources/Game/View` (rendering) / `sources/UI` (Vue), connected by `sources/UI/UIBridge.js`
@@ -18,8 +18,8 @@
 |---|---|---|
 | Terrain/world | `State/Chunks, Chunk, Terrains, Terrain, DayCycle, Sun, Teleporter`; `View/Chunks, Chunk, ChunkHelper, Terrains, Terrain, TerrainGradient, Grass, Water, Noises`; `Workers/*`; terrain/grass/noises shaders | **Remove** (M0) |
 | Billboards | `View/Billboard.js` (774 lines), `View/CertificateBillboards.js` | **Remove** (M0); replaced by planet content points |
-| Player | `State/Player.js`, `View/Player.js`, `View/PlayerModel.js`, `loadMixamoAnimationForVRM.js`, `mixamoVRMRigMap.js` | **Rewrite** (M1) for spherical gravity; retargeting code may be reused if the new astronaut is humanoid |
-| Camera | `State/Camera.js`, `CameraThirdPerson.js`, `CameraFly.js`, `View/Camera.js` | **Adapt** (M1); `CameraFly` kept behind `#debug` |
+| Player | `State/Player.js`, `View/Player.js`, `View/PlayerModel.js`, `loadMixamoAnimationForVRM.js`, `mixamoVRMRigMap.js` | **Done (M1)**: `State/Player.js` rewritten for spherical gravity; `View/Player.js` + VRM/Mixamo helpers deleted; code-built astronaut in `View/PlayerModel.js` |
+| Camera | `State/Camera.js`, `CameraThirdPerson.js`, `CameraFly.js`, `View/Camera.js` | **Done (M1)**: `CameraThirdPerson` follows the player's up; `CameraFly` kept behind `#debug` |
 | Core | `Game.js`, `Settings.js`, `State/Controls, Viewport, Time, State.js`, `View/Renderer, View.js` | **Keep / refactor** |
 | Sky | `View/Sky.js`, sky + stars shaders | **Keep the stars shader**, replace the sky (M2) |
 | Debug | `Debug/*` | **Keep** |
@@ -47,7 +47,8 @@
 | F14 | `gdg-qa.mp4` is 10 min 13 s long, so fitting it under 4 MB needed ~50 kbps; it looks soft | Low | Open → waiting for Jefferson's trim timestamps, then re-encode |
 | F15 | Email mismatch: contact uses `its.jeffersonlaspinas@gmail.com`, `package.json` author uses `its.laspinasjefferson@gmail.com` | Low | **Resolved (M0)**: confirmed `its.laspinasjefferson@gmail.com`; `contact.js` updated, old address removed everywhere |
 | F16 | Live URL is still `field-notes-xi-eight.vercel.app` (old "Field Notes" name); used in README and OG tags | Low | Open → Jefferson renames the Vercel project later (e.g. `apeiron`), then update the links |
-| F17 | `@pixiv/three-vrm`, `loadMixamoAnimationForVRM.js` and `mixamoVRMRigMap.js` are kept but unused after M0 | Info | Open → M1: reuse for the astronaut or delete |
+| F17 | `@pixiv/three-vrm`, `loadMixamoAnimationForVRM.js` and `mixamoVRMRigMap.js` are kept but unused after M0 | Info | **Resolved (M1)**: package uninstalled, both helpers deleted; astronaut is built in code |
+| F19 | Main JS chunk is ~766 kB (Three.js + game + UI in one bundle) | Low | Open → M2 (BR-01 dynamic `import()` splits Three.js out for phones) |
 
 ## 4. Strengths worth keeping
 - Clean State/View/UI separation, with one bridge between Game and UI
@@ -61,3 +62,4 @@
 | 2026-11-10 | — | `8110261` | Initial audit (F1–F12) |
 | 2026-11-10 | M0 | uncommitted (`m0-cleanup`) | Resolved F1–F10; F11 decided (purge pending); added F13–F17 |
 | 2026-11-10 | M0 follow-ups | uncommitted (`m0-cleanup`) | Resolved F13 (ghost image removed, new SVG favicon), F15 (email); F14, F16 still open |
+| 2026-11-10 | M1 | uncommitted (`m1-planet`) | Resolved F17 (VRM package + helpers removed); added F19 (bundle size, M2). New: `config/planets.js`, `State/Planets.js`, `StateMachine.js`, `View/Planet.js`, `View/PlayerModel.js`, `View/Lights.js`, `UI/components/InteractionPrompt.vue` |

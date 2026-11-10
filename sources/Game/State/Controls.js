@@ -62,6 +62,10 @@ export default class Controls
                 name: 'fullscreen'
             },
             {
+                codes: [ 'KeyE' ],
+                name: 'interact'
+            },
+            {
                 codes: [ 'Space' ],
                 name: 'jump'
             },

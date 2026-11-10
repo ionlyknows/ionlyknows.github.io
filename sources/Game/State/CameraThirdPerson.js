@@ -1,7 +1,16 @@
-import { vec3, quat2, mat4 } from 'gl-matrix'
+import * as THREE from 'three'
 
 import State from '@/State/State.js'
 
+const DEG = Math.PI / 180
+const UP_FOLLOW_SPEED = 6 // ≈ 0.1 per frame at 60 fps
+
+const _target = new THREE.Vector3()
+const _matrix = new THREE.Matrix4()
+
+// Follow camera for small planets. Its up vector eases toward the player's up,
+// and its horizontal forward is kept tangent to the surface, so nothing depends
+// on world Y and there are no flips at the poles.
 export default class CameraThirdPerson
 {
     constructor(player)
@@ -9,19 +18,20 @@ export default class CameraThirdPerson
         this.state = State.getInstance()
         this.viewport = this.state.viewport
         this.controls = this.state.controls
+        this.time = this.state.time
 
         this.player = player
 
         this.active = false
-        this.gameUp = vec3.fromValues(0, 1, 0)
-        this.position = vec3.create()
-        this.quaternion = quat2.create()
-        this.distance = 15
-        this.distanceLimits = { min: 4, max: 24 }
-        this.phi = Math.PI * 0.45
-        this.theta = - Math.PI * 0.25
-        this.aboveOffset = 2
-        this.phiLimits = { min: 0.1, max: Math.PI - 0.1 }
+        this.position = new THREE.Vector3()
+        this.quaternion = new THREE.Quaternion()
+        this.up = player.up.clone()
+        this.forward = player.facing.clone()
+        this.distance = 10
+        this.distanceLimits = { min: 4, max: 18 }
+        this.pitch = 25 * DEG
+        this.pitchLimits = { min: 10 * DEG, max: 70 * DEG }
+        this.targetOffset = 1.2
     }
 
     activate()
@@ -39,48 +49,34 @@ export default class CameraThirdPerson
         if(!this.active)
             return
 
-        // Phi and theta. Gated by controls.inputEnabled (the UI flips it off
-        // while a panel is open); pointer.delta keeps accumulating from raw
-        // window events regardless (see Controls.setPointer()).
+        this.up.lerp(this.player.up, 1 - Math.exp(- UP_FOLLOW_SPEED * this.time.delta)).normalize()
+
+        // Mouse drag orbits around `up`; pitch is clamped
         if(this.controls.inputEnabled && (this.controls.pointer.down || this.viewport.pointerLock.active))
         {
             const normalisedPointer = this.viewport.normalise(this.controls.pointer.delta)
-            this.phi -= normalisedPointer.y * 2
-            this.theta -= normalisedPointer.x * 2
-
-            if(this.phi < this.phiLimits.min)
-                this.phi = this.phiLimits.min
-            if(this.phi > this.phiLimits.max)
-                this.phi = this.phiLimits.max
+            this.forward.applyAxisAngle(this.up, - normalisedPointer.x * 2)
+            this.pitch = THREE.MathUtils.clamp(this.pitch + normalisedPointer.y * 2, this.pitchLimits.min, this.pitchLimits.max)
         }
 
-        // Scroll toward the character to zoom in and away to zoom out.
-        // Limits preserve a useful third-person view and avoid camera clipping.
+        // Scroll zoom
         if(this.controls.inputEnabled && this.controls.pointer.wheel)
-        {
-            this.distance += this.controls.pointer.wheel * 0.01
-            this.distance = Math.min(this.distanceLimits.max, Math.max(this.distanceLimits.min, this.distance))
-        }
-        
-        // Position
-        const sinPhiRadius = Math.sin(this.phi) * this.distance
-        const sphericalPosition = vec3.fromValues(
-            sinPhiRadius * Math.sin(this.theta),
-            Math.cos(this.phi) * this.distance,
-            sinPhiRadius * Math.cos(this.theta)
-        )
-        vec3.add(this.position, this.player.position.current, sphericalPosition)
+            this.distance = THREE.MathUtils.clamp(this.distance + this.controls.pointer.wheel * 0.01, this.distanceLimits.min, this.distanceLimits.max)
 
-        // Target
-        const target = vec3.fromValues(
-            this.player.position.current[0],
-            this.player.position.current[1] + this.aboveOffset,
-            this.player.position.current[2]
-        )
+        // Keep forward tangent to the current up
+        this.forward.projectOnPlane(this.up)
+        if(this.forward.lengthSq() < 1e-6)
+            this.forward.copy(this.player.facing)
+        this.forward.normalize()
 
-        // Quaternion
-        const toTargetMatrix = mat4.create()
-        mat4.targetTo(toTargetMatrix, this.position, target, this.gameUp)
-        quat2.fromMat4(this.quaternion, toTargetMatrix)
+        // Behind and above the player, in the player's local frame
+        _target.copy(this.player.position).addScaledVector(this.player.up, this.targetOffset)
+        this.position
+            .copy(_target)
+            .addScaledVector(this.forward, - Math.cos(this.pitch) * this.distance)
+            .addScaledVector(this.up, Math.sin(this.pitch) * this.distance)
+
+        _matrix.lookAt(this.position, _target, this.up)
+        this.quaternion.setFromRotationMatrix(_matrix)
     }
 }

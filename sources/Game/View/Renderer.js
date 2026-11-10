@@ -45,14 +45,9 @@ export default class Renderer
         this.instance.setSize(this.viewport.width, this.viewport.height)
         this.instance.setPixelRatio(this.viewport.clampedPixelRatio)
 
-        // this.instance.physicallyCorrectLights = true
-        // this.instance.gammaOutPut = true
-        // this.instance.outputEncoding = THREE.sRGBEncoding
-        // this.instance.shadowMap.type = THREE.PCFSoftShadowMap
-        // this.instance.shadowMap.enabled = false
-        // this.instance.toneMapping = THREE.ReinhardToneMapping
-        // this.instance.toneMapping = THREE.ReinhardToneMapping
-        // this.instance.toneMappingExposure = 1.3
+        // Shadows: only the current planet casts/receives (map ≤ 1024, see View/Lights.js)
+        this.instance.shadowMap.enabled = true
+        this.instance.shadowMap.type = THREE.PCFShadowMap
 
         this.context = this.instance.getContext()
 

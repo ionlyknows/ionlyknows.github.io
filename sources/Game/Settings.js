@@ -30,7 +30,7 @@ export default class Settings
 
         return {
             stars: { count: stars.count, size: stars.material.uniforms.uSize.value, brightness: stars.material.uniforms.uBrightness.value },
-            lighting: { sunLightIntensity: view.player.sunLight.intensity, fillLightIntensity: view.player.fillLight.intensity }
+            lighting: { sunLightIntensity: view.lights.sun.intensity, fillLightIntensity: view.lights.fill.intensity }
         }
     }
 
@@ -59,8 +59,8 @@ export default class Settings
         }
         stars.material.uniforms.uSize.value = next.stars.size
         stars.material.uniforms.uBrightness.value = next.stars.brightness
-        view.player.sunLight.intensity = next.lighting.sunLightIntensity
-        view.player.fillLight.intensity = next.lighting.fillLightIntensity
+        view.lights.sun.intensity = next.lighting.sunLightIntensity
+        view.lights.fill.intensity = next.lighting.fillLightIntensity
     }
 
     save(values = this.snapshot())

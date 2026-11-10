@@ -1,6 +1,7 @@
 import Time from './Time.js'
 import Controls from './Controls.js'
 import Viewport from './Viewport.js'
+import Planets from './Planets.js'
 import Player from './Player.js'
 
 export default class State
@@ -22,6 +23,7 @@ export default class State
         this.time = new Time()
         this.controls = new Controls()
         this.viewport = new Viewport()
+        this.planets = new Planets()
         this.player = new Player()
     }
 

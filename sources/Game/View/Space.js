@@ -95,8 +95,7 @@ export default class Space
 
     update()
     {
-        const position = this.state.player.position.current
-        this.group.position.set(position[0], position[1], position[2])
+        this.group.position.copy(this.state.player.position)
     }
 
     resize()

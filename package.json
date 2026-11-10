@@ -11,7 +11,6 @@
   "author": "Jefferson F. Laspiñas <its.laspinasjefferson@gmail.com> (https://github.com/ionlyknows)",
   "license": "MIT",
   "dependencies": {
-    "@pixiv/three-vrm": "^3.5.5",
     "events": "^3.3.0",
     "gl-matrix": "^3.4.3",
     "gsap": "^3.15.0",
@@ -24,5 +23,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.6.2"
+  },
+  "allowScripts": {
+    "esbuild@0.16.17": true
   }
 }
