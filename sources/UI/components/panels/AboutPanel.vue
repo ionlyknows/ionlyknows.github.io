@@ -2,63 +2,80 @@
 import { ref } from 'vue'
 import PanelShell from './PanelShell.vue'
 import { usePanelEscape } from '../../composables/usePanelEscape.js'
-import about from '../../data/about.js'
+import profile from '../../../content/profile.js'
+import skills from '../../../content/skills.js'
+import achievements from '../../../content/achievements.js'
+import activities from '../../../content/activities.js'
+import contact from '../../../content/contact.js'
+import { visibleProjects } from '../../visibleContent.js'
 
 const emit = defineEmits([ 'close' ])
 const avatarLoadFailed = ref(false)
 
+// BR-07: rows with an empty value are not rendered
+const quickInfo = [
+    { label: 'Location', value: profile.location },
+    { label: 'School', value: profile.school },
+    { label: 'College Year', value: profile.year },
+    { label: 'Education', value: profile.program }
+].filter((row) => row.value)
+
+const contactNames = { email: 'Email', github: 'GitHub', linkedin: 'LinkedIn', facebook: 'Facebook' }
+const contactLinks = contact.links.filter((link) => link.url)
+const pad = (n) => String(n).padStart(2, '0')
+
 function close() { emit('close') }
 function onAvatarError() { avatarLoadFailed.value = true }
 
-// Unchanged: same global-Escape wiring every panel uses.
 usePanelEscape(close)
 </script>
 
 <template>
-    <PanelShell variant="fullscreen" :title="about.name" :subtitle="about.role" :show-header-copy="false" @close="close">
-        <template #header-meta>
+    <PanelShell variant="fullscreen" :title="profile.name" :subtitle="profile.role" :show-header-copy="false" @close="close">
+        <template v-if="profile.status" #header-meta>
             <span class="iw-about__status">
                 <span class="iw-about__status-dot" />
-                {{ about.status }}
+                {{ profile.status }}
             </span>
         </template>
 
         <div class="iw-about">
-            <!-- â”€â”€ ABOUT â”€â”€ -->
+            <!-- ABOUT -->
             <section class="iw-about__hero">
                 <div>
-                    <p class="iw-about__eyebrow">{{ about.hero.greeting }}</p>
+                    <p v-if="profile.greeting" class="iw-about__eyebrow">{{ profile.greeting }}</p>
                     <h1 class="iw-about__headline">
-                        I'm <span class="iw-about__accent-text">{{ about.name }}</span>
+                        I'm <span class="iw-about__accent-text">{{ profile.name }}</span>
                     </h1>
-                    <p class="iw-about__role">{{ about.role }}</p>
+                    <p v-if="profile.role" class="iw-about__role">{{ profile.role }}</p>
 
-                    <p v-for="(paragraph, i) in about.hero.bio" :key="i" class="iw-about__bio">
+                    <p v-for="(paragraph, i) in profile.bio" :key="i" class="iw-about__bio">
                         {{ paragraph }}
                     </p>
 
-                    <dl class="iw-about__quick-info">
-                        <div v-for="row in about.quickInfo" :key="row.label" class="iw-about__quick-row">
+                    <dl v-if="quickInfo.length" class="iw-about__quick-info">
+                        <div v-for="row in quickInfo" :key="row.label" class="iw-about__quick-row">
                             <dt>{{ row.label }}</dt>
-                            <dd v-if="row.value">{{ row.value }}</dd>
-                            <dd v-else-if="row.tags" class="iw-about__tag-row">
-                                <span v-for="tag in row.tags" :key="tag" class="iw-about__tag">{{ tag }}</span>
-                            </dd>
+                            <dd>{{ row.value }}</dd>
                         </div>
                     </dl>
+
+                    <!-- BR-07: hidden while resumeUrl is empty -->
+                    <a v-if="profile.resumeUrl" class="iw-about__project-link iw-about__project-link--live" :href="profile.resumeUrl" target="_blank" rel="noopener noreferrer">
+                        Resume
+                    </a>
                 </div>
 
                 <div class="iw-about__avatar-block">
                     <div class="iw-about__avatar">
                         <div class="iw-about__avatar-glow" />
-                        <template v-if="about.hero.avatarImage && !avatarLoadFailed">
-                            <img
-                                class="iw-about__avatar-image"
-                                :src="about.hero.avatarImage"
-                                :alt="`Profile picture of ${about.name}`"
-                                @error="onAvatarError"
-                            />
-                        </template>
+                        <img
+                            v-if="profile.avatar && !avatarLoadFailed"
+                            class="iw-about__avatar-image"
+                            :src="profile.avatar"
+                            :alt="`Profile picture of ${profile.name}`"
+                            @error="onAvatarError"
+                        />
                         <svg v-else class="iw-about__avatar-icon" viewBox="0 0 80 80" fill="none" aria-hidden="true">
                             <circle cx="40" cy="30" r="18" fill="var(--iw-about-accent-faint)" stroke="var(--iw-about-accent-dim)" stroke-width="1.5" />
                             <path d="M8 72 C8 52 72 52 72 72" fill="var(--iw-about-accent-faint)" stroke="var(--iw-about-accent-dim)" stroke-width="1.5" />
@@ -67,212 +84,198 @@ usePanelEscape(close)
                 </div>
             </section>
 
-            <hr class="iw-about__divider">
+            <template v-if="skills.length">
+                <hr class="iw-about__divider">
 
-            <!-- â”€â”€ SKILLS â”€â”€ -->
-            <section>
-                <p class="iw-about__slug">// skills</p>
-                <h3 class="iw-about__heading">What I Work With</h3>
-                <div class="iw-about__skills">
-                    <div v-for="group in about.skills" :key="group.group" class="iw-about__skill-group">
-                        <p class="iw-about__skill-group-title">// {{ group.group }}</p>
-                        <div class="iw-about__tag-row">
-                            <span v-for="item in group.items" :key="item" class="iw-about__tag">{{ item }}</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <hr class="iw-about__divider">
-
-            <!-- â”€â”€ PROJECTS â”€â”€ -->
-            <section>
-                <p class="iw-about__slug">// projects</p>
-                <h3 class="iw-about__heading">Things I've Built</h3>
-                <div class="iw-about__projects">
-                    <article v-for="project in about.projects" :key="project.title" class="iw-about__project-card">
-                        <div class="iw-about__project-media">
-                            <img :src="project.image" :alt="project.imageAlt" loading="lazy">
-                            <span class="iw-about__project-num">{{ project.num }}</span>
-                        </div>
-                        <div class="iw-about__project-body">
-                            <div class="iw-about__project-head">
-                                <span class="iw-about__project-title">{{ project.title }}</span>
-                            </div>
-                            <p class="iw-about__project-desc">{{ project.desc }}</p>
+                <!-- SKILLS -->
+                <section>
+                    <p class="iw-about__slug">// skills</p>
+                    <h3 class="iw-about__heading">What I Work With</h3>
+                    <div class="iw-about__skills">
+                        <div v-for="group in skills" :key="group.group" class="iw-about__skill-group">
+                            <p class="iw-about__skill-group-title">// {{ group.group }}</p>
                             <div class="iw-about__tag-row">
-                                <span v-for="tag in project.tags" :key="tag" class="iw-about__tag">{{ tag }}</span>
-                            </div>
-
-                            <!-- Live Site / Repository actions. Each renders as a real
-                                 link only when its URL is filled in (see about.js); with
-                                 no URL it renders a disabled placeholder instead, so we
-                                 never ship a dead or fake link. -->
-                            <div class="iw-about__project-links">
-                                <a
-                                    v-if="project.liveUrl"
-                                    class="iw-about__project-link iw-about__project-link--live"
-                                    :href="project.liveUrl"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    :aria-label="`Open live site for ${project.title} (opens in a new tab)`"
-                                    @click.stop
-                                >
-                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                                        <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                                        <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                                    </svg>
-                                    {{ project.liveLabel || 'Live Site' }}
-                                </a>
-                                <span v-else class="iw-about__project-link iw-about__project-link--disabled" aria-disabled="true" title="Live site link coming soon">
-                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                                        <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                                        <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                                    </svg>
-                                    {{ project.liveLabel || 'Live Site' }}
-                                </span>
-
-                                <a
-                                    v-if="project.repoUrl"
-                                    class="iw-about__project-link iw-about__project-link--repo"
-                                    :href="project.repoUrl"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    :aria-label="`Open GitHub repository for ${project.title} (opens in a new tab)`"
-                                    @click.stop
-                                >
-                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-                                    </svg>
-                                    {{ project.repoLabel || 'Repository' }}
-                                </a>
-                                <span v-else class="iw-about__project-link iw-about__project-link--disabled" aria-disabled="true" title="Repository link coming soon">
-                                    <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-                                    </svg>
-                                    {{ project.repoLabel || 'Repository' }}
-                                </span>
+                                <span v-for="item in group.items" :key="item" class="iw-about__tag">{{ item }}</span>
                             </div>
                         </div>
-                    </article>
-                </div>
-            </section>
-
-            <hr class="iw-about__divider">
-
-            <!-- â”€â”€ ACTIVITIES â”€â”€ -->
-            <section>
-                <p class="iw-about__slug">// activities</p>
-                <h3 class="iw-about__heading">Hands-on Practice</h3>
-                <a
-                    v-for="activity in about.activities"
-                    :key="activity.title"
-                    class="iw-about__activity"
-                    :href="activity.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    :aria-label="`Open ${activity.title} in a new tab`"
-                >
-                    <div class="iw-about__activity-head">
-                        <div>
-                            <p class="iw-about__activity-meta">{{ activity.num }} · {{ activity.year }}</p>
-                            <p class="iw-about__activity-title">{{ activity.title }}</p>
-                            <p class="iw-about__activity-role">{{ activity.role }}</p>
-                        </div>
-                        <span class="iw-about__activity-details">Details →</span>
                     </div>
-                    <p class="iw-about__activity-desc">{{ activity.desc }}</p>
-                </a>
-            </section>
+                </section>
+            </template>
 
-            <hr class="iw-about__divider">
+            <template v-if="visibleProjects.length">
+                <hr class="iw-about__divider">
 
-            <!-- â”€â”€ EXPERIENCE â”€â”€ -->
-            <section>
-                <p class="iw-about__slug">// experience</p>
-                <h3 class="iw-about__heading">Where I've Been</h3>
-                <div v-for="entry in about.experience" :key="entry.title" class="iw-about__timeline-card">
-                    <p class="iw-about__timeline-period">{{ entry.period }}</p>
-                    <p class="iw-about__timeline-title">{{ entry.title }}</p>
-                    <p class="iw-about__timeline-place">{{ entry.place }}</p>
-                    <p v-if="entry.desc" class="iw-about__timeline-desc">{{ entry.desc }}</p>
-                    <ul v-if="entry.bullets" class="iw-about__timeline-bullets">
-                        <li v-for="(bullet, index) in entry.bullets" :key="index">{{ bullet }}</li>
-                    </ul>
-                </div>
-            </section>
-
-            <hr class="iw-about__divider">
-
-            <!-- â”€â”€ ACHIEVEMENTS â”€â”€ -->
-            <section>
-                <p class="iw-about__slug">// achievements</p>
-                <h3 class="iw-about__heading">Milestones</h3>
-                <div class="iw-about__achievements">
-                    <article v-for="(item, i) in about.achievements" :key="i" class="iw-about__achievement-row">
-                        <div class="iw-about__achievement-copy">
-                            <span class="iw-about__achievement-year">{{ item.year }}</span>
-                            <span class="iw-about__achievement-label">{{ item.label }}</span>
-                            <dl class="iw-about__achievement-details">
-                                <div>
-                                    <dt>Issuer</dt>
-                                    <dd>{{ item.issuer }}</dd>
+                <!-- PROJECTS -->
+                <section>
+                    <p class="iw-about__slug">// projects</p>
+                    <h3 class="iw-about__heading">Things I've Built</h3>
+                    <div class="iw-about__projects">
+                        <article v-for="(project, index) in visibleProjects" :key="project.id" class="iw-about__project-card">
+                            <!-- No media: themed placeholder (BR-07) -->
+                            <div class="iw-about__project-media" :class="{ 'iw-about__project-media--placeholder': !project.media?.poster }">
+                                <img v-if="project.media?.poster" :src="project.media.poster" :alt="project.media.alt || project.title" loading="lazy">
+                                <span class="iw-about__project-num">Project {{ pad(index + 1) }}</span>
+                            </div>
+                            <div class="iw-about__project-body">
+                                <div class="iw-about__project-head">
+                                    <span class="iw-about__project-title">{{ project.title }}</span>
                                 </div>
-                                <div>
-                                    <dt>Credential ID</dt>
-                                    <dd>{{ item.credentialId }}</dd>
+                                <p class="iw-about__project-desc">{{ project.summary }}</p>
+                                <div v-if="project.stack?.length" class="iw-about__tag-row">
+                                    <span v-for="tag in project.stack" :key="tag" class="iw-about__tag">{{ tag }}</span>
                                 </div>
-                            </dl>
+
+                                <!-- BR-07: a link renders only when its URL is filled in -->
+                                <div v-if="project.demoUrl || project.repoUrl" class="iw-about__project-links">
+                                    <a
+                                        v-if="project.demoUrl"
+                                        class="iw-about__project-link iw-about__project-link--live"
+                                        :href="project.demoUrl"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        :aria-label="`Open demo for ${project.title} (opens in a new tab)`"
+                                        @click.stop
+                                    >
+                                        <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                            <path d="M6.5 9.5L14 2M14 2H9.5M14 2V6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M12 9V13.25C12 13.6642 11.6642 14 11.25 14H2.75C2.33579 14 2 13.6642 2 13.25V4.75C2 4.33579 2.33579 4 2.75 4H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        Live Demo
+                                    </a>
+
+                                    <a
+                                        v-if="project.repoUrl"
+                                        class="iw-about__project-link iw-about__project-link--repo"
+                                        :href="project.repoUrl"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        :aria-label="`Open GitHub repository for ${project.title} (opens in a new tab)`"
+                                        @click.stop
+                                    >
+                                        <svg class="iw-about__project-link-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                                        </svg>
+                                        Repository
+                                    </a>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+            </template>
+
+            <template v-if="activities.length">
+                <hr class="iw-about__divider">
+
+                <!-- ACTIVITIES -->
+                <section>
+                    <p class="iw-about__slug">// activities</p>
+                    <h3 class="iw-about__heading">Hands-on Practice</h3>
+                    <component
+                        :is="activity.url ? 'a' : 'div'"
+                        v-for="(activity, index) in activities"
+                        :key="activity.id"
+                        class="iw-about__activity"
+                        :href="activity.url || undefined"
+                        :target="activity.url ? '_blank' : undefined"
+                        :rel="activity.url ? 'noopener noreferrer' : undefined"
+                        :aria-label="activity.url ? `Open ${activity.title} in a new tab` : undefined"
+                    >
+                        <div class="iw-about__activity-head">
+                            <div>
+                                <p class="iw-about__activity-meta">{{ pad(index + 1) }}<template v-if="activity.year"> · {{ activity.year }}</template></p>
+                                <p class="iw-about__activity-title">{{ activity.title }}</p>
+                                <p v-if="activity.role" class="iw-about__activity-role">{{ activity.role }}</p>
+                            </div>
+                            <span v-if="activity.url" class="iw-about__activity-details">Details →</span>
                         </div>
-                        <a
-                            class="iw-about__achievement-image-link"
-                            :href="item.imageUrl"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            :aria-label="`Open full certificate image for ${item.label} in a new tab`"
-                        >
-                            <img class="iw-about__achievement-image" :src="item.imageUrl" :alt="item.imageAlt" />
-                        </a>
-                        <a
-                            class="iw-about__achievement-credential-button"
-                            :href="item.credentialUrl"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            CREDENTIAL
-                        </a>
-                    </article>
-                </div>
-            </section>
+                        <p v-if="activity.description" class="iw-about__activity-desc">{{ activity.description }}</p>
+                    </component>
+                </section>
+            </template>
 
-            <hr class="iw-about__divider">
+            <template v-if="profile.experience.length">
+                <hr class="iw-about__divider">
 
-            <!-- â”€â”€ CONTACT â”€â”€ -->
-            <section class="iw-about__contact-section">
-                <p class="iw-about__slug">// contact</p>
-                <h3 class="iw-about__heading">{{ about.contact.heading }}</h3>
-                <p class="iw-about__bio">{{ about.contact.subheading }}</p>
+                <!-- EXPERIENCE -->
+                <section>
+                    <p class="iw-about__slug">// experience</p>
+                    <h3 class="iw-about__heading">Where I've Been</h3>
+                    <div v-for="entry in profile.experience" :key="entry.title" class="iw-about__timeline-card">
+                        <p v-if="entry.period" class="iw-about__timeline-period">{{ entry.period }}</p>
+                        <p class="iw-about__timeline-title">{{ entry.title }}</p>
+                        <p v-if="entry.place" class="iw-about__timeline-place">{{ entry.place }}</p>
+                        <ul v-if="entry.bullets?.length" class="iw-about__timeline-bullets">
+                            <li v-for="(bullet, index) in entry.bullets" :key="index">{{ bullet }}</li>
+                        </ul>
+                    </div>
+                </section>
+            </template>
 
-                <div class="iw-about__contact-rows">
-                    <div v-if="about.contact.email" class="iw-about__contact-row">
-                        <span>Email</span>
-                        <a :href="`mailto:${about.contact.email}?subject=Portfolio%20Inquiry`" target="_blank" rel="noopener noreferrer">{{ about.contact.email }}</a>
-                    </div>
-                    <div v-if="about.contact.github" class="iw-about__contact-row">
-                        <span>GitHub</span>
-                        <a :href="about.contact.github" target="_blank" rel="noopener noreferrer">{{ about.contact.github.replace('https://', '') }}</a>
-                    </div>
-                    <div v-if="about.contact.linkedin" class="iw-about__contact-row">
-                        <span>LinkedIn</span>
-                        <a :href="about.contact.linkedin" target="_blank" rel="noopener noreferrer">{{ about.contact.linkedin.replace('https://', '') }}</a>
-                    </div>
-                    <div v-if="about.contact.facebook" class="iw-about__contact-row">
-                        <span>Facebook</span>
-                        <a :href="about.contact.facebook" target="_blank" rel="noopener noreferrer">{{ about.contact.facebook.replace('https://', '') }}</a>
-                    </div>
-                </div>
+            <template v-if="achievements.length">
+                <hr class="iw-about__divider">
 
-            </section>
+                <!-- ACHIEVEMENTS -->
+                <section>
+                    <p class="iw-about__slug">// achievements</p>
+                    <h3 class="iw-about__heading">Milestones</h3>
+                    <div class="iw-about__achievements">
+                        <article v-for="item in achievements" :key="item.id" class="iw-about__achievement-row">
+                            <div class="iw-about__achievement-copy">
+                                <span v-if="item.year" class="iw-about__achievement-year">{{ item.year }}</span>
+                                <span class="iw-about__achievement-label">{{ item.title }}</span>
+                                <dl v-if="item.issuer || item.credentialId" class="iw-about__achievement-details">
+                                    <div v-if="item.issuer">
+                                        <dt>Issuer</dt>
+                                        <dd>{{ item.issuer }}</dd>
+                                    </div>
+                                    <div v-if="item.credentialId">
+                                        <dt>Credential ID</dt>
+                                        <dd>{{ item.credentialId }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            <a
+                                v-if="item.image"
+                                class="iw-about__achievement-image-link"
+                                :href="item.image"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                :aria-label="`Open full certificate image for ${item.title} in a new tab`"
+                            >
+                                <img class="iw-about__achievement-image" :src="item.image" :alt="`${item.title} certificate`" loading="lazy" />
+                            </a>
+                            <a
+                                v-if="item.credentialUrl"
+                                class="iw-about__achievement-credential-button"
+                                :href="item.credentialUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                CREDENTIAL
+                            </a>
+                        </article>
+                    </div>
+                </section>
+            </template>
+
+            <template v-if="contactLinks.length">
+                <hr class="iw-about__divider">
+
+                <!-- CONTACT -->
+                <section class="iw-about__contact-section">
+                    <p class="iw-about__slug">// contact</p>
+                    <h3 v-if="contact.heading" class="iw-about__heading">{{ contact.heading }}</h3>
+                    <p v-if="contact.subheading" class="iw-about__bio">{{ contact.subheading }}</p>
+
+                    <div class="iw-about__contact-rows">
+                        <div v-for="link in contactLinks" :key="link.type" class="iw-about__contact-row">
+                            <span>{{ contactNames[link.type] }}</span>
+                            <a :href="link.url" target="_blank" rel="noopener noreferrer">{{ link.label || link.url }}</a>
+                        </div>
+                    </div>
+                </section>
+            </template>
         </div>
     </PanelShell>
 </template>
@@ -1202,5 +1205,10 @@ usePanelEscape(close)
         width: 100%;
         min-width: 0;
     }
+}
+
+.iw-about__project-media--placeholder
+{
+    background: linear-gradient(135deg, rgba(255, 138, 61, 0.22), rgba(53, 246, 255, 0.12));
 }
 </style>

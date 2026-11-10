@@ -1,13 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import gsap from 'gsap'
-import about from '../data/about.js'
+import profile from '../../content/profile.js'
 
-defineProps({
-    activePanel: { type: String, default: null }
-})
-
-const emit = defineEmits([ 'open-panel', 'return-to-spawn' ])
+const emit = defineEmits([ 'open-panel' ])
 
 const items = [
     { id: 'work', label: 'Work' },
@@ -30,21 +26,17 @@ onMounted(() =>
 
 <template>
     <div ref="rootEl" class="iw-topbar">
-        <div class="iw-topbar__mark">{{ about.name }}</div>
+        <div class="iw-topbar__mark">{{ profile.name }}</div>
 
         <nav class="iw-topbar__nav">
             <button
                 v-for="item in items"
                 :key="item.id"
                 class="iw-topbar__link"
-                :class="{ 'is-active': activePanel === item.id }"
                 type="button"
                 @click="emit('open-panel', item.id)"
             >
                 {{ item.label }}
-            </button>
-            <button class="iw-topbar__link" type="button" @click="emit('return-to-spawn')">
-                Spawn
             </button>
         </nav>
     </div>

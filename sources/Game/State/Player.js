@@ -24,14 +24,12 @@ export default class Player
         this.speed = 0
 
         this.position = {}
-        this.position.current = vec3.fromValues(10, 0, 1)
+        this.position.current = vec3.fromValues(0, 0, 0)
         this.position.previous = vec3.clone(this.position.current)
         this.position.delta = vec3.create()
 
-        // Vertical physics: `groundOffset` is the height above the terrain-clamped
-        // ground position, driven by gravity + a jump impulse. The final Y position
-        // is always (terrain elevation + groundOffset), so terrain following keeps
-        // working exactly as before while airborne.
+        // Vertical physics: `groundOffset` is the height above the ground,
+        // driven by gravity + a jump impulse.
         this.verticalVelocity = 0
         this.groundOffset = 0
         this.isGrounded = true
@@ -107,10 +105,8 @@ export default class Player
         // Update view
         this.camera.update()
 
-        // Ground elevation (unchanged existing terrain query)
-        const chunks = this.state.chunks
-        const elevation = chunks.getElevationForPosition(this.position.current[0], this.position.current[2])
-        const groundHeight = elevation || 0
+        // M0: empty space, flat ground at y = 0 (spherical gravity arrives in M1)
+        const groundHeight = 0
 
         // Vertical physics: while airborne, gravity pulls the ground offset back down.
         // Landing (offset <= 0) snaps back to the terrain surface and resets velocity.

@@ -1,14 +1,14 @@
 import * as THREE from 'three'
 
-import Game from '@/Game.js'
 import View from '@/View/View.js'
 import Debug from '@/Debug/Debug.js'
 import State from '@/State/State.js'
-import PlayerModel from './PlayerModel.js'
-
-const SUN_LIGHT_DISTANCE = 20
 
 const ROTATION_SMOOTHING_SPEED = 15
+
+// Temporary player (M0): a simple colored capsule. Replaced by the astronaut in M1.
+const CAPSULE_RADIUS = 0.5
+const CAPSULE_LENGTH = 1
 
 function dampAngle(current, target, speed, delta)
 {
@@ -28,7 +28,6 @@ export default class Player
 {
     constructor()
     {
-        this.game = Game.getInstance()
         this.state = State.getInstance()
         this.view = View.getInstance()
         this.debug = Debug.getInstance()
@@ -39,7 +38,7 @@ export default class Player
 
         this.setGroup()
         this.setLights()
-        this.setModel()
+        this.setCapsule()
         this.setDebug()
     }
 
@@ -52,26 +51,29 @@ export default class Player
     setLights()
     {
         this.sunLight = new THREE.DirectionalLight('#fff8d6', 2.4)
-        this.sunLight.target.position.set(0, 0, 0)
+        this.sunLight.position.set(10, 20, 10)
         this.scene.add(this.sunLight)
-        this.scene.add(this.sunLight.target)
 
         this.fillLight = new THREE.HemisphereLight('#fff8d6', '#3a3a4a', 0.6)
         this.scene.add(this.fillLight)
     }
 
-    setModel()
+    setCapsule()
     {
-        this.model = new PlayerModel()
-        this.group.add(this.model.group)
-    }
+        const geometry = new THREE.CapsuleGeometry(CAPSULE_RADIUS, CAPSULE_LENGTH, 8, 16)
+        const material = new THREE.MeshStandardMaterial({ color: '#ff8a3d', roughness: 0.6 })
+        this.capsule = new THREE.Mesh(geometry, material)
+        // Feet at the group origin
+        this.capsule.position.y = CAPSULE_LENGTH * 0.5 + CAPSULE_RADIUS
+        this.group.add(this.capsule)
 
-    setVisible(visible)
-    {
-        this.group.visible = visible
-        this.sunLight.visible = visible
-        this.sunLight.target.visible = visible
-        this.fillLight.visible = visible
+        // Small "visor" so the facing direction is readable
+        const visor = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.2, 0.2),
+            new THREE.MeshStandardMaterial({ color: '#35f6ff', roughness: 0.3 })
+        )
+        visor.position.set(0, CAPSULE_LENGTH * 0.5 + 0.2, -CAPSULE_RADIUS)
+        this.capsule.add(visor)
     }
 
     setDebug()
@@ -88,7 +90,6 @@ export default class Player
     update()
     {
         const playerState = this.state.player
-        const sunState = this.state.sun
         const delta = this.state.time.delta
 
         this.group.position.set(
@@ -99,14 +100,5 @@ export default class Player
 
         this.renderedRotationY = dampAngle(this.renderedRotationY, playerState.rotation, ROTATION_SMOOTHING_SPEED, delta)
         this.group.rotation.y = this.renderedRotationY
-
-        this.sunLight.target.position.copy(this.group.position)
-        this.sunLight.position.set(
-            this.group.position.x + sunState.position.x * SUN_LIGHT_DISTANCE,
-            this.group.position.y + sunState.position.y * SUN_LIGHT_DISTANCE,
-            this.group.position.z + sunState.position.z * SUN_LIGHT_DISTANCE
-        )
-
-        this.model.update(playerState, delta)
     }
 }

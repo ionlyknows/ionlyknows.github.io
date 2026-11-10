@@ -8,7 +8,6 @@ export default function StarsMaterial()
     const material = new THREE.ShaderMaterial({
         uniforms:
         {
-            uSunPosition: { value: new THREE.Vector3() },
             uSize: { value: 0.01 },
             uBrightness: { value: 0.5 },
             uHeightFragments: { value: null }

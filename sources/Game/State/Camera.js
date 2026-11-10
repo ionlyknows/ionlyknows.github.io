@@ -33,8 +33,12 @@ export default class Camera
         else if(this.mode === Camera.MODE_FLY)
             this.fly.activate()
 
+        // The fly camera is a dev tool: reachable only with #debug
         this.controls.events.on('cameraModeDown', () =>
         {
+            if(!this.game.debug.active)
+                return
+
             this.setMode(this.mode === Camera.MODE_THIRDPERSON ? Camera.MODE_FLY : Camera.MODE_THIRDPERSON)
         })
 

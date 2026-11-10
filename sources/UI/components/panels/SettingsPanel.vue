@@ -32,52 +32,8 @@ onUnmounted(() => window.clearTimeout(notificationTimer))
 </script>
 
 <template>
-    <PanelShell title="Settings" subtitle="Live world controls" @close="emit('close')">
+    <PanelShell title="Settings" subtitle="Live scene controls" @close="emit('close')">
         <form class="iw-settings" @submit.prevent="save">
-            <section class="iw-settings__group">
-                <h3>State · Day cycle</h3>
-                <label class="iw-settings__toggle"><input v-model="values.dayCycle.autoUpdate" type="checkbox" @change="apply"><span>Auto update</span></label>
-                <label>Progress <output>{{ values.dayCycle.progress.toFixed(3) }}</output><input v-model.number="values.dayCycle.progress" type="range" min="0" max="1" step=".001" @input="apply"></label>
-                <label>Duration (seconds)<input v-model.number="values.dayCycle.duration" type="number" min="5" max="100" step="1" @change="apply"></label>
-            </section>
-
-            <section class="iw-settings__group">
-                <h3>Player · View</h3>
-                <label>Camera mode<select v-model.number="values.player.viewMode" @change="apply"><option :value="1">Third person</option><option :value="2">Fly camera</option></select></label>
-            </section>
-
-            <section class="iw-settings__group">
-                <h3>Terrain</h3>
-                <div class="iw-settings__grid">
-                    <label>Subdivisions<input v-model.number="values.terrain.subdivisions" type="number" min="1" max="400" step="1" @change="apply"></label>
-                    <label>Lacunarity<input v-model.number="values.terrain.lacunarity" type="number" min="1" max="5" step=".01" @change="apply"></label>
-                    <label>Persistence<input v-model.number="values.terrain.persistence" type="number" min="0" max="1" step=".01" @change="apply"></label>
-                    <label>Max iterations<input v-model.number="values.terrain.maxIterations" type="number" min="1" max="10" step="1" @change="apply"></label>
-                    <label>Base frequency<input v-model.number="values.terrain.baseFrequency" type="number" min="0" max=".01" step=".0001" @change="apply"></label>
-                    <label>Base amplitude<input v-model.number="values.terrain.baseAmplitude" type="number" min="0" max="500" step=".1" @change="apply"></label>
-                    <label>Power<input v-model.number="values.terrain.power" type="number" min="1" max="10" step="1" @change="apply"></label>
-                    <label>Elevation offset<input v-model.number="values.terrain.elevationOffset" type="number" min="-10" max="10" step="1" @change="apply"></label>
-                    <label>Iterations formula<select v-model.number="values.terrain.iterationsFormula" @change="apply"><option :value="1">Max</option><option :value="2">Min</option><option :value="3">Mix</option><option :value="4">Power mix</option></select></label>
-                </div>
-            </section>
-
-            <section class="iw-settings__group">
-                <h3>Sky</h3>
-                <div class="iw-settings__grid">
-                    <label>Sphere width segments<input v-model.number="values.sky.widthSegments" type="number" min="4" max="512" step="1" @change="apply"></label>
-                    <label>Sphere height segments<input v-model.number="values.sky.heightSegments" type="number" min="4" max="512" step="1" @change="apply"></label>
-                    <label>Atmosphere elevation<input v-model.number="values.sky.atmosphereElevation" type="number" min=".01" max="5" step=".01" @change="apply"></label>
-                    <label>Atmosphere power<input v-model.number="values.sky.atmospherePower" type="number" min="0" max="20" step="1" @change="apply"></label>
-                    <label>Dawn angle amplitude<input v-model.number="values.sky.dawnAngleAmplitude" type="number" min=".001" max="1" step=".001" @change="apply"></label>
-                    <label>Dawn elevation amplitude<input v-model.number="values.sky.dawnElevationAmplitude" type="number" min=".01" max="1" step=".01" @change="apply"></label>
-                    <label>Sun amplitude<input v-model.number="values.sky.sunAmplitude" type="number" min=".01" max="3" step=".01" @change="apply"></label>
-                    <label>Sun multiplier<input v-model.number="values.sky.sunMultiplier" type="number" min="0" max="1" step=".01" @change="apply"></label>
-                </div>
-                <div class="iw-settings__colors">
-                    <label>Day low<input v-model="values.sky.colorDayCycleLow" type="color" @input="apply"></label><label>Day high<input v-model="values.sky.colorDayCycleHigh" type="color" @input="apply"></label><label>Night low<input v-model="values.sky.colorNightLow" type="color" @input="apply"></label><label>Night high<input v-model="values.sky.colorNightHigh" type="color" @input="apply"></label><label>Dawn<input v-model="values.sky.colorDawn" type="color" @input="apply"></label><label>Sun<input v-model="values.sky.colorSun" type="color" @input="apply"></label>
-                </div>
-            </section>
-
             <section class="iw-settings__group">
                 <h3>Stars &amp; lighting</h3>
                 <div class="iw-settings__grid">
@@ -89,7 +45,6 @@ onUnmounted(() => window.clearTimeout(notificationTimer))
                 </div>
             </section>
 
-            <section class="iw-settings__group"><h3>Terrain gradient</h3><div class="iw-settings__colors"><label>Above far<input v-model="values.terrainGradient.aboveFar" type="color" @input="apply"></label><label>Above close<input v-model="values.terrainGradient.aboveClose" type="color" @input="apply"></label><label>Below close<input v-model="values.terrainGradient.belowClose" type="color" @input="apply"></label><label>Below far<input v-model="values.terrainGradient.belowFar" type="color" @input="apply"></label></div></section>
             <footer class="iw-settings__actions"><Transition name="iw-settings-notice"><p v-if="notification" class="iw-settings__notice" role="status">{{ notification }}</p></Transition><button class="iw-settings__reset" type="button" @click="reset">Reset to default</button><button class="iw-settings__save" type="submit">Save changes</button></footer>
         </form>
     </PanelShell>
