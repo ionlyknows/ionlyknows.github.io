@@ -1,9 +1,14 @@
 import * as THREE from 'three'
+import EventsEmitter from 'events'
 
-import config from '@/config/planets.js'
+import config, { earth, spawnPlanetId, sunDirection } from '../config/planets.js'
+import locations from '../../content/locations.js'
+import { PROP_BUILDERS, MARKER_SHAPES, propMatrix, buildCollider } from './PropShapes.js'
 
 const DEG = Math.PI / 180
 const INTERACTION_RADIUS = 3 // BR-03
+
+const _yAxis = new THREE.Vector3(0, 1, 0)
 
 // Unit direction for a { lat, long } point (degrees). long 0 / lat 0 = +Z.
 export function latLongToDirection({ lat, long }, target = new THREE.Vector3())
@@ -12,51 +17,114 @@ export function latLongToDirection({ lat, long }, target = new THREE.Vector3())
     return target.set(cosLat * Math.sin(long * DEG), Math.sin(lat * DEG), cosLat * Math.cos(long * DEG))
 }
 
+// All positions here are scene positions relative to the floating origin: the current
+// planet is always at (0, 0, 0). `origin` is where the scene origin sits in layout space.
+// Colliders are generated from the real prop meshes (State/PropShapes.js); only the
+// current planet's colliders are ever queried.
 export default class Planets
 {
-    constructor()
+    constructor({ keepTriangles = false } = {})
     {
+        this.events = new EventsEmitter()
+        this.origin = new THREE.Vector3()
+
+        const geometries = Object.fromEntries(Object.entries(PROP_BUILDERS).map(([ type, builder ]) => [ type, builder.build() ]))
+        const baseGeometry = [ { geometry: MARKER_SHAPES.base() } ]
+
         this.items = config.map((planet) =>
         {
             const center = new THREE.Vector3().fromArray(planet.center)
             const surfacePoint = (position) => latLongToDirection(position).multiplyScalar(planet.radius).add(center)
+            const point = (id, position, opens) => ({ id, opens, position: surfacePoint(position), up: latLongToDirection(position) })
 
-            const props = planet.props.map((prop) => ({
-                type: prop.type,
-                size: prop.size,
-                position: surfacePoint(prop.position),
-                up: latLongToDirection(prop.position)
-            }))
+            const typeCounts = {}
+            const props = planet.props.map((prop) =>
+            {
+                const up = latLongToDirection(prop.position)
+                const index = typeCounts[prop.type] = (typeCounts[prop.type] ?? - 1) + 1
+                const result = { type: prop.type, size: prop.size, up, position: surfacePoint(prop.position) }
+                result.matrix = propMatrix(result, index, planet.radius) // relative to the planet center
+                result.collider = buildCollider(geometries[prop.type], result.matrix, center, { keepTriangles })
+                return result
+            })
+
+            const contentPoints = planet.contentPoints.map((p) => point(p.id, p.position, p.opens))
+            const launchPad = point('launchpad', planet.launchPad, 'destinations')
+
+            // Beacon bases collide (small, their visible base only); launch pads are flat
+            const beaconColliders = contentPoints.map((p) =>
+            {
+                const matrix = new THREE.Matrix4().compose(p.up.clone().multiplyScalar(planet.radius), new THREE.Quaternion().setFromUnitVectors(_yAxis, p.up), new THREE.Vector3(1, 1, 1))
+                const collider = buildCollider(baseGeometry, matrix, center, { keepTriangles })
+                collider.beacon = p.id
+                return collider
+            })
 
             return {
                 id: planet.id,
-                name: planet.name,
+                name: locations.find((location) => location.id === planet.id)?.name || '',
                 center,
                 radius: planet.radius,
                 color: planet.color,
+                accent: planet.accent,
                 landingPoint: surfacePoint(planet.landingPoint),
-                contentPoints: planet.contentPoints.map((point) => ({
-                    id: point.id,
-                    opens: point.opens,
-                    position: surfacePoint(point.position),
-                    up: latLongToDirection(point.position)
-                })),
+                contentPoints,
+                launchPad,
+                interactives: [ ...contentPoints, launchPad ],
                 props,
-                colliders: props.map((prop) => ({ center: prop.position, radius: prop.size }))
+                colliders: [ ...props.map((prop) => prop.collider).filter(Boolean), ...beaconColliders ]
             }
         })
 
-        this.current = this.items[0]
-        this.nearest = null
+        this.earth = {
+            center: new THREE.Vector3().fromArray(earth.center),
+            radius: earth.radius,
+            beaconDirection: latLongToDirection(earth.beacon)
+        }
+
+        this.sunDirection = new THREE.Vector3().fromArray(sunDirection).normalize()
+        this.current = this.get(spawnPlanetId)
+        this.shiftOrigin(this.current.center.clone())
     }
 
-    // Nearest content point within the interaction radius, or null
+    get(id)
+    {
+        return this.items.find((planet) => planet.id === id)
+    }
+
+    // Floating origin: move every position by -offset (so `offset` becomes the new origin)
+    shiftOrigin(offset)
+    {
+        if(offset.lengthSq() === 0)
+            return
+
+        this.origin.add(offset)
+        for(const planet of this.items)
+        {
+            planet.center.sub(offset)
+            planet.landingPoint.sub(offset)
+            for(const point of planet.interactives)
+                point.position.sub(offset)
+            for(const prop of planet.props)
+                prop.position.sub(offset)
+            for(const collider of planet.colliders)
+            {
+                collider.center.sub(offset)
+                collider.camera.center.sub(offset)
+            }
+        }
+        this.earth.center.sub(offset)
+
+        this.events.emit('originShift', offset)
+    }
+
+    // Nearest interactive point (content point or launch pad) in range, or null
     findNearest(position)
     {
         let nearest = null
         let nearestDistance = INTERACTION_RADIUS
 
-        for(const point of this.current.contentPoints)
+        for(const point of this.current.interactives)
         {
             const distance = point.position.distanceTo(position)
             if(distance <= nearestDistance)

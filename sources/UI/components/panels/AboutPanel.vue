@@ -8,6 +8,7 @@ import achievements from '../../../content/achievements.js'
 import activities from '../../../content/activities.js'
 import contact from '../../../content/contact.js'
 import { visibleProjects } from '../../visibleContent.js'
+import { track } from '../../../Game/Analytics.js'
 
 const emit = defineEmits([ 'close' ])
 const avatarLoadFailed = ref(false)
@@ -242,6 +243,7 @@ usePanelEscape(close)
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 :aria-label="`Open full certificate image for ${item.title} in a new tab`"
+                                @click="track('certificate_open', { id: item.id })"
                             >
                                 <img class="iw-about__achievement-image" :src="item.image" :alt="`${item.title} certificate`" loading="lazy" />
                             </a>
@@ -251,6 +253,7 @@ usePanelEscape(close)
                                 :href="item.credentialUrl"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                @click="track('certificate_open', { id: item.id })"
                             >
                                 CREDENTIAL
                             </a>
@@ -271,7 +274,7 @@ usePanelEscape(close)
                     <div class="iw-about__contact-rows">
                         <div v-for="link in contactLinks" :key="link.type" class="iw-about__contact-row">
                             <span>{{ contactNames[link.type] }}</span>
-                            <a :href="link.url" target="_blank" rel="noopener noreferrer">{{ link.label || link.url }}</a>
+                            <a :href="link.url" target="_blank" rel="noopener noreferrer" @click="track('contact_click', { type: link.type })">{{ link.label || link.url }}</a>
                         </div>
                     </div>
                 </section>

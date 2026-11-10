@@ -1,22 +1,23 @@
-import Game from '@/Game.js'
-import UIBridge from './UI/UIBridge.js'
-import { createUIApp } from './UI/main.js'
+// Boot: decide the device FIRST, then load only what it needs (BR-01, NFR-03).
+// Phones/tablets (coarse pointer AND no hover) and browsers without WebGL 2 get the
+// Vue 2D view; everything in Game/ (and Three.js) is a separate chunk for desktop only.
+const isPhone = window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(hover: none)').matches
 
-const game = new Game()
-
-document.querySelector('.game').append(game.view.renderer.instance.domElement)
-
-try
+function hasWebGL2()
 {
-    const bridge = UIBridge.getInstance()
-    createUIApp(bridge, game)
-
-    game.state.controls.events.on('escapeDown', () =>
+    try
     {
-        bridge.emit('escapePressed')
-    })
+        const context = document.createElement('canvas').getContext('webgl2')
+        context?.getExtension('WEBGL_lose_context')?.loseContext()
+        return !!context
+    }
+    catch
+    {
+        return false
+    }
 }
-catch(error)
-{
-    console.error('[UI] Failed to initialise the UI layer -- gameplay input remains enabled regardless:', error)
-}
+
+if(isPhone || !hasWebGL2())
+    import('./UI/mobile.js').then(({ createMobileApp }) => createMobileApp())
+else
+    import('./desktop.js')

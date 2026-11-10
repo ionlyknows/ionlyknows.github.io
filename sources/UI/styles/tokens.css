@@ -3,7 +3,7 @@
     /* Palette: dusk terrain map -- deep slate base, contour-line accents */
     --iw-ink: #0b0f14;
     --iw-ink-soft: rgba(11, 15, 20, 0.78);
-    --iw-panel: rgba(15, 20, 27, 0.92);
+    --iw-panel: rgba(10, 14, 32, 0.84);
     --iw-border: rgba(148, 176, 168, 0.22);
     --iw-border-strong: rgba(148, 176, 168, 0.45);
     --iw-text: #eef2ee;
@@ -12,6 +12,15 @@
     --iw-accent-soft: rgba(255, 138, 61, 0.16);
     --iw-accent-2: #ffc178;
     --iw-danger: #f2a65a;
+    --iw-glow: #7ff9ff;
+    --iw-glass: rgba(8, 12, 28, 0.62);
+    --iw-space: #050814;
+
+    /* Location accents (HUD, destination picker) */
+    --iw-loc-station: #6fd6ff;
+    --iw-loc-forge: #ff8a3d;
+    --iw-loc-observatory: #2ec4b6;
+    --iw-loc-trophy: #ffcf5a;
 
     --iw-radius-sm: 6px;
     --iw-radius-md: 12px;
@@ -46,4 +55,19 @@
 {
     scrollbar-width: thin;
     scrollbar-color: var(--iw-border-strong) transparent;
+}
+
+/* Phone / no-WebGL 2D view: a normal scrolling page */
+html.is-2d,
+html.is-2d body
+{
+    margin: 0;
+    background: #02030a;
+    overflow-y: auto;
+}
+
+#mobile-root
+{
+    font-family: var(--iw-font);
+    color: var(--iw-text);
 }

@@ -2,9 +2,9 @@ import * as THREE from 'three'
 
 import View from '@/View/View.js'
 import State from '@/State/State.js'
-import { toonMaterial, flat } from './Materials/toon.js'
 
 const _right = new THREE.Vector3()
+const _facing = new THREE.Vector3()
 const _matrix = new THREE.Matrix4()
 
 function damp(current, target, speed, delta)
@@ -33,13 +33,14 @@ export default class PlayerModel
 
     setModel()
     {
-        const suit = toonMaterial({ color: '#f4f1ea' })
-        const accent = toonMaterial({ color: '#ff8a3d' })
-        const visor = toonMaterial({ color: '#1b2a4a', emissive: '#0b3a5a' })
+        const suit = new THREE.MeshStandardMaterial({ color: '#ebe7df', roughness: 0.8, metalness: 0, envMapIntensity: 0.5, userData: { useEnvironment: true } })
+        const accent = new THREE.MeshStandardMaterial({ color: '#ff7a2e', roughness: 0.6, metalness: 0, envMapIntensity: 0.5, userData: { useEnvironment: true } })
+        // Reflective dark gold visor
+        const visor = new THREE.MeshStandardMaterial({ color: '#8c6a24', roughness: 0.1, metalness: 1, envMapIntensity: 1.6, userData: { useEnvironment: true } })
 
         const part = (geometry, material, x, y, z, parent) =>
         {
-            const mesh = new THREE.Mesh(flat(geometry), material)
+            const mesh = new THREE.Mesh(geometry, material)
             mesh.position.set(x, y, z)
             mesh.castShadow = true
             parent.add(mesh)
@@ -50,7 +51,7 @@ export default class PlayerModel
         {
             const pivot = new THREE.Group()
             pivot.position.set(x, y, 0)
-            part(new THREE.CapsuleGeometry(radius, length, 2, 6), material, 0, - (length * 0.5 + radius), 0, pivot)
+            part(new THREE.CapsuleGeometry(radius, length, 4, 12), material, 0, - (length * 0.5 + radius), 0, pivot)
             parent.add(pivot)
             return pivot
         }
@@ -65,16 +66,36 @@ export default class PlayerModel
         this.legLeft = limb(0.16, 0.5, 0.24, 0.13, suit, this.body)
         this.legRight = limb(- 0.16, 0.5, 0.24, 0.13, suit, this.body)
 
-        part(new THREE.CapsuleGeometry(0.32, 0.3, 3, 8), suit, 0, 0.85, 0, this.body)
-        part(new THREE.CylinderGeometry(0.34, 0.34, 0.1, 8), accent, 0, 0.72, 0, this.body) // belt
+        part(new THREE.CapsuleGeometry(0.32, 0.3, 6, 20), suit, 0, 0.85, 0, this.body)
+        part(new THREE.CylinderGeometry(0.34, 0.34, 0.1, 24), accent, 0, 0.72, 0, this.body) // belt
         part(new THREE.BoxGeometry(0.46, 0.5, 0.22), accent, 0, 0.95, - 0.32, this.body) // backpack
 
         this.armLeft = limb(0.4, 1.12, 0.22, 0.1, suit, this.body)
         this.armRight = limb(- 0.4, 1.12, 0.22, 0.1, suit, this.body)
 
-        part(new THREE.SphereGeometry(0.42, 10, 8), suit, 0, 1.45, 0, this.body) // helmet
-        const visorMesh = part(new THREE.SphereGeometry(0.3, 10, 8), visor, 0, 1.47, 0.22, this.body)
+        part(new THREE.SphereGeometry(0.42, 32, 24), suit, 0, 1.45, 0, this.body) // helmet
+        const visorMesh = part(new THREE.SphereGeometry(0.3, 32, 24), visor, 0, 1.47, 0.22, this.body)
         visorMesh.scale.set(1, 0.72, 0.62)
+
+        // Soft contact shadow under the feet (stays on the ground while jumping)
+        const canvas = document.createElement('canvas')
+        canvas.width = 64
+        canvas.height = 64
+        const context = canvas.getContext('2d')
+        const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32)
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.7)')
+        gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.35)')
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        context.fillStyle = gradient
+        context.fillRect(0, 0, 64, 64)
+
+        this.contactShadow = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.4, 1.4),
+            new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: - 2 })
+        )
+        this.contactShadow.rotation.x = - Math.PI / 2
+        this.contactShadow.renderOrder = 1
+        this.group.add(this.contactShadow)
     }
 
     update()
@@ -84,15 +105,24 @@ export default class PlayerModel
         const elapsed = this.state.time.elapsed
 
         // Align up to the player's up, face the movement direction (+Z = facing)
-        _right.crossVectors(player.up, player.facing)
-        _matrix.makeBasis(_right, player.up, player.facing)
+        // Exactly the interpolated physics position (no extra smoothing here)
+        _facing.copy(player.facing).projectOnPlane(player.renderUp).normalize()
+        _right.crossVectors(player.renderUp, _facing)
+        _matrix.makeBasis(_right, player.renderUp, _facing)
         this.group.quaternion.setFromRotationMatrix(_matrix)
-        this.group.position.copy(player.position)
+        this.group.position.copy(player.renderPosition)
+
+        const planet = this.state.planets.current
+        const height = Math.max(0, player.renderPosition.distanceTo(planet.center) - planet.radius)
+        this.contactShadow.position.y = - height + 0.03
+        this.contactShadow.visible = height < 3
+        this.contactShadow.material.opacity = 1 - THREE.MathUtils.clamp(height / 3, 0, 1)
 
         // Blends
-        this.moveBlend = damp(this.moveBlend, player.isMoving ? (player.isRunning ? 1 : 0.6) : 0, 10, delta)
+        // Driven by the real speed (continuous), so sliding slowly along a rock never flickers
+        this.moveBlend = damp(this.moveBlend, THREE.MathUtils.clamp(player.speed / 10, 0, 1), 10, delta)
         this.airBlend = damp(this.airBlend, player.isGrounded ? 0 : 1, 14, delta)
-        this.phase += delta * (player.isRunning ? 14 : 9) * (player.isMoving ? 1 : 0)
+        this.phase += delta * (5 + player.speed * 0.9)
 
         if(player.isGrounded && !this.wasGrounded)
             this.squash = 1

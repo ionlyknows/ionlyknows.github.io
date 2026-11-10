@@ -5,7 +5,7 @@ export default class Time
      */
     constructor()
     {
-        this.start = Date.now() / 1000
+        this.start = performance.now() / 1000 // sub-millisecond (Date.now() made 16/17 ms deltas jitter)
         this.current = this.start
         this.elapsed = 0
         this.delta = 16 / 1000
@@ -16,7 +16,7 @@ export default class Time
      */
     update()
     {
-        const current = Date.now() / 1000
+        const current = performance.now() / 1000
 
         this.delta = current - this.current
         this.elapsed += this.delta

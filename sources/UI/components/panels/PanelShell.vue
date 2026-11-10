@@ -1,4 +1,5 @@
 <script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import gsap from 'gsap'
 
 const props = defineProps({
@@ -16,37 +17,71 @@ const props = defineProps({
 
 const emit = defineEmits([ 'close' ])
 
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const panelEl = ref(null)
+let previousFocus = null
+
+// Motion (apeiron-ui): fade + 12 px rise, 0.25 s in / 0.15 s out; opacity only with reduced motion
 function onBackdropEnter(el, done)
 {
-    gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: 'power2.out', onComplete: done })
+    gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: 'power2.out', onComplete: done })
 }
 
 function onBackdropLeave(el, done)
 {
-    gsap.to(el, { opacity: 0, duration: 0.25, ease: 'power1.in', onComplete: done })
+    gsap.to(el, { opacity: 0, duration: 0.15, ease: 'power1.in', onComplete: done })
 }
 
 function onPanelEnter(el, done)
 {
-    const fromVars = props.variant === 'fullscreen'
-        ? { opacity: 0 }
-        : { opacity: 0, y: 24, scale: 0.98 }
-
-    gsap.fromTo(
-        el,
-        fromVars,
-        { opacity: 1, y: 0, scale: 1, duration: 0.45, delay: 0.05, ease: 'power3.out', onComplete: done }
-    )
+    gsap.fromTo(el, { opacity: 0, y: reducedMotion ? 0 : 12 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out', onComplete: done })
 }
 
 function onPanelLeave(el, done)
 {
-    const toVars = props.variant === 'fullscreen'
-        ? { opacity: 0, duration: 0.25, ease: 'power1.in' }
-        : { opacity: 0, y: 16, scale: 0.98, duration: 0.25, ease: 'power1.in' }
-
-    gsap.to(el, { ...toVars, onComplete: done })
+    gsap.to(el, { opacity: 0, duration: 0.15, ease: 'power1.in', onComplete: done })
 }
+
+// Focus trap: Tab cycles inside the panel; focus returns on close (NFR-04)
+function focusables()
+{
+    return [ ...(panelEl.value?.querySelectorAll('a[href], button:not([disabled]), input, select, video[controls], [tabindex]:not([tabindex="-1"])') || []) ]
+}
+
+function onKeydown(event)
+{
+    if(event.key !== 'Tab')
+        return
+
+    const items = focusables()
+    if(!items.length)
+        return
+
+    const first = items[0]
+    const last = items[items.length - 1]
+    if(event.shiftKey && document.activeElement === first)
+    {
+        event.preventDefault()
+        last.focus()
+    }
+    else if(!event.shiftKey && document.activeElement === last)
+    {
+        event.preventDefault()
+        first.focus()
+    }
+}
+
+onMounted(() =>
+{
+    previousFocus = document.activeElement
+    focusables()[0]?.focus({ preventScroll: true })
+})
+
+onBeforeUnmount(() =>
+{
+    gsap.killTweensOf(panelEl.value)
+    previousFocus?.focus?.({ preventScroll: true })
+})
 </script>
 
 <template>
@@ -58,11 +93,13 @@ function onPanelLeave(el, done)
         >
             <Transition :css="false" @enter="onPanelEnter" @leave="onPanelLeave" appear>
                 <section
+                    ref="panelEl"
                     class="iw-panel"
                     :class="{ 'iw-panel--fullscreen': variant === 'fullscreen' }"
                     role="dialog"
                     aria-modal="true"
                     :aria-label="title"
+                    @keydown="onKeydown"
                 >
                     <header class="iw-panel__header" :class="{ 'iw-panel__header--actions-only': !showHeaderCopy }">
                         <div v-if="showHeaderCopy">
@@ -120,6 +157,8 @@ function onPanelLeave(el, done)
     display: flex;
     flex-direction: column;
     background: var(--iw-panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--iw-border);
     border-radius: var(--iw-radius-lg);
     box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.7);

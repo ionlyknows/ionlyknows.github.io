@@ -1,5 +1,7 @@
 // All profile text. Empty string / empty array = hidden in the UI (BR-07).
 export default {
+    // Site title card (intro + loading screen)
+    site: { title: 'APEIRON', subtitle: 'the boundless' },
     name: 'Jefferson F. Laspiñas',
     role: 'Frontend-Backend Developer',
     status: 'Available',

@@ -18,6 +18,9 @@ export default class Controls
         // playable even if the UI layer fails to initialise.
         this.inputEnabled = true
 
+        // Any key / pointer / wheel activity (idle camera drift)
+        this.lastInputTime = performance.now()
+
         this.setKeys()
         this.setPointer()
 
@@ -96,6 +99,7 @@ export default class Controls
         // Event
         window.addEventListener('keydown', (event) =>
         {
+            this.lastInputTime = performance.now()
             const mapItem = this.keys.findPerCode(event.code)
 
             if(!mapItem)
@@ -165,11 +169,13 @@ export default class Controls
 
         window.addEventListener('pointerdown', (event) =>
         {
+            this.lastInputTime = performance.now()
             this.pointer.down = true
         })
 
         window.addEventListener('pointermove', (event) =>
         {
+            this.lastInputTime = performance.now()
             this.pointer.deltaTemp.x += event.movementX
             this.pointer.deltaTemp.y += event.movementY
         })
@@ -181,6 +187,7 @@ export default class Controls
 
         window.addEventListener('wheel', (event) =>
         {
+            this.lastInputTime = performance.now()
             if(!this.inputEnabled)
                 return
 

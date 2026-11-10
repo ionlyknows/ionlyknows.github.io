@@ -1,3 +1,4 @@
+import { onUnmounted } from 'vue'
 import { useUIBridge } from './useUIBridge.js'
 
 /**
@@ -8,5 +9,5 @@ import { useUIBridge } from './useUIBridge.js'
 export function usePanelEscape(onClose)
 {
     const { listen } = useUIBridge()
-    listen('escapePressed', onClose)
+    onUnmounted(listen('escapePressed', onClose))
 }

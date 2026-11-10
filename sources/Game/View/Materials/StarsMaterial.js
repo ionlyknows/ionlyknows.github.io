@@ -10,7 +10,8 @@ export default function StarsMaterial()
         {
             uSize: { value: 0.01 },
             uBrightness: { value: 0.5 },
-            uHeightFragments: { value: null }
+            uHeightFragments: { value: null },
+            uIntensity: { value: 1.6 }
         },
         vertexShader: vertexShader,
         fragmentShader: fragmentShader

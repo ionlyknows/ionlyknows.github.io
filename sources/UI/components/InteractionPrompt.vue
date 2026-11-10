@@ -7,7 +7,13 @@ const props = defineProps({
 
 // Prompt label per panel type opened by a content point
 const labels = {
-    work: 'View projects'
+    about: 'About me',
+    contact: 'Contact',
+    work: 'View projects',
+    skills: 'View skills',
+    achievements: 'View achievements',
+    activities: 'View activities',
+    destinations: 'Travel'
 }
 
 const label = computed(() => labels[props.type] || '')

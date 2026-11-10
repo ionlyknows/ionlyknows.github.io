@@ -19,8 +19,9 @@ export default class Camera
 
         this.player = player
 
-        this.position = vec3.create()
-        this.quaternion = quat2.create()
+        // Plain (double precision) arrays: gl-matrix's default Float32Array rounded the camera position
+        this.position = [ 0, 0, 0 ]
+        this.quaternion = [ 0, 0, 0, 1, 0, 0, 0, 0 ]
         this.mode = Camera.MODE_THIRDPERSON
 
         this.thirdPerson = new CameraThirdPerson(this.player)

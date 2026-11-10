@@ -3,66 +3,32 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Apeiron — Jefferson Laspiñas's Space Adventure Portfolio</title>
+        <title>Apeiron — Jefferson Laspiñas</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="stylesheet" href="./sources/style.css">
 
-        <meta name="description" content="Apeiron — an interactive 3D space-adventure portfolio. Explore Jefferson Laspiñas's universe to see his projects, skills, and achievements.">
+        <!-- Descriptions are filled from sources/content/profile.js at build time (vite.config.js) -->
+        <meta name="description" content="%APEIRON_DESCRIPTION%">
 
-        <meta itemprop="name" content="Apeiron">
-        <meta itemprop="description" content="An interactive 3D space-adventure portfolio by Jefferson Laspiñas, built with Three.js and Vue.">
+        <meta itemprop="name" content="Apeiron — Jefferson Laspiñas">
+        <meta itemprop="description" content="%APEIRON_DESCRIPTION%">
         <meta itemprop="image" content="https://field-notes-xi-eight.vercel.app/media/projects/3d-portfolio.webp">
 
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="Apeiron — Jefferson Laspiñas's Space Adventure Portfolio">
-        <meta name="twitter:description" content="An interactive 3D space-adventure portfolio by Jefferson Laspiñas, built with Three.js and Vue.">
+        <meta name="twitter:title" content="Apeiron — Jefferson Laspiñas">
+        <meta name="twitter:description" content="%APEIRON_DESCRIPTION%">
         <meta name="twitter:image" content="https://field-notes-xi-eight.vercel.app/media/projects/3d-portfolio.webp">
 
         <meta property="og:site_name" content="Apeiron">
         <meta property="og:type" content="website">
         <meta property="og:url" content="https://field-notes-xi-eight.vercel.app/">
-        <meta property="og:title" content="Apeiron — Jefferson Laspiñas's Space Adventure Portfolio">
-        <meta property="og:description" content="An interactive 3D space-adventure portfolio by Jefferson Laspiñas, built with Three.js and Vue.">
+        <meta property="og:title" content="Apeiron — Jefferson Laspiñas">
+        <meta property="og:description" content="%APEIRON_DESCRIPTION%">
         <meta property="og:image" content="https://field-notes-xi-eight.vercel.app/media/projects/3d-portfolio.webp">
     </head>
     <body>
         <div class="game">
-            <div class="ui">
-                <div class="mobile-warning">
-                    For a better experience with 3D world interaction, open this portfolio on a desktop.
-                </div>
-                <div class="controls">
-                    <div class="group">
-                        <div class="element">
-                            <div class="keys is-arrows">
-                                <div class="key">A</div>
-                                <div class="key">S</div>
-                                <div class="key">D</div>
-                                <div class="key">W</div>
-                            </div>
-                            move
-                        </div>
-                        <div class="element">
-                            <div class="keys">
-                                <div class="key">F</div>
-                            </div>
-                            fullscreen
-                        </div>
-                        <div class="element">
-                            <div class="keys">
-                                <div class="key">P</div>
-                            </div>
-                            pointer lock
-                        </div>
-                        <div class="element">
-                            <div class="keys">
-                                <div class="key">B</div>
-                            </div>
-                            settings
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div class="ui"></div>
         </div>
         <script type="module" src="./sources/index.js"></script>
     </body>

@@ -1,6 +1,6 @@
 ---
 name: apeiron-3d-world
-description: Apeiron's Three.js patterns for small spherical planets, astronaut movement, the follow camera, toon materials, travel cinematics, and 3D performance. Use for any work in sources/Game/ (planets, player, camera, travel, materials, shaders).
+description: Apeiron's Three.js patterns for small spherical planets, astronaut movement, the follow camera, cinematic PBR materials, travel cinematics, and 3D performance. Use for any work in sources/Game/ (planets, player, camera, travel, materials, shaders).
 ---
 
 # Apeiron 3D world (Three.js r0.184, WebGL 2, plain JS, no React)
@@ -23,7 +23,7 @@ player.position.sub(c).setLength(r + h).add(c);                    // re-project
 player.quaternion.setFromUnitVectors(_yAxis, up);                  // then rotate around `up` toward velocity (slerp)
 ```
 - Reuse module-level temp vectors (`_v1`, `_v2`…); never allocate inside the frame loop.
-- Props: sphere colliders `{center, radius}`. If too close, push the player out along `(player − prop)` projected on the tangent plane.
+- Props: sphere colliders `{center, radius}`. **Slide, don't bounce:** remove the velocity component pointing into the collider before moving, resolve overlap once after moving (skin 0.02), then re-project onto the radius. Collision never changes facing. Smooth the visual model and camera target so corrections don't show.
 - Content point "in range" = straight-line distance ≤ 3 units; only the nearest one shows a prompt.
 
 ## Follow camera
@@ -35,11 +35,13 @@ player.quaternion.setFromUnitVectors(_yAxis, up);                  // then rotat
 - One GSAP timeline per trip: lift off (0.8 s) → follow a `THREE.CatmullRomCurve3` between planets (2.5–4 s) → land (0.8 s). With `prefers-reduced-motion`, total 1.5 s.
 - Disable input for the whole timeline; on complete, emit `location:change` through UIBridge and set state `ON_FOOT`.
 
-## Look: cute low-poly toon
-- `MeshToonMaterial` with a 3–4 step gradient map (`THREE.DataTexture`, `NearestFilter`) or flat-shaded `MeshLambertMaterial`.
-- Colors from vertex colors or one small palette texture shared by all props (fewer materials = fewer draw calls).
-- Outlines only if cheap (inverted-hull on the hero objects only, never on everything).
-- Lighting: one `DirectionalLight` (the sun) + `HemisphereLight`. Shadows only on the current planet, map ≤ 1024.
+## Look: cinematic, polished space (changed 2026-11-10; replaces "cute low-poly toon")
+- PBR: `MeshStandardMaterial` everywhere, CC0 textures (ambientCG / Poly Haven) with triplanar mapping, NASA Blue Marble for Earth.
+- ACES tone mapping, exposure ~0.75. One directional sun with a real dark side; very weak cool fill. Content points sit on the day side.
+- Near-black space, subtle stars, one soft procedural nebula. Bloom threshold ~0.85, strength ~0.5: only beacons, sun and emissive details glow.
+- Soft scattering atmosphere rim per planet; PMREM environment map for metals and the astronaut visor.
+- Post-processing breaks default MSAA: use a `WebGLRenderTarget` with `samples: 4` (or SMAA).
+- Quality levels: see docs/milestones/M2a-revision.md §5.
 
 ## Performance (spec §10)
 - Budget: ≤ 150 draw calls, ≤ 300k triangles, initial 3D assets ≤ 8 MB.

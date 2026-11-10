@@ -1,20 +1,25 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import gsap from 'gsap'
 import profile from '../../content/profile.js'
 
-const emit = defineEmits([ 'open-panel' ])
+defineProps({ location: { type: String, default: '' } })
+const emit = defineEmits([ 'open-panel', 'quick' ])
 
 const items = [
     { id: 'work', label: 'Work' },
-    { id: 'about', label: 'About' }
+    { id: 'about', label: 'About' },
+    { id: 'settings', label: 'Settings' }
 ]
 
 const rootEl = ref(null)
+let tween = null
+
+onBeforeUnmount(() => tween?.kill())
 
 onMounted(() =>
 {
-    gsap.from(rootEl.value.children, {
+    tween = gsap.from(rootEl.value.children, {
         opacity: 0,
         y: -12,
         stagger: 0.06,
@@ -26,7 +31,10 @@ onMounted(() =>
 
 <template>
     <div ref="rootEl" class="iw-topbar">
-        <div class="iw-topbar__mark">{{ profile.name }}</div>
+        <div class="iw-topbar__mark">
+            <p v-if="location" class="iw-topbar__location">{{ location }}</p>
+            <p class="iw-topbar__name">{{ profile.name }}</p>
+        </div>
 
         <nav class="iw-topbar__nav">
             <button
@@ -38,6 +46,7 @@ onMounted(() =>
             >
                 {{ item.label }}
             </button>
+            <button class="iw-topbar__link iw-topbar__skip" type="button" @click="emit('quick')">Skip the adventure</button>
         </nav>
     </div>
 </template>
@@ -48,7 +57,7 @@ onMounted(() =>
     position: fixed;
     top: 20px;
     left: 20px;
-    right: 20px;
+    right: 76px; /* the sound toggle sits in the corner */
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -58,13 +67,27 @@ onMounted(() =>
 
 .iw-topbar__mark
 {
-    padding: 8px 4px;
-    font-size: 13px;
+    padding: 4px;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+.iw-topbar__location
+{
+    margin: 0;
+    color: var(--iw-text);
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    text-transform: uppercase;
+}
+
+.iw-topbar__name
+{
+    margin: 2px 0 0;
     color: var(--iw-text-dim);
-    pointer-events: auto;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .iw-topbar__nav
@@ -109,5 +132,17 @@ onMounted(() =>
 {
     .iw-topbar__mark { display: none; }
     .iw-topbar { justify-content: center; }
+}
+
+/* FR-08: always-visible quick-view entry, slightly highlighted */
+.iw-topbar__skip
+{
+    color: var(--iw-glow);
+    background: rgba(127, 249, 255, 0.1);
+}
+
+.iw-topbar__skip:hover
+{
+    background: rgba(127, 249, 255, 0.2);
 }
 </style>

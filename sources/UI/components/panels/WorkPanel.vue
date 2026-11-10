@@ -1,13 +1,17 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import PanelShell from './PanelShell.vue'
 import { usePanelEscape } from '../../composables/usePanelEscape.js'
 import { visibleProjects as projects } from '../../visibleContent.js'
+import { track } from '../../../Game/Analytics.js'
 
 const emit = defineEmits([ 'close' ])
 
 const index = ref(0)
 const project = computed(() => projects[index.value])
+
+// Analytics: every project the visitor looks at
+watch(() => project.value?.id, (id) => { if(id) track('project_open', { id }) }, { immediate: true })
 
 function step(direction)
 {

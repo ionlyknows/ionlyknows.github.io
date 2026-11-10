@@ -13,3 +13,8 @@ node_modules
 *.sw?
 *.bak
 *.bak2
+
+# Local env files
+.env
+.env.local
+.env.*.local
