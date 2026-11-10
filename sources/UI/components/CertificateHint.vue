@@ -1,6 +1,5 @@
 <template>
     <aside class="iw-certificate-hint" :class="{ 'iw-certificate-hint--above': above }" role="status" aria-live="polite">
-        <img class="iw-certificate-hint__ghost" src="/social/Ghost.png" alt="" />
         <p>{{ message }}</p>
     </aside>
 </template>
@@ -22,21 +21,13 @@ defineProps({
     align-items: center;
     gap: 12px;
     width: min(315px, calc(100vw - 40px));
-    padding: 12px 18px 12px 10px;
+    padding: 12px 18px;
     border: 1px solid rgba(255, 193, 120, 0.52);
     border-radius: 16px;
     background: rgba(11, 15, 20, 0.9);
     box-shadow: 0 14px 36px rgba(0, 0, 0, 0.34);
     color: #fff4e8;
     transform: translateY(-50%);
-}
-
-.iw-certificate-hint__ghost
-{
-    width: 62px;
-    height: 62px;
-    flex: 0 0 auto;
-    object-fit: contain;
 }
 
 .iw-certificate-hint p
