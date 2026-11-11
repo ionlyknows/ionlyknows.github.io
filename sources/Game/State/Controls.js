@@ -73,8 +73,8 @@ export default class Controls
                 name: 'jump'
             },
             {
-                codes: [ 'ControlLeft', 'KeyC' ],
-                name: 'crouch'
+                codes: [ 'ControlLeft', 'ControlRight', 'KeyC' ],
+                name: 'crouch' // also "slow down" in flight
             },
             {
                 codes: [ 'Escape' ],
@@ -110,6 +110,10 @@ export default class Controls
             // closed even while gameplay input is disabled.
             if(!this.inputEnabled && mapItem.name !== 'escape')
                 return
+
+            // In flight Ctrl slows down: keep Ctrl+S / Ctrl+D / Ctrl+A from reaching the browser
+            if((event.ctrlKey || event.metaKey) && this.game.stateMachine?.is('FLYING') && [ 'KeyS', 'KeyD', 'KeyA' ].includes(event.code))
+                event.preventDefault()
 
             this.events.emit('keyDown', mapItem.name)
             this.events.emit(`${mapItem.name}Down`)
@@ -166,6 +170,10 @@ export default class Controls
         this.pointer.delta = { x: 0, y: 0 }
         this.pointer.wheelTemp = 0
         this.pointer.wheel = 0
+        // Absolute position, -1…1 from the screen center (flight steering)
+        this.pointer.x = 0
+        this.pointer.y = 0
+        this.pointer.inside = false
 
         window.addEventListener('pointerdown', (event) =>
         {
@@ -178,6 +186,14 @@ export default class Controls
             this.lastInputTime = performance.now()
             this.pointer.deltaTemp.x += event.movementX
             this.pointer.deltaTemp.y += event.movementY
+            this.pointer.x = event.clientX / window.innerWidth * 2 - 1
+            this.pointer.y = event.clientY / window.innerHeight * 2 - 1
+            this.pointer.inside = true
+        })
+
+        document.documentElement.addEventListener('pointerleave', () =>
+        {
+            this.pointer.inside = false
         })
 
         window.addEventListener('pointerup', () =>

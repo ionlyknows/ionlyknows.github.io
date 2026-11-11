@@ -82,4 +82,4 @@ Installed third-party skills (general reference only; **CLAUDE.md and the projec
 - At the end of a task: run `npm run build`, tick the milestone checklist, update `docs/audit.md` (findings status + change log), and list what changed and anything left open.
 
 ## Current milestone
-M2b — Launch-Ready → `docs/milestones/M2b-launch.md`
+M3 — Flight → `docs/milestones/M3-flight.md`

@@ -37,6 +37,7 @@ export default class Player
         this.speed = 0
         this.isMoving = false
         this.isRunning = false
+        this.visibility = 1 // boarding the ship fades the astronaut out
 
         this.previousPosition = new THREE.Vector3()
         this.renderPosition = new THREE.Vector3()
@@ -81,6 +82,7 @@ export default class Player
         this.snap()
         this.isMoving = false
         this.isRunning = false
+        this.visibility = 1
         this.accumulator = 0
 
         if(this.nearestPoint)
@@ -147,6 +149,24 @@ export default class Player
         this.snap()
     }
 
+    updateFlight()
+    {
+        const flight = this.state.flight
+
+        // Arrival: floating-origin shift to the destination + full physics reset (here, so that
+        // nothing else ever writes the player position)
+        if(flight.arrival)
+        {
+            const planet = flight.arrival
+            flight.arrival = null
+            this.state.shiftOrigin(planet.center.clone())
+            this.place(planet)
+            return
+        }
+
+        flight.sample(this)
+    }
+
     update()
     {
         const stateMachine = this.game.stateMachine
@@ -160,6 +180,10 @@ export default class Player
         if(stateMachine.is(StateMachine.TRAVELING) || this.state.travel.arrival)
         {
             this.updateTravel()
+        }
+        else if(this.state.flight.active || this.state.flight.arrival)
+        {
+            this.updateFlight()
         }
         else
         {

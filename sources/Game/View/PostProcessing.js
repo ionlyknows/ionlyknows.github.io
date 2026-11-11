@@ -60,8 +60,8 @@ export default class PostProcessing
         this.composer.addPass(this.bloom)
 
         // Control hints render after bloom, so they stay crisp (tone mapped like the scene)
-        this.hints = this.view.hints
-        this.hintsPass = new RenderPass(this.hints.scene, this.camera)
+        this.overlay = this.view.overlay
+        this.hintsPass = new RenderPass(this.overlay, this.camera)
         this.hintsPass.clear = false
         this.composer.addPass(this.hintsPass)
 
@@ -175,14 +175,14 @@ export default class PostProcessing
     {
         this.monitor()
 
-        const hints = this.hints.sprite.visible
+        const hints = this.overlay.children.some((child) => child.visible)
         if(this.quality === 'low')
         {
             this.renderer.render(this.scene, this.camera)
             if(hints)
             {
                 this.renderer.autoClear = false
-                this.renderer.render(this.hints.scene, this.camera)
+                this.renderer.render(this.overlay, this.camera)
                 this.renderer.autoClear = true
             }
             return

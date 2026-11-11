@@ -3,7 +3,7 @@ import EventsEmitter from 'events'
 
 import config, { earth, spawnPlanetId, sunDirection } from '../config/planets.js'
 import locations from '../../content/locations.js'
-import { PROP_BUILDERS, MARKER_SHAPES, propMatrix, buildCollider } from './PropShapes.js'
+import { PROP_BUILDERS, MARKER_SHAPES, SHIP_SHAPE, propMatrix, buildCollider, shipRestPose } from './PropShapes.js'
 
 const DEG = Math.PI / 180
 const INTERACTION_RADIUS = 3 // BR-03
@@ -30,6 +30,7 @@ export default class Planets
 
         const geometries = Object.fromEntries(Object.entries(PROP_BUILDERS).map(([ type, builder ]) => [ type, builder.build() ]))
         const baseGeometry = [ { geometry: MARKER_SHAPES.base() } ]
+        const shipGeometry = SHIP_SHAPE.build()
 
         this.items = config.map((planet) =>
         {
@@ -60,6 +61,12 @@ export default class Planets
                 return collider
             })
 
+            // The ship parked on the launch pad collides like a prop (its mesh footprint)
+            const landingPoint = surfacePoint(planet.landingPoint)
+            const rest = shipRestPose(launchPad, landingPoint)
+            const shipMatrix = new THREE.Matrix4().compose(rest.position.clone().sub(center), rest.quaternion, new THREE.Vector3(1, 1, 1))
+            const shipCollider = buildCollider(shipGeometry, shipMatrix, center, { keepTriangles })
+
             return {
                 id: planet.id,
                 name: locations.find((location) => location.id === planet.id)?.name || '',
@@ -67,12 +74,12 @@ export default class Planets
                 radius: planet.radius,
                 color: planet.color,
                 accent: planet.accent,
-                landingPoint: surfacePoint(planet.landingPoint),
+                landingPoint,
                 contentPoints,
                 launchPad,
                 interactives: [ ...contentPoints, launchPad ],
                 props,
-                colliders: [ ...props.map((prop) => prop.collider).filter(Boolean), ...beaconColliders ]
+                colliders: [ ...props.map((prop) => prop.collider).filter(Boolean), ...beaconColliders, shipCollider ].filter(Boolean)
             }
         })
 

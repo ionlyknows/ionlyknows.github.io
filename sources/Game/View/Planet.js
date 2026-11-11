@@ -12,7 +12,8 @@ const CONTENT_COLOR = '#35f6ff'
 const PAD_COLOR = '#ffcf5a'
 const GEM_HDR = 0.9 // beacon and pad diamonds: bright, at most a faint bloom (threshold 0.9)
 const PAD_RING_HDR = 0.72 // launch pad ring
-const BEAM_OPACITY = { content: 0.4, pad: 0.35 }
+const BEAM_OPACITY = { content: 0.4 }
+const GEM_HEIGHT = { content: 3, pad: 3.4 }
 const BEACON_LIGHT = 3 // point light above each beacon of the current planet
 const ATMOSPHERE_INTENSITY = 0.3
 const FAR_SEGMENTS = 32
@@ -96,11 +97,10 @@ export default class Planets
             padGeometry: MARKER_SHAPES.pad(),
             ringGeometry: new THREE.TorusGeometry(1.5, 0.05, 8, 64),
             beamGeometry: new THREE.CylinderGeometry(0.2, 0.2, 4, 16, 1, true),
-            padBeamGeometry: new THREE.CylinderGeometry(0.1, 0.1, 4, 12, 1, true),
             gemGeometry: new THREE.OctahedronGeometry(0.34, 0),
             baseMaterial: createSurfaceMaterial({ set: 'metal', scale: 0.8, variation: 0.05, color: '#4a505c', metalness: 0.85, roughness: 0.8, ...env }),
             content: { color: CONTENT_COLOR, beam: beam(CONTENT_COLOR, BEAM_OPACITY.content), gem: new THREE.MeshBasicMaterial({ color: hdr(CONTENT_COLOR, GEM_HDR) }) },
-            pad: { color: PAD_COLOR, beam: beam(PAD_COLOR, BEAM_OPACITY.pad), gem: new THREE.MeshBasicMaterial({ color: hdr(PAD_COLOR, GEM_HDR) }), ring: new THREE.MeshBasicMaterial({ color: hdr(PAD_COLOR, PAD_RING_HDR) }) }
+            pad: { color: PAD_COLOR, gem: new THREE.MeshBasicMaterial({ color: hdr(PAD_COLOR, GEM_HDR) }), ring: new THREE.MeshBasicMaterial({ color: hdr(PAD_COLOR, PAD_RING_HDR) }) }
         }
     }
 
@@ -197,12 +197,17 @@ export default class Planets
             marker.add(ring)
         }
 
-        const beam = new THREE.Mesh(isPad ? this.marker.padBeamGeometry : this.marker.beamGeometry, materials.beam)
-        beam.position.y = 2
-        marker.add(beam)
+        // Launch pads: the parked ship (View/Ship.js) stands where the beam was; the diamond floats above it
+        if(!isPad)
+        {
+            const beam = new THREE.Mesh(this.marker.beamGeometry, materials.beam)
+            beam.position.y = 2
+            marker.add(beam)
+        }
 
         const gem = new THREE.Mesh(this.marker.gemGeometry, materials.gem)
-        gem.position.y = 3
+        gem.position.y = isPad ? GEM_HEIGHT.pad : GEM_HEIGHT.content
+        gem.userData.baseY = gem.position.y
         marker.add(gem)
 
         item.group.add(marker)
@@ -374,7 +379,7 @@ export default class Planets
         for(let i = 0; i < gems.length; i++)
         {
             gems[i].rotation.y = elapsed * 1.5
-            gems[i].position.y = 3 + Math.sin(elapsed * 2 + i) * 0.2
+            gems[i].position.y = gems[i].userData.baseY + Math.sin(elapsed * 2 + i) * 0.2
         }
 
         // Fade the atmosphere out when the camera is inside it

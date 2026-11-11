@@ -69,7 +69,8 @@ export default class Camera
         this.lastWritten.copy(_position)
         this.writers++
 
-        const fov = BASE_FOV + (override.fov - BASE_FOV) * override.weight
+        // Gameplay FOV (walk 45, flight 60–72) blended with the cinematic one
+        const fov = playerCamera.fov + (override.fov - playerCamera.fov) * override.weight
         if(Math.abs(fov - this.instance.fov) > 0.01)
         {
             this.instance.fov = fov

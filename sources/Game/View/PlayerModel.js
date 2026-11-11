@@ -112,6 +112,12 @@ export default class PlayerModel
         this.group.quaternion.setFromRotationMatrix(_matrix)
         this.group.position.copy(player.renderPosition)
 
+        // Boarding the ship: the astronaut shrinks into the hatch; hidden in flight
+        this.group.visible = player.visibility > 0.01
+        this.group.scale.setScalar(Math.max(0.01, player.visibility))
+        if(!this.group.visible)
+            return
+
         const planet = this.state.planets.current
         const height = Math.max(0, player.renderPosition.distanceTo(planet.center) - planet.radius)
         this.contactShadow.position.y = - height + 0.03

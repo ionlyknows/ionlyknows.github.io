@@ -9,11 +9,14 @@ const BASE = `${import.meta.env.BASE_URL}audio/`
 const FILES = { ambient: 'ambient.mp3', warp: 'warp.mp3', panel: 'panel.mp3', beacon: 'beacon.mp3' }
 const SFX = {
     warp: { gain: 0.5, fadeIn: 0.25, fadeOut: 0.5 }, // airy whoosh, a bit below the music
+    boost: { buffer: 'warp', gain: 0.32, fadeIn: 0.15, fadeOut: 0.5 }, // same whoosh, softer
     panel: { gain: 0.45, fadeIn: 0.005, fadeOut: 0.06 },
     beacon: { gain: 0.4, fadeIn: 0.005, fadeOut: 0.08 }
 }
 const MUSIC_GAIN = 0.45
-const DUCK = 0.5 // −6 dB while traveling
+const DUCK = 0.5 // −6 dB during the cinematic travel
+const FLIGHT_DUCK = 0.71 // −3 dB during a flight (M3)
+const FLIGHT_STATES = [ StateMachine.BOARDING, StateMachine.TAKEOFF, StateMachine.FLYING, StateMachine.LANDING ]
 const DUCK_DOWN = 0.5 // s
 const DUCK_UP = 1 // s, after arrival
 const LOOP_TRIM = 0.05 // s: skips the MP3 encoder padding at both ends of the loop
@@ -29,22 +32,28 @@ export default class Audio
         this.muted = false
         this.context = null
         this.music = null
-        this.traveling = false
+        this.duck = 1
         this.buffers = {}
 
         this.bridge.on('launch', () => this.start())
         this.bridge.on('panel:open', () => this.play('panel'))
         this.bridge.on('prompt:show', () => this.play('beacon'))
-        this.game.stateMachine.events.on('change', (state) =>
+        this.bridge.on('flight:boost', () => this.play('boost'))
+        this.game.stateMachine.events.on('change', (state, previous) =>
         {
-            const traveling = state === StateMachine.TRAVELING
-            if(traveling === this.traveling)
+            // The quick-view pauses the scene: keep the sound where it was
+            if(state === StateMachine.QUICK_VIEW || previous === StateMachine.QUICK_VIEW)
                 return
 
-            this.traveling = traveling
-            if(traveling)
+            // Whoosh on the cinematic travel and on take-off (no engine sound at all)
+            if(state === StateMachine.TRAVELING || state === StateMachine.TAKEOFF)
                 this.play('warp')
-            this.rampMusic(traveling ? MUSIC_GAIN * DUCK : MUSIC_GAIN, traveling ? DUCK_DOWN : DUCK_UP)
+
+            const duck = state === StateMachine.TRAVELING ? DUCK : FLIGHT_STATES.includes(state) ? FLIGHT_DUCK : 1
+            if(duck === this.duck)
+                return
+            this.rampMusic(MUSIC_GAIN * duck, duck < this.duck ? DUCK_DOWN : DUCK_UP)
+            this.duck = duck
         })
 
         // Silence while the tab is hidden
@@ -122,7 +131,7 @@ export default class Audio
         source.connect(this.music).connect(this.master)
         source.start(0, LOOP_TRIM)
 
-        this.rampMusic(this.traveling ? MUSIC_GAIN * DUCK : MUSIC_GAIN, 3)
+        this.rampMusic(MUSIC_GAIN * this.duck, 3)
     }
 
     // Smooth music level change from wherever it is now (also mid-ramp)
@@ -142,11 +151,11 @@ export default class Audio
     // One-shot with a fade in and out (no clicks at either end)
     play(name)
     {
-        const buffer = this.buffers[name]
+        const { buffer: bufferName = name, gain: level, fadeIn, fadeOut } = SFX[name]
+        const buffer = this.buffers[bufferName]
         if(!this.context || !buffer)
             return
 
-        const { gain: level, fadeIn, fadeOut } = SFX[name]
         const now = this.context.currentTime
         const end = now + buffer.duration
 

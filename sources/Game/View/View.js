@@ -2,7 +2,11 @@ import * as THREE from 'three'
 
 import Camera from './Camera.js'
 import Cinematics from './Cinematics.js'
-import ControlHints from './ControlHints.js'
+import ControlHints, { WALK_HINTS, FLIGHT_HINTS } from './ControlHints.js'
+import Ship from './Ship.js'
+import Asteroids from './Asteroids.js'
+import Game from '@/Game.js'
+import StateMachine from '@/StateMachine.js'
 import Earth from './Earth.js'
 import Lights from './Lights.js'
 import Planets from './Planet.js'
@@ -52,7 +56,28 @@ export default class View
         this.planets = new Planets()
         this.earth = new Earth()
         this.player = new PlayerModel()
-        this.hints = new ControlHints()
+        this.ship = new Ship()
+        this.asteroids = new Asteroids()
+
+        // Control hints: own scene, drawn after bloom
+        const stateMachine = Game.getInstance().stateMachine
+        const state = State.getInstance()
+        this.overlay = new THREE.Scene()
+        this.hints = new ControlHints({
+            scene: this.overlay,
+            hints: WALK_HINTS,
+            isActive: () => stateMachine.is(StateMachine.ON_FOOT),
+            isUsed: () => state.player.isMoving
+        })
+        this.flightHints = new ControlHints({
+            scene: this.overlay,
+            hints: FLIGHT_HINTS,
+            height: 3.4,
+            side: 3.8, // clear of the wings
+            autoShow: true,
+            isActive: () => stateMachine.is(StateMachine.TAKEOFF) || stateMachine.is(StateMachine.FLYING),
+            isUsed: () => state.flight.body?.steering
+        })
         this.cinematics = new Cinematics()
         this.postProcessing = new PostProcessing()
     }
@@ -126,7 +151,10 @@ export default class View
         this.planets.update()
         this.earth.update()
         this.player.update()
+        this.ship.update()
+        this.asteroids.update()
         this.hints.update()
+        this.flightHints.update()
         this.lights.update()
         this.renderer.update()
     }

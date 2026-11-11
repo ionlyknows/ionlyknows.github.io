@@ -9,6 +9,7 @@ import UIBridge from '../../UI/UIBridge.js'
 const LIFT_HEIGHT = 6
 const DURATIONS = { lift: 0.7, flight: 2.6, land: 0.7, establish: 1.6 } // 5.6 s (BR-05: 4–6 s)
 const REDUCED_DURATIONS = { lift: 0.3, flight: 0.9, land: 0.3, establish: 0 } // 1.5 s
+const SKIP_LIFT = 0.4 // "Skip flight" from the air: a short flash instead of the lift-off
 
 const _up = new THREE.Vector3()
 
@@ -32,23 +33,28 @@ export default class Travel
         this.path = null
         this.timeline = null
         this.arrival = null // destination waiting for Player.update to finish the arrival
+        this.fromFlight = false // started by "Skip flight" while the ship was in the air
 
         this.bridge.on('travel:request', ({ to }) => this.start(to))
     }
 
-    start(toId)
+    // force: also from a flight state ("Skip flight"); fromFlight: start where the ship is
+    start(toId, { force = false, fromFlight = false } = {})
     {
         const stateMachine = this.game.stateMachine
         const planets = this.state.planets
         const player = this.state.player
         const to = planets.get(toId)
 
-        if(!stateMachine.is(StateMachine.ON_FOOT) || !to || to === planets.current)
+        if((!force && !stateMachine.is(StateMachine.ON_FOOT)) || !to || to === planets.current)
             return
 
         this.from = planets.current
         this.to = to
+        this.fromFlight = fromFlight
         this.durations = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? REDUCED_DURATIONS : DURATIONS
+        if(fromFlight)
+            this.durations = { ...this.durations, lift: SKIP_LIFT }
 
         stateMachine.set(StateMachine.TRAVELING)
         this.bridge.emit('prompt:hide')
@@ -56,7 +62,7 @@ export default class Travel
         const liftStart = player.position.clone()
         const fromUp = player.up.clone()
         const toUp = new THREE.Vector3().subVectors(to.landingPoint, to.center).normalize()
-        const liftEnd = liftStart.clone().addScaledVector(fromUp, LIFT_HEIGHT)
+        const liftEnd = fromFlight ? liftStart.clone() : liftStart.clone().addScaledVector(fromUp, LIFT_HEIGHT)
         const landStart = to.landingPoint.clone().addScaledVector(toUp, LIFT_HEIGHT)
 
         this.curve = this.buildCurve(liftEnd, fromUp, landStart, toUp)
@@ -138,7 +144,10 @@ export default class Travel
             return center.clone().addScaledVector(dir.normalize(), radius + 12)
         }
 
-        const departure = outward(this.from.center, this.from.radius, fromUp, toDestination)
+        // From the air: carry on along the ship's heading
+        const departure = this.fromFlight
+            ? start.clone().addScaledVector(this.state.player.facing, 30)
+            : outward(this.from.center, this.from.radius, fromUp, toDestination)
         const approach = outward(this.to.center, this.to.radius, toUp, toDestination.clone().negate())
 
         const mid = new THREE.Vector3().addVectors(departure, approach).multiplyScalar(0.5)
@@ -147,7 +156,7 @@ export default class Travel
             side.set(1, 0, 0)
         mid.addScaledVector(side.normalize(), departure.distanceTo(approach) * 0.15)
 
-        const obstacles = [ ...planets.items.filter((p) => p !== this.from && p !== this.to), planets.earth ]
+        const obstacles = [ ...planets.items.filter((p) => (p !== this.from || this.fromFlight) && p !== this.to), planets.earth ]
         for(const obstacle of obstacles)
         {
             const clearance = obstacle.radius * 2.5 + 10
@@ -168,6 +177,7 @@ export default class Travel
         gsap.killTweensOf(this)
         this.phase = null
         this.phaseT = 0
+        this.fromFlight = false
         this.arrival = this.to
         this.game.stateMachine.set(StateMachine.ON_FOOT)
         this.bridge.emit('location:change', { id: this.to.id, name: this.to.name })

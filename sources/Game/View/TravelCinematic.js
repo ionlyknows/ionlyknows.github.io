@@ -4,6 +4,7 @@ import View from '@/View/View.js'
 import State from '@/State/State.js'
 import { BASE_FOV } from './Camera.js'
 import { lookAtPose } from './Cinematics.js'
+import { DURATIONS as FLIGHT_DURATIONS } from '@/State/FlightPhysics.js'
 
 const WARP_FOV = 30 // extra FOV at the warp peak
 const ORBIT_DISTANCE = 2.8 // × destination radius
@@ -47,10 +48,8 @@ export default class TravelCinematic
     }
 
     // Wide shot of the destination, sweeping around its landing point's up axis
-    establish(progress, weight)
+    establish(progress, weight, planet = this.state.travel.to)
     {
-        const travel = this.state.travel
-        const planet = travel.to
         const player = this.state.player
 
         _up.subVectors(planet.landingPoint, planet.center).normalize()
@@ -61,6 +60,16 @@ export default class TravelCinematic
         _target.copy(planet.center).addScaledVector(_up, planet.radius * 0.4)
         lookAtPose(this.override, _position, _target, _up)
         this.override.weight = weight
+    }
+
+    // Flight landing (M3): after touchdown, the same establishing shot settles behind the astronaut
+    updateFlightEstablish(flight)
+    {
+        const t = THREE.MathUtils.clamp(flight.body.time / FLIGHT_DURATIONS.establish, 0, 1)
+        this.cinematics.screen.flash = Math.max(0, 1 - flight.body.time / 0.5)
+        this.override.fov = BASE_FOV
+        const settle = smooth(THREE.MathUtils.clamp((t - 0.35) / 0.65, 0, 1))
+        this.establish(t, 1 - settle, flight.route.to)
     }
 
     update()
@@ -76,7 +85,7 @@ export default class TravelCinematic
         if(travel.phase === 'lift')
         {
             this.chase(smooth(t))
-            screen.flash = 0
+            screen.flash = travel.fromFlight ? 1 - t : 0 // "Skip flight": the ship gives way in a flash
         }
         else if(travel.phase === 'flight')
         {

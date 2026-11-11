@@ -74,7 +74,7 @@ export default class Cinematics
             // Control is back: nothing cinematic may keep writing
             gsap.killTweensOf(this.override)
             this.travel.reset()
-            if(previous === StateMachine.TRAVELING || previous === StateMachine.INTRO)
+            if(previous === StateMachine.TRAVELING || previous === StateMachine.INTRO || previous === StateMachine.LANDING)
                 this.override.weight = 0
             this.state.controls.lastInputTime = performance.now()
             if(this.screen.black > 0 && !this.intro)
@@ -243,10 +243,24 @@ export default class Cinematics
             this.focus.weight = 0
             this.travel.update()
         }
+        else if(this.state.flight.phase === 'establish')
+        {
+            this.focus.weight = 0
+            this.travel.reset()
+            this.travel.updateFlightEstablish(this.state.flight)
+        }
         else
         {
             this.travel.reset()
             this.updateFocus(delta)
+        }
+
+        // Boost (M3): warp streaks along the ship's heading
+        const flight = this.state.flight
+        if(flight.active && flight.boost > 0.01)
+        {
+            this.view.space.warp.amount = flight.boost
+            this.view.space.warp.direction.copy(flight.render.forward)
         }
 
         this.updateScreen()

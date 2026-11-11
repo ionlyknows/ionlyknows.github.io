@@ -3,8 +3,9 @@ import EventsEmitter from 'events'
 import State from '@/State/State.js'
 import UIBridge from '../UI/UIBridge.js'
 
-// Spec §5. Gameplay input only in ON_FOOT (BR-04). QUICK_VIEW pauses the scene and
-// remembers where to return ("Back to the adventure").
+// Spec §5. Walking input only in ON_FOOT (BR-04); steering only in FLYING. QUICK_VIEW pauses
+// the scene and remembers where to return ("Back to the adventure").
+// Flight (M3): ON_FOOT → BOARDING → TAKEOFF → FLYING → LANDING → ON_FOOT.
 export default class StateMachine
 {
     static LOADING = 'LOADING'
@@ -14,6 +15,11 @@ export default class StateMachine
     static PANEL_OPEN = 'PANEL_OPEN'
     static TRAVELING = 'TRAVELING'
     static QUICK_VIEW = 'QUICK_VIEW'
+    static BOARDING = 'BOARDING'
+    static TAKEOFF = 'TAKEOFF'
+    static FLYING = 'FLYING'
+    static LANDING = 'LANDING'
+    static FLIGHT_STATES = [ 'BOARDING', 'TAKEOFF', 'FLYING', 'LANDING' ]
 
     constructor()
     {
@@ -42,7 +48,7 @@ export default class StateMachine
         // Quick-view opens from the loading screen or the world (FR-08)
         this.bridge.on('quickview:open', () =>
         {
-            if(!this.is(StateMachine.LOADING) && !this.is(StateMachine.READY) && !this.is(StateMachine.ON_FOOT))
+            if(!this.is(StateMachine.LOADING) && !this.is(StateMachine.READY) && !this.is(StateMachine.ON_FOOT) && !this.inFlight())
                 return
             this.resumeState = this.state
             this.set(StateMachine.QUICK_VIEW)
@@ -71,6 +77,11 @@ export default class StateMachine
         return this.state === state
     }
 
+    inFlight()
+    {
+        return StateMachine.FLIGHT_STATES.includes(this.state)
+    }
+
     set(state)
     {
         if(state === this.state)
@@ -80,7 +91,7 @@ export default class StateMachine
         this.state = state
 
         const { controls, viewport } = State.getInstance()
-        controls.setInputEnabled(state === StateMachine.ON_FOOT)
+        controls.setInputEnabled(state === StateMachine.ON_FOOT || state === StateMachine.FLYING)
         if(state !== StateMachine.ON_FOOT)
             viewport.pointerLock.deactivate()
 

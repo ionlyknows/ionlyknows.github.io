@@ -21,7 +21,7 @@ export const random = (i, k) =>
 }
 
 // One vertex-colored piece of a prop, drawn with material `mat`
-function part(geometry, color, mat, { position = [ 0, 0, 0 ], rotation = [ 0, 0, 0 ], scale = [ 1, 1, 1 ] } = {})
+export function part(geometry, color, mat, { position = [ 0, 0, 0 ], rotation = [ 0, 0, 0 ], scale = [ 1, 1, 1 ] } = {})
 {
     _matrix.compose(_position.fromArray(position), _quaternion.setFromEuler(_euler.set(...rotation)), _scale.fromArray(scale))
     geometry.applyMatrix4(_matrix)
@@ -109,6 +109,61 @@ export const MARKER_SHAPES = {
     base: () => new THREE.CylinderGeometry(1.1, 1.3, 0.3, 32),
     pad: () => new THREE.CylinderGeometry(1.9, 2, 0.16, 48)
 }
+
+// The ship (M3): built in code, +Z = nose, +Y = up, origin under the belly on the pad.
+// Materials: paint (hull + orange accents), metal, glass (canopy), glow (engine + nav lights).
+// Shared by View/Ship.js (meshes) and State/Planets.js (the parked ship's collider).
+const HULL = '#eeeae2'
+const ACCENT = '#ff7a2e'
+const STEEL = '#5b616b'
+export const SHIP_SHAPE = {
+    hatch: [ 0, 1.0, 0.3 ], // where the astronaut boards (local)
+    engine: [ 0, 0.95, - 2.15 ], // engine exit (local)
+    build: () => [
+        // Landing skids and struts
+        part(new THREE.BoxGeometry(0.12, 0.1, 2.4), STEEL, 'metal', { position: [ 0.75, 0.05, - 0.1 ] }),
+        part(new THREE.BoxGeometry(0.12, 0.1, 2.4), STEEL, 'metal', { position: [ - 0.75, 0.05, - 0.1 ] }),
+        part(new THREE.BoxGeometry(0.08, 0.5, 0.08), STEEL, 'metal', { position: [ 0.62, 0.32, 0.6 ], rotation: [ 0, 0, - 0.35 ] }),
+        part(new THREE.BoxGeometry(0.08, 0.5, 0.08), STEEL, 'metal', { position: [ - 0.62, 0.32, 0.6 ], rotation: [ 0, 0, 0.35 ] }),
+        part(new THREE.BoxGeometry(0.08, 0.5, 0.08), STEEL, 'metal', { position: [ 0.62, 0.32, - 0.8 ], rotation: [ 0, 0, - 0.35 ] }),
+        part(new THREE.BoxGeometry(0.08, 0.5, 0.08), STEEL, 'metal', { position: [ - 0.62, 0.32, - 0.8 ], rotation: [ 0, 0, 0.35 ] }),
+        // Fuselage (capsule along Z, a little flattened) with an orange band
+        part(new THREE.CapsuleGeometry(0.55, 2.4, 8, 24), HULL, 'paint', { position: [ 0, 0.95, 0 ], rotation: [ Math.PI / 2, 0, 0 ], scale: [ 1, 1, 0.82 ] }),
+        part(new THREE.CylinderGeometry(0.565, 0.565, 0.2, 32), ACCENT, 'paint', { position: [ 0, 0.95, - 0.55 ], rotation: [ Math.PI / 2, 0, 0 ], scale: [ 1, 1, 0.83 ] }),
+        // Canopy
+        part(new THREE.SphereGeometry(0.42, 28, 16), '#1b2230', 'glass', { position: [ 0, 1.27, 0.8 ], scale: [ 0.82, 0.6, 1.5 ] }),
+        // Swept wings with orange tips
+        part(new THREE.BoxGeometry(1.7, 0.08, 1.0), '#e6e2da', 'paint', { position: [ 1.15, 0.82, - 0.45 ], rotation: [ 0, 0.25, - 0.06 ] }),
+        part(new THREE.BoxGeometry(1.7, 0.08, 1.0), '#e6e2da', 'paint', { position: [ - 1.15, 0.82, - 0.45 ], rotation: [ 0, - 0.25, 0.06 ] }),
+        part(new THREE.BoxGeometry(0.16, 0.14, 0.9), ACCENT, 'paint', { position: [ 1.98, 0.77, - 0.68 ], rotation: [ 0, 0.25, 0 ] }),
+        part(new THREE.BoxGeometry(0.16, 0.14, 0.9), ACCENT, 'paint', { position: [ - 1.98, 0.77, - 0.68 ], rotation: [ 0, - 0.25, 0 ] }),
+        // Tail fin
+        part(new THREE.BoxGeometry(0.08, 0.72, 0.85), ACCENT, 'paint', { position: [ 0, 1.5, - 1.3 ], rotation: [ - 0.35, 0, 0 ] }),
+        // Engine housing + glowing exit
+        part(new THREE.CylinderGeometry(0.42, 0.5, 0.55, 28), STEEL, 'metal', { position: [ 0, 0.95, - 1.86 ], rotation: [ Math.PI / 2, 0, 0 ] }),
+        part(new THREE.CylinderGeometry(0.34, 0.34, 0.04, 28), '#ffb46b', 'glow', { position: [ 0, 0.95, - 2.14 ], rotation: [ Math.PI / 2, 0, 0 ] }),
+        // Nav lights: red on the port wing (+X), green on starboard (-X)
+        part(new THREE.SphereGeometry(0.07, 10, 8), '#ff3b3b', 'glow', { position: [ 2.08, 0.8, - 0.7 ] }),
+        part(new THREE.SphereGeometry(0.07, 10, 8), '#3bff7a', 'glow', { position: [ - 2.08, 0.8, - 0.7 ] })
+    ]
+}
+
+const PAD_TOP = 0.16 // pad thickness (MARKER_SHAPES.pad)
+
+// Where a ship rests on a launch pad: on top of the pad, nose toward the landing point
+export function shipRestPose(launchPad, landingPoint, target = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion(), up: new THREE.Vector3(), forward: new THREE.Vector3() })
+{
+    target.up.copy(launchPad.up)
+    target.position.copy(launchPad.position).addScaledVector(target.up, PAD_TOP)
+    target.forward.subVectors(landingPoint, launchPad.position).projectOnPlane(target.up)
+    if(target.forward.lengthSq() < 1e-6)
+        target.forward.set(1, 0, 0).projectOnPlane(target.up)
+    target.forward.normalize()
+    _matrix.makeBasis(_right.crossVectors(target.up, target.forward), target.up, target.forward)
+    target.quaternion.setFromRotationMatrix(_matrix)
+    return target
+}
+const _right = new THREE.Vector3()
 
 // Placement of one prop, relative to its planet's center (identical for mesh and collider)
 export function propMatrix(prop, index, planetRadius, target = new THREE.Matrix4())

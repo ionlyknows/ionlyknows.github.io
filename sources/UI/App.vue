@@ -18,6 +18,7 @@ import ContactPanel from './components/panels/ContactPanel.vue'
 import DestinationPicker from './components/panels/DestinationPicker.vue'
 import SettingsPanel from './components/panels/SettingsPanel.vue'
 import QuickView from './components/QuickView.vue'
+import FlightHUD from './components/FlightHUD.vue'
 import SoundToggle from './components/SoundToggle.vue'
 import { track } from '../Game/Analytics.js'
 
@@ -46,14 +47,17 @@ const activePanel = ref(null)
 const promptType = ref(null)
 const quickOpen = ref(false)
 
+const FLIGHT_STATES = [ 'BOARDING', 'TAKEOFF', 'FLYING', 'LANDING' ]
 const onFoot = computed(() => gameState.value === 'ON_FOOT')
+const inFlight = computed(() => FLIGHT_STATES.includes(gameState.value))
 const showLoading = computed(() => gameState.value === 'LOADING' || gameState.value === 'READY')
 
 // Panels open only through UIBridge `panel:open` (content points, launch pads
 // or the menu); the game's state machine listens to the same events (BR-04).
+// In flight the panels stay available; the flight waits while one is open
 function openPanel(type)
 {
-    if(!activePanel.value && onFoot.value)
+    if(!activePanel.value && (onFoot.value || inFlight.value))
         props.bridge.emit('panel:open', { type })
 }
 
@@ -93,10 +97,24 @@ function onHashChange()
         openQuick('url')
 }
 
+// HUD Locations list: the cinematic travel
 function travelTo(id)
 {
     closePanel()
     props.bridge.emit('travel:request', { to: id })
+}
+
+// Destination picker at a launch pad: the flight (reduced motion: the short cinematic travel)
+function flyTo(id)
+{
+    closePanel()
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    props.bridge.emit(reduced ? 'travel:request' : 'flight:request', { to: id })
+}
+
+function skipFlight()
+{
+    props.bridge.emit('flight:skip')
 }
 
 const stops = [
@@ -110,10 +128,15 @@ const stops = [
     }),
     props.bridge.on('prompt:show', ({ type }) => { promptType.value = type }),
     props.bridge.on('prompt:hide', () => { promptType.value = null }),
+    // Registered before any panel: Esc closes a panel first, and only skips the flight when
+    // nothing was open
     props.bridge.on('escapePressed', () =>
     {
+        const somethingOpen = !!activePanel.value || quickOpen.value
         if(activePanel.value === 'settings')
             closePanel()
+        if(!somethingOpen && [ 'BOARDING', 'TAKEOFF', 'FLYING' ].includes(gameState.value))
+            skipFlight()
     })
 ]
 
@@ -161,8 +184,10 @@ onUnmounted(() =>
 
     <IntroOverlay v-if="gameState === 'INTRO'" />
 
+    <Navigation v-if="onFoot || inFlight" :location="inFlight ? '' : location.name" @open-panel="openPanel" @quick="openQuick('button')" />
+    <FlightHUD v-if="inFlight" @skip="skipFlight" />
+
     <template v-if="onFoot">
-        <Navigation :location="location.name" @open-panel="openPanel" @quick="openQuick('button')" />
         <LocationNav :current="location.id" @travel="travelTo" />
         <ControlsHint />
         <InteractionPrompt v-if="promptType" :type="promptType" />
@@ -175,7 +200,7 @@ onUnmounted(() =>
     <component
         :is="panels[activePanel]"
         v-else-if="panels[activePanel]"
-        v-bind="activePanel === 'destinations' ? { current: location.id, onTravel: travelTo } : {}"
+        v-bind="activePanel === 'destinations' ? { current: location.id, onTravel: flyTo } : {}"
         @close="closePanel"
     />
 </template>

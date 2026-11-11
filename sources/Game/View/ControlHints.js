@@ -1,23 +1,26 @@
 import * as THREE from 'three'
 import gsap from 'gsap'
 
-import Game from '@/Game.js'
 import View from '@/View/View.js'
 import State from '@/State/State.js'
-import StateMachine from '@/StateMachine.js'
 
-const MOVE_TIME_TO_HIDE = 2 // s of movement before the hints fade out
+const USE_TIME_TO_HIDE = 2 // s of use (walking / steering) before the hints fade out for good
 const OPACITY = 0.85
 const SIZE = { width: 3.6, height: 1.8 }
-const HEIGHT = 2.8 // center above the astronaut's feet
-const SIDE = 2.5 // center to the side of the astronaut (screen space)
 const MARGIN = 0.04 // NDC padding around beacons and pads
 const MARKER_SAMPLES = [ 0, 1.2, 2.4, 3.4 ] // heights along a beacon (base → diamond)
-const HINTS = [
+
+export const WALK_HINTS = [
     { keys: [ 'W', 'A', 'S', 'D' ], label: 'move' },
     { keys: [ 'Shift' ], label: 'run' },
     { keys: [ 'Space' ], label: 'jump' },
     { keys: [ 'E' ], label: 'interact' }
+]
+export const FLIGHT_HINTS = [
+    { keys: [ 'W', 'A', 'S', 'D' ], label: 'steer (or mouse)' },
+    { keys: [ 'Shift' ], label: 'boost' },
+    { keys: [ 'Ctrl' ], label: 'slow down' },
+    { keys: [ 'Esc' ], label: 'skip flight' }
 ]
 
 const _base = new THREE.Vector3()
@@ -27,29 +30,35 @@ const _center = new THREE.Vector3()
 const _edge = new THREE.Vector3()
 const _point = new THREE.Vector3()
 
-// Key icons next to the astronaut after the intro. They live in their own scene, rendered
-// after bloom (PostProcessing), so they stay crisp. Placed above-left of the astronaut on
-// screen; they switch to the right when a beacon or launch pad would be behind them.
+// Key icons next to the astronaut (after the intro) or the ship (at take-off). They live in the
+// overlay scene, rendered after bloom (PostProcessing), so they stay crisp. Placed above-left
+// on screen; they switch to the right when a beacon or launch pad would be behind them.
+// isActive(): shown now · isUsed(): counts toward hiding them for good · autoShow: show
+// whenever active (otherwise show() is called, e.g. after the intro)
 export default class ControlHints
 {
-    constructor()
+    constructor({ scene, hints, height = 2.8, side = 2.5, isActive, isUsed, autoShow = false })
     {
-        this.game = Game.getInstance()
         this.view = View.getInstance()
         this.state = State.getInstance()
 
-        this.scene = new THREE.Scene()
+        this.hints = hints
+        this.height = height
+        this.side = side
+        this.isActive = isActive
+        this.isUsed = isUsed
+        this.autoShow = autoShow
         this.opacity = 0
         this.movedTime = 0
         this.done = false
-        this.side = - 1 // -1 left, 1 right
+        this.direction = - 1 // -1 left, 1 right
         this.offset = - 1
 
         this.material = new THREE.SpriteMaterial({ map: this.createTexture(), transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false })
         this.sprite = new THREE.Sprite(this.material)
         this.sprite.scale.set(SIZE.width, SIZE.height, 1)
         this.sprite.visible = false
-        this.scene.add(this.sprite)
+        scene.add(this.sprite)
     }
 
     createTexture()
@@ -71,7 +80,7 @@ export default class ControlHints
         context.shadowColor = 'rgba(0, 0, 0, 0.6)'
         context.shadowBlur = 3
 
-        HINTS.forEach((hint, index) =>
+        this.hints.forEach((hint, index) =>
         {
             const cx = 128 + (index % 2) * 256
             const cy = 70 + Math.floor(index / 2) * 120
@@ -106,7 +115,7 @@ export default class ControlHints
 
     show()
     {
-        if(this.done)
+        if(this.done || this.sprite.visible)
             return
 
         this.sprite.visible = true
@@ -127,9 +136,10 @@ export default class ControlHints
     overlaps(side)
     {
         const camera = this.view.camera.instance
-        _center.copy(_base).addScaledVector(_right, side * SIDE).project(camera)
-        const halfWidth = Math.abs(_edge.copy(_base).addScaledVector(_right, side * SIDE + SIZE.width / 2).project(camera).x - _center.x) + MARGIN
-        const halfHeight = Math.abs(_edge.copy(_base).addScaledVector(_right, side * SIDE).addScaledVector(_up, SIZE.height / 2).project(camera).y - _center.y) + MARGIN
+        const offset = side * this.side
+        _center.copy(_base).addScaledVector(_right, offset).project(camera)
+        const halfWidth = Math.abs(_edge.copy(_base).addScaledVector(_right, offset + SIZE.width / 2).project(camera).x - _center.x) + MARGIN
+        const halfHeight = Math.abs(_edge.copy(_base).addScaledVector(_right, offset).addScaledVector(_up, SIZE.height / 2).project(camera).y - _center.y) + MARGIN
 
         for(const marker of this.view.planets.current?.markers ?? [])
         {
@@ -145,30 +155,32 @@ export default class ControlHints
 
     update()
     {
+        const active = this.isActive()
+        if(this.autoShow && active)
+            this.show()
         if(!this.sprite.visible)
             return
 
         const player = this.state.player
-        const onFoot = this.game.stateMachine.is(StateMachine.ON_FOOT)
 
-        if(!this.done && onFoot && player.isMoving)
+        if(!this.done && active && this.isUsed())
         {
             this.movedTime += this.state.time.delta
-            if(this.movedTime >= MOVE_TIME_TO_HIDE)
+            if(this.movedTime >= USE_TIME_TO_HIDE)
                 this.hide()
         }
 
         const camera = this.view.camera.instance
         _right.setFromMatrixColumn(camera.matrixWorld, 0)
         _up.setFromMatrixColumn(camera.matrixWorld, 1)
-        _base.copy(player.renderPosition).addScaledVector(player.renderUp, HEIGHT)
+        _base.copy(player.renderPosition).addScaledVector(player.renderUp, this.height)
 
         // Switch sides only when the current one is blocked and the other is free
-        if(this.overlaps(this.side) && !this.overlaps(- this.side))
-            this.side = - this.side
-        this.offset += (this.side - this.offset) * Math.min(1, this.state.time.delta * 6)
+        if(this.overlaps(this.direction) && !this.overlaps(- this.direction))
+            this.direction = - this.direction
+        this.offset += (this.direction - this.offset) * Math.min(1, this.state.time.delta * 6)
 
-        this.sprite.position.copy(_base).addScaledVector(_right, this.offset * SIDE)
-        this.material.opacity = onFoot ? this.opacity : 0
+        this.sprite.position.copy(_base).addScaledVector(_right, this.offset * this.side)
+        this.material.opacity = active ? this.opacity : 0
     }
 }
