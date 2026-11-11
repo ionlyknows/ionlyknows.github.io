@@ -46,7 +46,7 @@ export default class Renderer
         this.instance.setPixelRatio(this.pixelRatio)
 
         this.instance.toneMapping = THREE.ACESFilmicToneMapping
-        this.instance.toneMappingExposure = 0.75
+        this.instance.toneMappingExposure = 0.7 // Settings → Brightness (0.5–1.0)
 
         // Shadows: only the current planet casts (size per quality, see View/Lights.js)
         this.instance.shadowMap.enabled = true

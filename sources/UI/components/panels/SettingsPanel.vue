@@ -3,7 +3,7 @@ import { reactive, ref, onUnmounted } from 'vue'
 import PanelShell from './PanelShell.vue'
 import { useUIBridge } from '../../composables/useUIBridge.js'
 
-// S7 / FR-13: quality, volume, mute, replay intro, reset. Every change applies live and is
+// S7 / FR-13: quality, brightness, volume, mute, replay intro, reset. Every change applies live and is
 // saved right away in `apeiron.settings`.
 const props = defineProps({ settings: { type: Object, required: true } })
 const emit = defineEmits([ 'close' ])
@@ -60,6 +60,9 @@ onUnmounted(() =>
                         <option value="medium">Medium (bloom)</option>
                         <option value="high">High (all effects)</option>
                     </select>
+                </label>
+                <label>Brightness <output>{{ Math.round(values.brightness * 100) }}%</output>
+                    <input v-model.number="values.brightness" type="range" min="0.5" max="1" step="0.05" @input="apply">
                 </label>
             </section>
 

@@ -23,6 +23,9 @@ const PLACEHOLDER = { albedo: placeholder(128, 128, 128, THREE.SRGBColorSpace), 
 // Shared uniforms per set: swapping `.value` updates every material that uses the set
 const uniforms = Object.fromEntries(SETS.map((set) => [ set, { albedo: { value: PLACEHOLDER.albedo }, normalRough: { value: PLACEHOLDER.normalRough } } ]))
 
+// Shared clock for the lava pulse (Planets.update sets it)
+export const surfaceTime = { value: 0 }
+
 function loadTexture(url, colorSpace)
 {
     return new Promise((resolve) =>
@@ -128,7 +131,8 @@ function patch(shader, materialUniforms)
             uniform float uScale;
             uniform float uNormalScale;
             uniform float uVariation;
-            uniform vec3 uCrackColor;
+            uniform float uCrackIntensity;
+            uniform float uTime;
             varying vec3 vTpPosition;
             varying vec3 vTpNormal;
             ${NOISE}`)
@@ -165,21 +169,31 @@ function patch(shader, materialUniforms)
             float tpLarge = tpFbm(vTpPosition * 0.07);
             diffuseColor.rgb *= tpAlbedo * mix(1.0 - uVariation, 1.0 + uVariation, tpLarge);
 
+            // Lava (The Forge): thin cracks along the zero lines of a noise field (ridged:
+            // 1 - |noise|, sharpened), ~13% of the surface, plus finer branches next to them.
+            // The branches use 2 octaves only: a third fbm makes ANGLE's D3D compiler stall.
             #ifdef USE_CRACKS
-                float tpRidge = 1.0 - abs(tpFbm(vTpPosition * 0.16 + tpLarge * 2.0) * 2.0 - 1.0);
-                float tpCrack = smoothstep(0.9, 0.975, tpRidge);
-                diffuseColor.rgb *= 1.0 - tpCrack * 0.8;
+                float tpMain = abs(tpFbm(vTpPosition * 0.16) * 2.0 - 0.86);
+                vec3 tpFineP = vTpPosition * 0.5 + 7.3;
+                float tpFine = abs((tpNoise(tpFineP) * 0.65 + tpNoise(tpFineP * 2.03) * 0.35) * 2.0 - 1.0);
+                float tpCrack = pow(clamp(1.0 - tpMain / 0.04, 0.0, 1.0), 3.0);
+                float tpBranch = pow(clamp(1.0 - tpFine / 0.045, 0.0, 1.0), 3.0) * (1.0 - smoothstep(0.0, 0.25, tpMain)) * 0.6;
+                tpCrack = max(tpCrack, tpBranch);
+                diffuseColor.rgb *= 1.0 - smoothstep(0.0, 0.5, tpCrack) * 0.85;
             #endif`)
         .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = roughness * tpRough;')
         .replace('#include <normal_fragment_maps>', 'normal = normalize((viewMatrix * vec4(tpWorldNormal, 0.0)).xyz);')
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
             #ifdef USE_CRACKS
-                totalEmissiveRadiance += uCrackColor * tpCrack * (0.6 + 0.4 * tpNoise(vTpPosition * 0.9));
+                // Deep orange at the edges, yellow-hot at the centers (only those reach the bloom threshold); ±10% pulse
+                vec3 tpLava = mix(vec3(1.0, 0.22, 0.03), vec3(1.0, 0.75, 0.3), tpCrack * tpCrack) * tpCrack;
+                float tpPulse = 1.0 + 0.1 * sin(uTime * 1.6 + tpLarge * 12.0);
+                totalEmissiveRadiance += tpLava * uCrackIntensity * tpPulse;
             #endif`)
 }
 
 // set: texture set name. scale: texture repeats per world unit.
-// cracks: HDR emissive color for glowing lava cracks (The Forge), or null.
+// cracks: emissive intensity at the lava crack centers (The Forge), or null.
 export function createSurfaceMaterial({ set, scale = 0.25, normalScale = 1, variation = 0.2, cracks = null, ...parameters })
 {
     const material = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, ...parameters })
@@ -190,7 +204,8 @@ export function createSurfaceMaterial({ set, scale = 0.25, normalScale = 1, vari
         uScale: { value: scale },
         uNormalScale: { value: normalScale },
         uVariation: { value: variation },
-        uCrackColor: { value: new THREE.Color(cracks || '#000000') }
+        uCrackIntensity: { value: cracks || 0 },
+        uTime: surfaceTime
     }
     if(cracks)
         material.defines = { USE_CRACKS: '' }

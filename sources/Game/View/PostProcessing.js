@@ -19,6 +19,12 @@ export const QUALITIES = [ 'low', 'medium', 'high' ]
 const MAX_PIXEL_RATIO = { low: 1, medium: 1.5, high: 2 }
 // Low keeps 64 near: a 32-segment sphere sags up to 10 cm below the walking radius
 const PLANET_SEGMENTS = { low: 64, medium: 64, high: 128 }
+// Same overall brightness on Medium and High: bloom only picks up the sun disc, beacon
+// diamonds and the hottest lava. High adds detail and effects (grading, vignette, grain).
+const BLOOM = {
+    medium: { strength: 0.35, threshold: 0.9, radius: 0.3 },
+    high: { strength: 0.4, threshold: 0.9, radius: 0.3 }
+}
 const MIN_FPS = 45
 const LOW_FPS_SECONDS = 3
 
@@ -48,11 +54,16 @@ export default class PostProcessing
         this.composer = new EffectComposer(this.renderer, target)
         this.composer.addPass(new RenderPass(this.scene, this.camera))
 
-        // Only beacons, the sun and emissive details glow
-        this.bloom = new UnrealBloomPass(new THREE.Vector2(this.viewport.width, this.viewport.height), 0.5, 0.4, 0.85)
+        this.bloom = new UnrealBloomPass(new THREE.Vector2(this.viewport.width, this.viewport.height), BLOOM.medium.strength, BLOOM.medium.radius, BLOOM.medium.threshold)
         const setBloomSize = this.bloom.setSize.bind(this.bloom)
         this.bloom.setSize = (width, height) => setBloomSize(Math.round(width / 2), Math.round(height / 2))
         this.composer.addPass(this.bloom)
+
+        // Control hints render after bloom, so they stay crisp (tone mapped like the scene)
+        this.hints = this.view.hints
+        this.hintsPass = new RenderPass(this.hints.scene, this.camera)
+        this.hintsPass.clear = false
+        this.composer.addPass(this.hintsPass)
 
         this.composer.addPass(new OutputPass())
 
@@ -85,6 +96,8 @@ export default class PostProcessing
 
         this.quality = quality
         this.bloom.enabled = quality !== 'low'
+        if(BLOOM[quality])
+            Object.assign(this.bloom, BLOOM[quality])
         this.grade.enabled = quality === 'high'
         this.view.renderer.setPixelRatio(MAX_PIXEL_RATIO[quality])
         this.view.planets.setDetail(PLANET_SEGMENTS[quality])
@@ -162,12 +175,20 @@ export default class PostProcessing
     {
         this.monitor()
 
+        const hints = this.hints.sprite.visible
         if(this.quality === 'low')
         {
             this.renderer.render(this.scene, this.camera)
+            if(hints)
+            {
+                this.renderer.autoClear = false
+                this.renderer.render(this.hints.scene, this.camera)
+                this.renderer.autoClear = true
+            }
             return
         }
 
+        this.hintsPass.enabled = hints
         this.grade.uniforms.uTime.value = this.state.time.elapsed
         this.composer.render(this.state.time.delta)
     }

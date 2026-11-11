@@ -6,6 +6,7 @@ import UIBridge from '../UI/UIBridge.js'
 const STORAGE_KEY = 'apeiron.settings'
 const VERSION = 2
 const INTRO_SEEN_KEY = 'apeiron.introSeen'
+const BRIGHTNESS = { min: 0.5, max: 1, default: 0.7 } // tone-mapping exposure
 
 // BR-09: High if devicePixelRatio ≤ 1.5 and max texture ≥ 8192, otherwise Medium
 function defaultQuality(renderer)
@@ -13,10 +14,10 @@ function defaultQuality(renderer)
     return window.devicePixelRatio <= 1.5 && renderer.capabilities.maxTextureSize >= 8192 ? 'high' : 'medium'
 }
 
-const clamp01 = (value, fallback) =>
+const clamp = (value, fallback, min = 0, max = 1) =>
 {
     const parsed = Number(value)
-    return Number.isFinite(parsed) ? Math.min(1, Math.max(0, parsed)) : fallback
+    return value !== null && value !== '' && Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback
 }
 
 // Every change is applied live and saved right away (no Save button)
@@ -26,7 +27,7 @@ export default class Settings
     {
         this.game = game
         this.bridge = UIBridge.getInstance()
-        this.defaults = { version: VERSION, quality: defaultQuality(game.view.renderer.instance), sound: { volume: 0.7, muted: false } }
+        this.defaults = { version: VERSION, quality: defaultQuality(game.view.renderer.instance), brightness: BRIGHTNESS.default, sound: { volume: 0.7, muted: false } }
         this.values = this.validate(this.read())
         this.apply(this.values, { save: false })
 
@@ -47,8 +48,9 @@ export default class Settings
         return {
             version: VERSION,
             quality: QUALITIES.includes(source.quality) ? source.quality : this.defaults.quality,
+            brightness: clamp(source.brightness, this.defaults.brightness, BRIGHTNESS.min, BRIGHTNESS.max),
             sound: {
-                volume: clamp01(sound.volume, this.defaults.sound.volume),
+                volume: clamp(sound.volume, this.defaults.sound.volume),
                 muted: typeof sound.muted === 'boolean' ? sound.muted : this.defaults.sound.muted
             }
         }
@@ -67,6 +69,7 @@ export default class Settings
 
         if(view.postProcessing.quality !== next.quality)
             view.postProcessing.setQuality(next.quality)
+        view.renderer.instance.toneMappingExposure = next.brightness
         audio.set(next.sound.volume, next.sound.muted)
 
         this.values = next

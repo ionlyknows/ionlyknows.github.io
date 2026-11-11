@@ -3,10 +3,10 @@ import * as THREE from 'three'
 import vertexShader from './shaders/atmosphere/vertex.glsl'
 import fragmentShader from './shaders/atmosphere/fragment.glsl'
 
-export const ATMOSPHERE_SCALE = 1.08
+export const ATMOSPHERE_SCALE = 1.05
 
-// Thin scattering shell in the planet's accent color: a ring outside the limb (back faces)
-// plus a haze over the disc that rises toward the limb (front faces), lit by the sun.
+// Thin scattering shell in the planet's accent color: a thin ring at the limb (back faces)
+// plus a faint edge just inside it (front faces), lit by the sun. No haze over the horizon.
 export function createAtmosphere(radius, color, intensity, sunDirection)
 {
     const material = new THREE.ShaderMaterial({

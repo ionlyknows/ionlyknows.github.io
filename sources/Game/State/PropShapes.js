@@ -100,7 +100,7 @@ export const PROP_BUILDERS = {
     banner: { build: () => [
         part(new THREE.CylinderGeometry(0.05, 0.05, 3, 10), '#c9ced6', 'metal', { position: [ 0, 1.5, 0 ] }),
         part(new THREE.BoxGeometry(1.2, 0.7, 0.03), '#b3263f', 'cloth', { position: [ 0.62, 2.5, 0 ] }),
-        part(new THREE.SphereGeometry(0.08, 12, 8), '#ffcf5a', 'glow', { position: [ 0, 3.05, 0 ] })
+        part(new THREE.SphereGeometry(0.08, 12, 8), '#ffcf5a', 'polished', { position: [ 0, 3.05, 0 ] }) // gold finial, not emissive
     ] }
 }
 

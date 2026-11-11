@@ -5,22 +5,26 @@ import View from '@/View/View.js'
 import State from '@/State/State.js'
 import Debug from '@/Debug/Debug.js'
 import { PROP_BUILDERS, MARKER_SHAPES, HEAD_HEIGHT } from '@/State/PropShapes.js'
-import { createSurfaceMaterial } from './Materials/surface.js'
+import { createSurfaceMaterial, surfaceTime } from './Materials/surface.js'
 import { createAtmosphere, ATMOSPHERE_SCALE } from './Materials/atmosphere.js'
 
 const CONTENT_COLOR = '#35f6ff'
 const PAD_COLOR = '#ffcf5a'
-const HDR = 1.8 // beacons sit just above the bloom threshold
+const GEM_HDR = 0.9 // beacon and pad diamonds: bright, at most a faint bloom (threshold 0.9)
+const PAD_RING_HDR = 0.72 // launch pad ring
+const BEAM_OPACITY = { content: 0.4, pad: 0.35 }
+const BEACON_LIGHT = 3 // point light above each beacon of the current planet
+const ATMOSPHERE_INTENSITY = 0.3
 const FAR_SEGMENTS = 32
 const BEACON_LIGHTS = 3 // max interactives on one planet
 const CLICK_TOLERANCE = 6 // px
 
 // Per-location look (textures: see CREDITS.md)
 const LOOKS = {
-    station: { set: 'regolith', tint: '#b8bbc1', scale: 0.2, variation: 0.25, rock: '#8b8d93' },
-    forge: { set: 'volcanic', tint: '#564943', scale: 0.18, variation: 0.3, cracks: new THREE.Color(3.4, 0.95, 0.2), rock: '#3c3431', crystal: '#ffb24a' },
-    observatory: { set: 'ice', tint: '#8fdcd6', scale: 0.2, variation: 0.2, roughness: 0.45, rock: '#5f9ea0', crystal: '#7ff9ec' },
-    trophy: { set: 'sand', tint: '#ead49e', scale: 0.22, variation: 0.2, rock: '#b39a6a', crystal: '#ffe08a' }
+    station: { set: 'regolith', tint: '#a9acb2', scale: 0.2, normalScale: 1.4, variation: 0.25, rock: '#8b8d93' },
+    forge: { set: 'volcanic', tint: '#3f3936', scale: 0.18, normalScale: 1.5, variation: 0.25, cracks: 1.2, rock: '#34302e', crystal: '#ffb24a' },
+    observatory: { set: 'ice', tint: '#86d2cc', scale: 0.2, normalScale: 1.2, variation: 0.2, roughness: 0.35, envMapIntensity: 0.5, rock: '#5f9ea0', crystal: '#7ff9ec' },
+    trophy: { set: 'sand', tint: '#dcc690', scale: 0.22, normalScale: 1.4, variation: 0.2, rock: '#b39a6a', crystal: '#ffe08a' }
 }
 
 const _yAxis = new THREE.Vector3(0, 1, 0)
@@ -73,26 +77,30 @@ export default class Planets
         }
 
         this.materials = {
-            metal: createSurfaceMaterial({ set: 'metal', scale: 0.8, variation: 0.05, metalness: 0.9, roughness: 0.9, vertexColors: true, ...env }),
-            paint: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.2, envMapIntensity: 0.6, ...env }),
-            panel: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.15, metalness: 0.7, envMapIntensity: 1.2, ...env }),
-            polished: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.18, metalness: 1, envMapIntensity: 1.6, ...env }),
+            // Soft reflections: no large bright highlights on the station's metal
+            metal: createSurfaceMaterial({ set: 'metal', scale: 0.8, variation: 0.05, metalness: 0.85, roughness: 0.9, envMapIntensity: 0.6, vertexColors: true, ...env }),
+            paint: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.1, envMapIntensity: 0.4, ...env }),
+            panel: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.6, envMapIntensity: 0.6, ...env }),
+            // Trophy Moon gold: polished, but highlights stay small
+            polished: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.8, envMapIntensity: 0.6, ...env }),
             cloth: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide }),
-            glow: new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(2.2, 2.2, 2.2) })
+            // Small indicator lights (antenna, solar panels, telescope lenses)
+            glow: new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(1.5, 1.5, 1.5) })
         }
 
-        const hdr = (color) => new THREE.Color(color).multiplyScalar(HDR)
-        const beam = (color) => new THREE.MeshBasicMaterial({ color: hdr(color), transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false })
+        const hdr = (color, amount) => new THREE.Color(color).multiplyScalar(amount)
+        const beam = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false })
 
         this.marker = {
             baseGeometry: MARKER_SHAPES.base(),
             padGeometry: MARKER_SHAPES.pad(),
             ringGeometry: new THREE.TorusGeometry(1.5, 0.05, 8, 64),
             beamGeometry: new THREE.CylinderGeometry(0.2, 0.2, 4, 16, 1, true),
-            gemGeometry: new THREE.OctahedronGeometry(0.45, 0),
+            padBeamGeometry: new THREE.CylinderGeometry(0.1, 0.1, 4, 12, 1, true),
+            gemGeometry: new THREE.OctahedronGeometry(0.34, 0),
             baseMaterial: createSurfaceMaterial({ set: 'metal', scale: 0.8, variation: 0.05, color: '#4a505c', metalness: 0.85, roughness: 0.8, ...env }),
-            content: { color: CONTENT_COLOR, beam: beam(CONTENT_COLOR), gem: new THREE.MeshBasicMaterial({ color: hdr(CONTENT_COLOR) }) },
-            pad: { color: PAD_COLOR, beam: beam(PAD_COLOR), gem: new THREE.MeshBasicMaterial({ color: hdr(PAD_COLOR) }) }
+            content: { color: CONTENT_COLOR, beam: beam(CONTENT_COLOR, BEAM_OPACITY.content), gem: new THREE.MeshBasicMaterial({ color: hdr(CONTENT_COLOR, GEM_HDR) }) },
+            pad: { color: PAD_COLOR, beam: beam(PAD_COLOR, BEAM_OPACITY.pad), gem: new THREE.MeshBasicMaterial({ color: hdr(PAD_COLOR, GEM_HDR) }), ring: new THREE.MeshBasicMaterial({ color: hdr(PAD_COLOR, PAD_RING_HDR) }) }
         }
     }
 
@@ -106,7 +114,7 @@ export default class Planets
         const item = { planet, group, casters: [], gems: [], markers: [], atmosphere: null }
 
         // Smooth sphere for walking; all relief comes from the normal maps
-        const surfaceMaterial = createSurfaceMaterial({ set: look.set, color: look.tint, scale: look.scale, variation: look.variation, roughness: look.roughness ?? 1, cracks: look.cracks })
+        const surfaceMaterial = createSurfaceMaterial({ set: look.set, color: look.tint, scale: look.scale, normalScale: look.normalScale, variation: look.variation, roughness: look.roughness ?? 1, envMapIntensity: look.envMapIntensity ?? 1, cracks: look.cracks })
         item.near = new THREE.Mesh(new THREE.SphereGeometry(planet.radius, this.segments, this.segments), surfaceMaterial)
         item.near.receiveShadow = true
         const far = new THREE.Mesh(new THREE.SphereGeometry(planet.radius, FAR_SEGMENTS, FAR_SEGMENTS), surfaceMaterial)
@@ -120,7 +128,7 @@ export default class Planets
             crystal: new THREE.MeshPhysicalMaterial({
                 color: look.crystal || '#ffffff',
                 emissive: look.crystal || '#ffffff',
-                emissiveIntensity: 0.12,
+                emissiveIntensity: 0.04, // small highlights only, no glowing areas
                 roughness: 0.06,
                 metalness: 0.05,
                 clearcoat: 1,
@@ -130,7 +138,7 @@ export default class Planets
                 transparent: true,
                 opacity: 0.88,
                 userData: { useEnvironment: true },
-                envMapIntensity: 2.2
+                envMapIntensity: 1
             })
         }
 
@@ -159,7 +167,7 @@ export default class Planets
         for(const point of planet.interactives)
             this.createMarker(item, point, point.opens === 'destinations')
 
-        item.atmosphere = createAtmosphere(planet.radius, planet.accent, 0.5, this.sunDirection)
+        item.atmosphere = createAtmosphere(planet.radius, planet.accent, ATMOSPHERE_INTENSITY, this.sunDirection)
         group.add(item.atmosphere)
 
         return item
@@ -183,13 +191,13 @@ export default class Planets
 
         if(isPad)
         {
-            const ring = new THREE.Mesh(this.marker.ringGeometry, materials.gem)
+            const ring = new THREE.Mesh(this.marker.ringGeometry, materials.ring)
             ring.rotation.x = Math.PI / 2
             ring.position.y = 0.1
             marker.add(ring)
         }
 
-        const beam = new THREE.Mesh(this.marker.beamGeometry, materials.beam)
+        const beam = new THREE.Mesh(isPad ? this.marker.padBeamGeometry : this.marker.beamGeometry, materials.beam)
         beam.position.y = 2
         marker.add(beam)
 
@@ -282,7 +290,7 @@ export default class Planets
         this.beaconLights.forEach((light, index) =>
         {
             const marker = this.current.markers[index]
-            light.intensity = marker ? 6 : 0
+            light.intensity = marker ? BEACON_LIGHT : 0
             if(!marker)
                 return
 
@@ -361,6 +369,7 @@ export default class Planets
 
         const elapsed = this.state.time.elapsed
         const { planet, gems, atmosphere } = this.current
+        surfaceTime.value = elapsed
 
         for(let i = 0; i < gems.length; i++)
         {

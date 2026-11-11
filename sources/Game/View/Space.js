@@ -68,10 +68,11 @@ export default class Space
         canvas.height = 128
         const context = canvas.getContext('2d')
         const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64)
+        // Same disc size as before on a sprite half as big: the halo is half the size and half as strong
         gradient.addColorStop(0, 'rgba(255, 255, 255, 1)')
-        gradient.addColorStop(0.08, 'rgba(255, 250, 235, 1)')
-        gradient.addColorStop(0.2, 'rgba(255, 220, 170, 0.35)')
-        gradient.addColorStop(0.5, 'rgba(255, 190, 120, 0.06)')
+        gradient.addColorStop(0.16, 'rgba(255, 250, 235, 1)')
+        gradient.addColorStop(0.3, 'rgba(255, 220, 170, 0.17)')
+        gradient.addColorStop(0.6, 'rgba(255, 190, 120, 0.03)')
         gradient.addColorStop(1, 'rgba(255, 180, 110, 0)')
         context.fillStyle = gradient
         context.fillRect(0, 0, 128, 128)
@@ -79,11 +80,11 @@ export default class Space
         const texture = new THREE.CanvasTexture(canvas)
         texture.colorSpace = THREE.SRGBColorSpace
 
-        // HDR color so bloom picks up the sun
-        const material = new THREE.SpriteMaterial({ map: texture, color: new THREE.Color(5, 4.6, 4), blending: THREE.AdditiveBlending, depthWrite: false, fog: false })
+        // HDR color so bloom picks up the sun disc (halved: never washes out the screen)
+        const material = new THREE.SpriteMaterial({ map: texture, color: new THREE.Color(2.5, 2.3, 2), blending: THREE.AdditiveBlending, depthWrite: false, fog: false })
         this.sun = new THREE.Sprite(material)
         this.sun.position.copy(this.sunDirection).multiplyScalar(SUN_DISTANCE)
-        this.sun.scale.setScalar(320)
+        this.sun.scale.setScalar(160)
         this.sun.renderOrder = - 1
         this.group.add(this.sun)
     }
@@ -218,7 +219,7 @@ export default class Space
 
         const sun = this.sun.clone()
         sun.position.copy(this.sunDirection).multiplyScalar(80)
-        sun.scale.setScalar(26)
+        sun.scale.setScalar(13)
         scene.add(sun)
 
         const pmrem = new THREE.PMREMGenerator(renderer)

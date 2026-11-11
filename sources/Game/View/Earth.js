@@ -5,7 +5,8 @@ import State from '@/State/State.js'
 import { createAtmosphere } from './Materials/atmosphere.js'
 
 const BASE = `${import.meta.env.BASE_URL}textures/earth/`
-const BEACON_COLOR = new THREE.Color('#7ff9ff').multiplyScalar(2.2)
+const BEACON_COLOR = new THREE.Color('#7ff9ff').multiplyScalar(1.4) // a small glowing point
+const BEAM_COLOR = new THREE.Color('#7ff9ff')
 
 const _direction = new THREE.Vector3()
 
@@ -45,7 +46,7 @@ export default class Earth
         this.setSurface()
         this.setClouds()
         this.setBeacon()
-        this.group.add(createAtmosphere(this.data.radius, '#6fb4ff', 0.6, this.sunDirection))
+        this.group.add(createAtmosphere(this.data.radius, '#6fb4ff', 0.36, this.sunDirection))
 
         this.view.world.updateMatrixWorld(true)
         this.beaconPosition = this.beacon.getWorldPosition(new THREE.Vector3())
@@ -54,7 +55,8 @@ export default class Earth
 
     setSurface()
     {
-        const material = new THREE.MeshStandardMaterial({ map: this.textures.day, roughness: 0.9, metalness: 0 })
+        // Day side not overexposed: the map is darkened a little, oceans glint less
+        const material = new THREE.MeshStandardMaterial({ map: this.textures.day, color: '#d6d6d6', roughness: 0.9, metalness: 0 })
         const uniforms = { uNight: { value: this.textures.night }, uSunDirection: { value: this.sunDirection } }
 
         material.onBeforeCompile = (shader) =>
@@ -68,12 +70,12 @@ export default class Earth
                 // Oceans are glossier than land (blue-dominant pixels)
                 .replace('#include <roughnessmap_fragment>', `
                     float ocean = smoothstep(0.01, 0.06, diffuseColor.b - diffuseColor.r);
-                    float roughnessFactor = mix(roughness, 0.35, ocean);`)
+                    float roughnessFactor = mix(roughness, 0.5, ocean);`)
                 // City lights only on the night side
                 .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
                     float night = smoothstep(0.05, - 0.25, dot(normalize(vEarthNormal), uSunDirection));
                     float city = smoothstep(0.25, 0.75, dot(texture2D(uNight, vMapUv).rgb, vec3(0.3, 0.59, 0.11)));
-                    totalEmissiveRadiance += vec3(1.0, 0.72, 0.42) * city * night * 1.6;`)
+                    totalEmissiveRadiance += vec3(1.0, 0.72, 0.42) * city * night * 0.6;`)
         }
 
         // Equirectangular texture → latLongToDirection frame (long 0 = +Z)
@@ -86,7 +88,8 @@ export default class Earth
     {
         this.clouds = new THREE.Mesh(
             new THREE.SphereGeometry(this.data.radius * 1.012, 96, 48),
-            new THREE.MeshStandardMaterial({ color: '#ffffff', alphaMap: this.textures.clouds, transparent: true, depthWrite: false, roughness: 1, metalness: 0 })
+            // Grey enough that sunlit clouds stay under the bloom threshold
+            new THREE.MeshStandardMaterial({ color: '#c4c4c4', alphaMap: this.textures.clouds, transparent: true, opacity: 0.9, depthWrite: false, roughness: 1, metalness: 0 })
         )
         this.clouds.rotation.y = - Math.PI / 2
         this.group.add(this.clouds)
@@ -97,13 +100,13 @@ export default class Earth
         const direction = this.data.beaconDirection
         const material = new THREE.MeshBasicMaterial({ color: BEACON_COLOR })
 
-        this.beacon = new THREE.Mesh(new THREE.OctahedronGeometry(0.9, 0), material)
+        this.beacon = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), material)
         this.beacon.position.copy(direction).multiplyScalar(this.data.radius + 1.2)
         this.group.add(this.beacon)
 
         this.beam = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.25, 0.25, 5, 12, 1, true),
-            new THREE.MeshBasicMaterial({ color: BEACON_COLOR, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false })
+            new THREE.CylinderGeometry(0.12, 0.12, 5, 12, 1, true),
+            new THREE.MeshBasicMaterial({ color: BEAM_COLOR, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false })
         )
         this.beam.position.copy(direction).multiplyScalar(this.data.radius + 2.5)
         this.beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
@@ -112,9 +115,9 @@ export default class Earth
 
     update()
     {
-        const pulse = 1 + Math.sin(this.state.time.elapsed * 3) * 0.3
+        const pulse = 1 + Math.sin(this.state.time.elapsed * 3) * 0.15
         this.beacon.scale.setScalar(pulse)
-        this.beam.material.opacity = 0.15 + (pulse - 0.7) * 0.2
+        this.beam.material.opacity = 0.2 + (pulse - 1) * 0.3
         this.clouds.rotation.y += this.state.time.delta * 0.004
     }
 }
