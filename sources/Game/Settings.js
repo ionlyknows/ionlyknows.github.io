@@ -27,11 +27,11 @@ export default class Settings
     {
         this.game = game
         this.bridge = UIBridge.getInstance()
-        this.defaults = { version: VERSION, quality: defaultQuality(game.view.renderer.instance), brightness: BRIGHTNESS.default, sound: { volume: 0.7, muted: false } }
+        this.defaults = { version: VERSION, quality: defaultQuality(game.view.renderer.instance), brightness: BRIGHTNESS.default, constellationLines: true, sound: { volume: 0.7, muted: false } }
         this.values = this.validate(this.read())
         this.apply(this.values, { save: false })
 
-        // M key / mute button
+        // N key / mute button
         this.bridge.on('sound:toggle', () => this.apply({ ...this.values, sound: { ...this.values.sound, muted: !this.values.sound.muted } }))
     }
 
@@ -49,6 +49,7 @@ export default class Settings
             version: VERSION,
             quality: QUALITIES.includes(source.quality) ? source.quality : this.defaults.quality,
             brightness: clamp(source.brightness, this.defaults.brightness, BRIGHTNESS.min, BRIGHTNESS.max),
+            constellationLines: typeof source.constellationLines === 'boolean' ? source.constellationLines : this.defaults.constellationLines,
             sound: {
                 volume: clamp(sound.volume, this.defaults.sound.volume),
                 muted: typeof sound.muted === 'boolean' ? sound.muted : this.defaults.sound.muted
@@ -70,6 +71,7 @@ export default class Settings
         if(view.postProcessing.quality !== next.quality)
             view.postProcessing.setQuality(next.quality)
         view.renderer.instance.toneMappingExposure = next.brightness
+        view.space.setConstellationLines(next.constellationLines)
         audio.set(next.sound.volume, next.sound.muted)
 
         this.values = next

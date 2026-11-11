@@ -6,7 +6,7 @@ import { GAME_KEY } from './composables/useGame.js'
 import LoadingScreen from './components/LoadingScreen.vue'
 import IntroOverlay from './components/IntroOverlay.vue'
 import Navigation from './components/Navigation.vue'
-import LocationNav from './components/LocationNav.vue'
+import MapButton from './components/MapButton.vue'
 import ControlsHint from './components/ControlsHint.vue'
 import InteractionPrompt from './components/InteractionPrompt.vue'
 import WorkPanel from './components/panels/WorkPanel.vue'
@@ -16,6 +16,7 @@ import AchievementsPanel from './components/panels/AchievementsPanel.vue'
 import ActivitiesPanel from './components/panels/ActivitiesPanel.vue'
 import ContactPanel from './components/panels/ContactPanel.vue'
 import DestinationPicker from './components/panels/DestinationPicker.vue'
+import MapOverlay from './components/panels/MapOverlay.vue'
 import SettingsPanel from './components/panels/SettingsPanel.vue'
 import QuickView from './components/QuickView.vue'
 import FlightHUD from './components/FlightHUD.vue'
@@ -38,7 +39,8 @@ const panels = {
     achievements: AchievementsPanel,
     activities: ActivitiesPanel,
     contact: ContactPanel,
-    destinations: DestinationPicker
+    destinations: DestinationPicker,
+    map: MapOverlay
 }
 
 const gameState = ref('LOADING')
@@ -98,19 +100,23 @@ function onHashChange()
         openQuick('url')
 }
 
-// HUD Locations list: the cinematic travel
-function travelTo(id)
+// Every trip is by ship (M5). Launch-pad picker: board the parked ship. Map: start already inside it.
+function flyTo({ id, autopilot }, cut = false)
 {
     closePanel()
-    props.bridge.emit('travel:request', { to: id })
+    props.bridge.emit('flight:request', { to: id, autopilot, cut })
 }
 
-// Destination picker at a launch pad: the flight (reduced motion: the short cinematic travel)
-function flyTo(id)
+// M5 map (M key or the HUD button): only on foot; the game pauses like for a panel
+function toggleMap()
 {
-    closePanel()
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    props.bridge.emit(reduced ? 'travel:request' : 'flight:request', { to: id })
+    if(activePanel.value === 'map')
+        closePanel()
+    else if(!activePanel.value && onFoot.value && !quickOpen.value)
+    {
+        openPanel('map')
+        track('map_open')
+    }
 }
 
 function skipFlight()
@@ -146,10 +152,17 @@ function onKeydown(event)
     if(event.repeat || [ 'INPUT', 'SELECT', 'TEXTAREA' ].includes(event.target?.tagName))
         return
 
-    // M: mute toggle, anywhere after load (BR-02 / FR-12)
-    if(event.code === 'KeyM')
+    // N: mute toggle, anywhere after load (BR-02 / FR-12; M is the map since M5)
+    if(event.code === 'KeyN')
     {
         props.bridge.emit('sound:toggle')
+        return
+    }
+
+    if(event.code === 'KeyM' && !showLoading.value)
+    {
+        event.preventDefault()
+        toggleMap()
         return
     }
 
@@ -190,7 +203,7 @@ onUnmounted(() =>
     <EasterEggs v-if="!showLoading" :count="game.state.eggs.count" :show-counter="onFoot || inFlight" />
 
     <template v-if="onFoot">
-        <LocationNav :current="location.id" @travel="travelTo" />
+        <MapButton @open="toggleMap" />
         <ControlsHint />
         <InteractionPrompt v-if="promptType" :type="promptType" />
     </template>
@@ -202,7 +215,7 @@ onUnmounted(() =>
     <component
         :is="panels[activePanel]"
         v-else-if="panels[activePanel]"
-        v-bind="activePanel === 'destinations' ? { current: location.id, onTravel: flyTo } : {}"
+        v-bind="activePanel === 'destinations' ? { current: location.id, onTravel: (trip) => flyTo(trip) } : activePanel === 'map' ? { current: location.id, onTravel: (trip) => flyTo(trip, true) } : {}"
         @close="closePanel"
     />
 </template>

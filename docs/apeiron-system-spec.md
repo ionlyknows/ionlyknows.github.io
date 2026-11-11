@@ -152,7 +152,7 @@ M3 adds: ON_FOOT ──(enter ship)──► FLYING ──(land)──► ON_FOO
 - UI: rounded glass panels over the 3D scene, reuse existing `tokens.css` and update the colors [P].
 
 ### Controls [P]
-WASD/arrows move · Shift run · Space jump · mouse drag rotate camera · scroll zoom · E interact · Esc close · M mute.
+WASD/arrows move · Shift run · Space jump · mouse drag rotate camera · scroll zoom · E interact · Esc close · M map · N mute (M5: M became the map key).
 
 ---
 

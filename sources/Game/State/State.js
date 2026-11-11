@@ -3,7 +3,6 @@ import Controls from './Controls.js'
 import Viewport from './Viewport.js'
 import Planets from './Planets.js'
 import Player from './Player.js'
-import Travel from './Travel.js'
 import Flight from './Flight.js'
 import Eggs from './Eggs.js'
 
@@ -28,7 +27,6 @@ export default class State
         this.viewport = new Viewport()
         this.planets = new Planets()
         this.player = new Player()
-        this.travel = new Travel()
         this.flight = new Flight()
         this.eggs = new Eggs()
     }
@@ -52,7 +50,7 @@ export default class State
     }
 
     // Order every frame: input → flight (fixed steps, ship) → player (fixed steps + collision, or
-    // sampled from travel / flight) → camera (this frame's player / ship) → View (cinematic
+    // sampled from the flight) → camera (this frame's player / ship) → View (cinematic
     // override, render)
     update()
     {

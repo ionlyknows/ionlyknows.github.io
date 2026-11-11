@@ -14,7 +14,6 @@ const SFX = {
     beacon: { gain: 0.4, fadeIn: 0.005, fadeOut: 0.08 }
 }
 const MUSIC_GAIN = 0.45
-const DUCK = 0.5 // −6 dB during the cinematic travel
 const FLIGHT_DUCK = 0.71 // −3 dB during a flight (M3)
 const FLIGHT_STATES = [ StateMachine.BOARDING, StateMachine.TAKEOFF, StateMachine.FLYING, StateMachine.LANDING ]
 const DUCK_DOWN = 0.5 // s
@@ -46,11 +45,11 @@ export default class Audio
             if(state === StateMachine.QUICK_VIEW || previous === StateMachine.QUICK_VIEW)
                 return
 
-            // Whoosh on the cinematic travel and on take-off (no engine sound at all)
-            if(state === StateMachine.TRAVELING || state === StateMachine.TAKEOFF)
+            // Whoosh on take-off (no engine sound at all)
+            if(state === StateMachine.TAKEOFF)
                 this.play('warp')
 
-            const duck = state === StateMachine.TRAVELING ? DUCK : FLIGHT_STATES.includes(state) ? FLIGHT_DUCK : 1
+            const duck = FLIGHT_STATES.includes(state) ? FLIGHT_DUCK : 1
             if(duck === this.duck)
                 return
             this.rampMusic(MUSIC_GAIN * duck, duck < this.duck ? DUCK_DOWN : DUCK_UP)

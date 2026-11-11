@@ -25,6 +25,7 @@ const controls = [
     { keys: [ 'Shift' ], label: 'run' },
     { keys: [ 'Space' ], label: 'jump' },
     { keys: [ 'E' ], label: 'interact' },
+    { keys: [ 'M' ], label: 'map' },
     { keys: [ 'Drag' ], label: 'camera' }
 ]
 </script>

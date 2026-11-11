@@ -11,6 +11,7 @@ const LOOK_AHEAD = 8
 const POSITION_DAMPING = 5 // 1 - exp(-k·dt): frame-rate independent
 const UP_DAMPING = 4
 const BANK_FOLLOW = 0.4 // share of the ship's bank the camera takes
+const ORBIT_DISTANCE = 9 // autopilot orbit shot
 
 const _desired = new THREE.Vector3()
 const _target = new THREE.Vector3()
@@ -30,6 +31,7 @@ const smoothstep = (edge0, edge1, x) =>
 // Flight camera: behind and slightly above the ship, banking a little with it, wider FOV when
 // boosting. It follows the ship's interpolated render pose; only its position and up are damped.
 // Take-off and landing get short cinematic angles from beside the pad, blended in and out.
+// Autopilot (M5): during the cruise the camera also swings round the ship (front 3/4 → side).
 export default class CameraChase
 {
     constructor()
@@ -108,6 +110,19 @@ export default class CameraChase
         {
             this.shot(flight.route.endPad, 15, 5, 6, render.position)
             shot = smoothstep(0, 1.1, tau)
+        }
+        else if(phase === 'flying' && flight.route.autopilot)
+        {
+            // Orbit shot in the ship's frame: from ahead-right to beside it, then back to the chase
+            const angle = 0.75 + 1.1 * smoothstep(0.4, 3, tau)
+            _right.crossVectors(render.forward, render.frameUp)
+            _shotPosition.copy(render.position)
+                .addScaledVector(render.forward, Math.cos(angle) * ORBIT_DISTANCE)
+                .addScaledVector(_right, Math.sin(angle) * ORBIT_DISTANCE)
+                .addScaledVector(render.frameUp, 2)
+            _matrix.lookAt(_shotPosition, render.position, render.frameUp)
+            _quaternion.setFromRotationMatrix(_matrix)
+            shot = smoothstep(0.3, 0.9, tau) * (1 - smoothstep(2.4, 3.1, tau))
         }
 
         if(shot > 0)

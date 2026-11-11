@@ -1,20 +1,30 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 import View from '@/View/View.js'
 import State from '@/State/State.js'
 
 // Astronaut mascot (M4): Quaternius "Astronaut" (CC0, see CREDITS.md), meshopt-compressed in
-// public/models/astronaut.glb, recoloured here to the Apeiron palette.
+// public/models/astronaut.glb, recoloured here to the Apeiron palette. M5: the helmet's "Grey"
+// part was split by vertex selection into the front visor (Grey) and the ear rings / tubes
+// (HelmetTrim); the dome has its own HelmetShell material. Suit fabric gets a faint CC0 fabric
+// normal map (triplanar in the model's bind pose: its UVs are collapsed) and every part a faint
+// cool rim light so the astronaut reads against dark space.
 const MODEL_URL = `${import.meta.env.BASE_URL}models/astronaut.glb`
+const FABRIC_URL = `${import.meta.env.BASE_URL}textures/suit/fabric-normal.webp`
 const LOOK = {
-    SciFi_Light_Accent: { color: '#e9e5dc', roughness: 0.8, metalness: 0, envMapIntensity: 0.5 }, // off-white suit fabric
-    SciFi_Light: { color: '#d2d5da', roughness: 0.5, metalness: 0.3, envMapIntensity: 0.6 }, // light-grey panels
-    SciFi_MainDark: { color: '#c9ccd1', roughness: 0.75, metalness: 0, envMapIntensity: 0.5 }, // light-grey fabric (legs, sleeves)
+    SciFi_Light_Accent: { color: '#e9e5dc', roughness: 0.8, metalness: 0, envMapIntensity: 0.5, fabric: true }, // off-white suit fabric
+    SciFi_Light: { color: '#d7dade', roughness: 0.45, metalness: 0.3, envMapIntensity: 0.6 }, // light-grey panels
+    SciFi_MainDark: { color: '#bfc3c9', roughness: 0.75, metalness: 0, envMapIntensity: 0.5, fabric: true }, // light-grey fabric (legs, sleeves): a soft seam contrast
     SciFi_Main: { color: '#ff7a2e', roughness: 0.6, metalness: 0, envMapIntensity: 0.5 }, // orange accents
-    Grey: { color: '#8c6a24', roughness: 0.12, metalness: 1, envMapIntensity: 1.2 } // reflective dark-gold visor
+    HelmetShell: { color: '#eeeae2', roughness: 0.3, metalness: 0.05, envMapIntensity: 0.8 }, // white helmet shell
+    HelmetTrim: { color: '#b9bec6', roughness: 0.35, metalness: 0.7, envMapIntensity: 0.8 }, // ear rings, tubes
+    Grey: { color: '#8c6a24', roughness: 0.12, metalness: 1, envMapIntensity: 1.2, rim: false } // reflective dark-gold visor
 }
+const FABRIC = { scale: 9, strength: 0.35 } // repeats per metre, normal strength
+const RIM = { color: new THREE.Color('#9ec9ff'), strength: 0.22 }
 // Our action → the model's clip ("CharacterArmature|Idle" …). `jump` is built from Run (see below).
 const CLIPS = { idle: 'Idle', walk: 'Walk', run: 'Run', emote: 'Wave', board: 'Interact' }
 const FADE = 0.2 // s crossfade
@@ -29,6 +39,69 @@ const _right = new THREE.Vector3()
 const _facing = new THREE.Vector3()
 const _matrix = new THREE.Matrix4()
 
+// Flat normal until the fabric texture has loaded
+const fabricMap = { value: new THREE.DataTexture(new Uint8Array([ 128, 128, 255, 255 ]), 1, 1) }
+fabricMap.value.needsUpdate = true
+
+// Suit shader additions: fabric normal detail (USE_FABRIC) + rim light. The fabric is sampled
+// triplanar from the bind-pose position in metres (raw position × the mesh's world scale: meshopt
+// quantizes positions and scales the node), and the bent normal is carried to view space through
+// the skinned object axes, so the weave sticks to the suit while it animates.
+function patchSuit(shader, { fabric, rim })
+{
+    shader.uniforms.uFabricMap = fabricMap
+    shader.uniforms.uRimColor = { value: RIM.color }
+    shader.uniforms.uRimStrength = { value: rim ? RIM.strength : 0 }
+
+    shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', `#include <common>
+            varying vec3 vFabricPosition;
+            varying vec3 vFabricNormal;
+            varying vec3 vFabricX;
+            varying vec3 vFabricY;
+            varying vec3 vFabricZ;`)
+        .replace('#include <skinnormal_vertex>', `#include <skinnormal_vertex>
+            vFabricPosition = position * length(modelMatrix[0].xyz) * ${FABRIC.scale.toFixed(1)};
+            vFabricNormal = normal;
+            vec3 fabricX = vec3(1.0, 0.0, 0.0);
+            vec3 fabricY = vec3(0.0, 1.0, 0.0);
+            vec3 fabricZ = vec3(0.0, 0.0, 1.0);
+            #ifdef USE_SKINNING
+                fabricX = (skinMatrix * vec4(fabricX, 0.0)).xyz;
+                fabricY = (skinMatrix * vec4(fabricY, 0.0)).xyz;
+                fabricZ = (skinMatrix * vec4(fabricZ, 0.0)).xyz;
+            #endif
+            vFabricX = normalize(normalMatrix * fabricX);
+            vFabricY = normalize(normalMatrix * fabricY);
+            vFabricZ = normalize(normalMatrix * fabricZ);`)
+
+    shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>
+            uniform sampler2D uFabricMap;
+            uniform vec3 uRimColor;
+            uniform float uRimStrength;
+            varying vec3 vFabricPosition;
+            varying vec3 vFabricNormal;
+            varying vec3 vFabricX;
+            varying vec3 vFabricY;
+            varying vec3 vFabricZ;`)
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+            #ifdef USE_FABRIC
+                vec3 fabricN = normalize(vFabricNormal);
+                vec3 fabricW = pow(abs(fabricN), vec3(4.0));
+                fabricW /= fabricW.x + fabricW.y + fabricW.z;
+                vec2 fabricA = texture2D(uFabricMap, vFabricPosition.zy).rg * 2.0 - 1.0;
+                vec2 fabricB = texture2D(uFabricMap, vFabricPosition.xz).rg * 2.0 - 1.0;
+                vec2 fabricC = texture2D(uFabricMap, vFabricPosition.xy).rg * 2.0 - 1.0;
+                // Object-space bend: each projection's tangent plane
+                vec3 fabricBend = vec3(0.0, fabricA.y, fabricA.x) * fabricW.x + vec3(fabricB.x, 0.0, fabricB.y) * fabricW.y + vec3(fabricC.x, fabricC.y, 0.0) * fabricW.z;
+                vec3 fabricView = fabricBend.x * vFabricX + fabricBend.y * vFabricY + fabricBend.z * vFabricZ;
+                normal = normalize(normal + fabricView * ${FABRIC.strength.toFixed(2)});
+            #endif`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+            float rimFacing = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+            totalEmissiveRadiance += uRimColor * pow(rimFacing, 3.0) * uRimStrength;`)
+}
 function damp(current, target, speed, delta)
 {
     return current + (target - current) * (1 - Math.exp(- speed * delta))
@@ -63,6 +136,13 @@ export default class PlayerModel
     // Called by View.load(): resolves either way (the placeholder stays on failure)
     load()
     {
+        new THREE.TextureLoader().load(FABRIC_URL, (texture) =>
+        {
+            texture.wrapS = THREE.RepeatWrapping
+            texture.wrapT = THREE.RepeatWrapping
+            texture.colorSpace = THREE.NoColorSpace
+            fabricMap.value = texture
+        })
         const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
         return loader.loadAsync(MODEL_URL)
             .then((gltf) => this.setCharacter(gltf))
@@ -89,6 +169,11 @@ export default class PlayerModel
                 material.envMapIntensity = look.envMapIntensity
                 material.userData.useEnvironment = true
                 material.envMap = this.view.environment || this.view.environmentPlaceholder || null
+                const options = { fabric: !!look.fabric, rim: look.rim !== false }
+                if(options.fabric)
+                    material.defines = { ...material.defines, USE_FABRIC: '' }
+                material.onBeforeCompile = (shader) => patchSuit(shader, options)
+                material.customProgramCacheKey = () => `astronaut-${options.fabric}-${options.rim}`
                 materials.set(material, true)
             }
         })
@@ -136,12 +221,71 @@ export default class PlayerModel
             return
         }
 
+        this.addDetails(root)
+
         // Swap: the GLB takes the placeholder's place (same pivot, so squash/stretch still apply)
         this.body.visible = false
         this.character = new THREE.Group()
         this.character.add(root)
         this.group.add(this.character)
         this.play('idle', 0)
+    }
+
+    // Chest light and backpack (code-built, on the Chest bone): placed on the suit's surface by
+    // casting rays at the rest pose from the front and from behind
+    addDetails(root)
+    {
+        const chest = root.getObjectByName('Chest')
+        const body = root.getObjectByName('SpaceSuit_Body')
+        const bodyMesh = body?.isMesh ? body : body?.children.find((child) => child.isMesh)
+        if(!chest || !bodyMesh)
+            return
+
+        root.updateMatrixWorld(true)
+        const raycaster = new THREE.Raycaster()
+        const surface = (origin, direction) =>
+        {
+            raycaster.set(origin, direction)
+            const hits = []
+            body.traverse((object) => { if(object.isMesh) hits.push(...raycaster.intersectObject(object, false)) })
+            hits.sort((a, b) => a.distance - b.distance)
+            return hits[0]?.point || null
+        }
+        const front = surface(new THREE.Vector3(0.07, 1.3, 1), new THREE.Vector3(0, 0, - 1))
+        const back = surface(new THREE.Vector3(0, 1.22, - 1), new THREE.Vector3(0, 0, 1))
+        if(!front || !back)
+            return
+
+        const tint = (geometry, color) =>
+        {
+            const geo = geometry.toNonIndexed()
+            const value = new THREE.Color(color)
+            const colors = new Float32Array(geo.attributes.position.count * 3)
+            for(let i = 0; i < colors.length; i += 3)
+                value.toArray(colors, i)
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+            geo.deleteAttribute('uv')
+            return geo
+        }
+
+        // Backpack (rest pose, world space = root space): off-white case, orange side stripes, status light
+        const pack = [
+            tint(new THREE.BoxGeometry(0.3, 0.38, 0.13).translate(0, 0, - 0.065), '#e6e2da'),
+            tint(new THREE.BoxGeometry(0.22, 0.05, 0.02).translate(0, 0.12, - 0.135), '#ff7a2e'),
+            tint(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 12).translate(0.13, 0, - 0.1), '#b9bec6'),
+            tint(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 12).translate(- 0.13, 0, - 0.1), '#b9bec6')
+        ].map((geometry) => geometry.translate(back.x, back.y, back.z + 0.01))
+        const glow = [
+            tint(new THREE.SphereGeometry(0.022, 12, 8).translate(front.x, front.y, front.z + 0.01), '#7ff9ff'),
+            tint(new THREE.SphereGeometry(0.014, 10, 6).translate(back.x + 0.08, back.y - 0.12, back.z - 0.125), '#3bff7a')
+        ]
+
+        // Into the Chest bone's space, so they follow the torso
+        const toChest = new THREE.Matrix4().copy(chest.matrixWorld).invert()
+        const packMesh = new THREE.Mesh(mergeGeometries(pack).applyMatrix4(toChest), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.2, envMapIntensity: 0.6, envMap: this.view.environment || this.view.environmentPlaceholder || null, userData: { useEnvironment: true } }))
+        packMesh.castShadow = true
+        const glowMesh = new THREE.Mesh(mergeGeometries(glow).applyMatrix4(toChest), new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(1.6, 1.6, 1.6) }))
+        chest.add(packMesh, glowMesh)
     }
 
     play(name, fade = FADE)

@@ -2,6 +2,8 @@ uniform float uIntensity;
 uniform vec3 uColorA;
 uniform vec3 uColorB;
 uniform vec3 uBandAxis;
+uniform vec3 uMilkyAxis;
+uniform float uMilkyIntensity;
 
 varying vec3 vDirection;
 
@@ -36,7 +38,9 @@ float fbm(vec3 p)
     return value;
 }
 
-// One soft procedural nebula: fbm clouds concentrated along a band of the sky
+// One soft procedural nebula: fbm clouds concentrated along a band of the sky.
+// Milky Way (M5): a soft band around the galactic equator with darker dust lanes along its middle.
+// Plain noise sums (no third fbm loop: ANGLE's D3D compiler stalls on it).
 void main()
 {
     vec3 direction = normalize(vDirection);
@@ -47,5 +51,12 @@ void main()
     float density = smoothstep(0.35, 0.85, clouds) * band;
     vec3 color = mix(uColorA, uColorB, smoothstep(0.3, 0.75, warp));
 
-    gl_FragColor = vec4(color * density * uIntensity, 1.0);
+    float latitude = dot(direction, uMilkyAxis);
+    float milkyBand = exp(- pow(latitude * 5.5, 2.0));
+    float milkyNoise = noise(direction * 7.0) * 0.6 + noise(direction * 15.0) * 0.4;
+    float dust = smoothstep(0.42, 0.7, noise(direction * 9.0 + 3.1) * 0.65 + noise(direction * 21.0) * 0.35) * exp(- pow(latitude * 14.0, 2.0));
+    float milky = milkyBand * (0.45 + 0.75 * milkyNoise) * (1.0 - 0.8 * dust);
+    vec3 milkyColor = mix(vec3(0.62, 0.66, 0.78), vec3(0.85, 0.78, 0.66), milkyNoise);
+
+    gl_FragColor = vec4(color * density * uIntensity + milkyColor * milky * uMilkyIntensity, 1.0);
 }

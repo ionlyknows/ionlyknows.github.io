@@ -82,4 +82,4 @@ Installed third-party skills (general reference only; **CLAUDE.md and the projec
 - At the end of a task: run `npm run build`, tick the milestone checklist, update `docs/audit.md` (findings status + change log), and list what changed and anything left open.
 
 ## Current milestone
-M4 — Character & Polish → `docs/milestones/M4-character-polish.md`
+M5 — Universe & Navigation → `docs/milestones/M5-universe-navigation.md` (finished milestones are in `docs/milestones/done/`; roadmap: `docs/roadmap-v2.md`)

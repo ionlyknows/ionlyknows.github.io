@@ -3,7 +3,7 @@ import { ref, onBeforeUnmount } from 'vue'
 import { useUIBridge } from '../composables/useUIBridge.js'
 import { useGame } from '../composables/useGame.js'
 
-// FR-12: always-visible mute toggle (M key does the same). Talks to the game via UIBridge.
+// FR-12: always-visible mute toggle (N key does the same). Talks to the game via UIBridge.
 const { emit, listen } = useUIBridge()
 const game = useGame()
 const muted = ref(game.settings.getValues().sound.muted)
@@ -16,8 +16,8 @@ onBeforeUnmount(listen('settings:change', ({ sound }) => { if(sound) muted.value
         class="iw-sound"
         type="button"
         :aria-pressed="muted"
-        :aria-label="muted ? 'Unmute sound (M)' : 'Mute sound (M)'"
-        :title="muted ? 'Unmute (M)' : 'Mute (M)'"
+        :aria-label="muted ? 'Unmute sound (N)' : 'Mute sound (N)'"
+        :title="muted ? 'Unmute (N)' : 'Mute (N)'"
         @click="emit('sound:toggle')"
     >
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">

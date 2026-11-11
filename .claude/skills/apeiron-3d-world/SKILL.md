@@ -31,9 +31,10 @@ player.quaternion.setFromUnitVectors(_yAxis, up);                  // then rotat
 - Mouse drag orbits around the player's `up` axis; clamp pitch to 10°–70°.
 - Use `camera.lookAt(player.position + up * 1.2)`.
 
-## Travel (BR-05)
-- One GSAP timeline per trip: lift off (0.8 s) → follow a `THREE.CatmullRomCurve3` between planets (2.5–4 s) → land (0.8 s). With `prefers-reduced-motion`, total 1.5 s.
-- Disable input for the whole timeline; on complete, emit `location:change` through UIBridge and set state `ON_FOOT`.
+## Travel (BR-05, M3 + M5): every trip is by ship
+- `State/Flight.js` runs `State/FlightPhysics.js` in fixed 1/120 s steps: boarding → take-off → flying → landing → establishing shot. "Fly it yourself" steers inside the corridor; "Autopilot" flies the same route with no steering (≈ 8 s take-off → touchdown) and cinematic camera angles (`State/CameraChase.js`).
+- Map trips start already inside the ship (fade from black). "Skip flight" / Esc fades to black and jumps to the touchdown; `prefers-reduced-motion` = that fade only (≤ 3 s).
+- Input locked except Skip; on arrival Player.update shifts the floating origin, `location:change` goes through UIBridge and the state returns to `ON_FOOT`. No flying-astronaut travel anywhere.
 
 ## Look: cinematic, polished space (changed 2026-11-10; replaces "cute low-poly toon")
 - PBR: `MeshStandardMaterial` everywhere, CC0 textures (ambientCG / Poly Haven) with triplanar mapping, NASA Blue Marble for Earth.

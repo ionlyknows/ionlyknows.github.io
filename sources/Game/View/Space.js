@@ -8,15 +8,17 @@ import warpVertexShader from './Materials/shaders/warp/vertex.glsl'
 import warpFragmentShader from './Materials/shaders/warp/fragment.glsl'
 import nebulaVertexShader from './Materials/shaders/nebula/vertex.glsl'
 import nebulaFragmentShader from './Materials/shaders/nebula/fragment.glsl'
+import SkyObjects, { galacticPole } from './SkyObjects.js'
 
 const WARP_STREAKS = 400
 const WARP_LENGTH = 420
 const NEBULA_RADIUS = 1800
 const SUN_DISTANCE = 1500
 
-// Near-black space: subtle stars, one soft nebula and the sun disc, all following the
-// camera so they look infinitely far away. During travel the stars stretch into warp
-// streaks (TravelCinematic sets `warp`). Also builds the PMREM environment map.
+// Near-black space: subtle stars, one soft nebula, the Milky Way, the sun disc and (M5) real
+// constellations, distant galaxies and meteors (View/SkyObjects.js), all following the camera so
+// they look infinitely far away. When boosting the stars stretch into warp streaks
+// (Cinematics sets `warp`). Also builds the PMREM environment map.
 export default class Space
 {
     constructor()
@@ -35,6 +37,7 @@ export default class Space
         this.setNebula()
         this.setSun()
         this.setStars()
+        this.objects = new SkyObjects(this.group, this.viewport, this.sunDirection)
         this.setWarp()
         this.setDebug()
     }
@@ -48,7 +51,9 @@ export default class Space
                     uIntensity: { value: 0.09 },
                     uColorA: { value: new THREE.Color('#3b2a8c') },
                     uColorB: { value: new THREE.Color('#1f6f8b') },
-                    uBandAxis: { value: new THREE.Vector3(0.35, 0.85, - 0.4).normalize() }
+                    uBandAxis: { value: new THREE.Vector3(0.35, 0.85, - 0.4).normalize() },
+                    uMilkyAxis: { value: galacticPole.clone() },
+                    uMilkyIntensity: { value: 0.11 }
                 },
                 vertexShader: nebulaVertexShader,
                 fragmentShader: nebulaFragmentShader,
@@ -102,13 +107,23 @@ export default class Space
             const colorArray = new Float32Array(this.stars.count * 3)
             const position = new THREE.Vector3()
             const color = new THREE.Color()
+            const bandX = new THREE.Vector3().crossVectors(galacticPole, new THREE.Vector3(0, 1, 0)).normalize()
+            const bandY = new THREE.Vector3().crossVectors(galacticPole, bandX)
 
             for(let i = 0; i < this.stars.count; i++)
             {
                 const iStride3 = i * 3
 
-                // Full sphere around the player (space has no horizon)
-                position.setFromSphericalCoords(this.stars.distance, Math.acos(Math.random() * 2 - 1), 2 * Math.PI * Math.random())
+                // Full sphere around the player (space has no horizon); 35% crowd along the Milky Way
+                if(i >= this.stars.count * 0.65) // last ones: the warp streaks use the first 400
+                {
+                    const latitude = (Math.random() + Math.random() + Math.random() - 1.5) * 0.16
+                    const longitude = Math.random() * Math.PI * 2
+                    position.copy(bandX).multiplyScalar(Math.cos(longitude)).addScaledVector(bandY, Math.sin(longitude))
+                        .multiplyScalar(Math.cos(latitude)).addScaledVector(galacticPole, Math.sin(latitude)).multiplyScalar(this.stars.distance)
+                }
+                else
+                    position.setFromSphericalCoords(this.stars.distance, Math.acos(Math.random() * 2 - 1), 2 * Math.PI * Math.random())
                 positionArray[iStride3    ] = position.x
                 positionArray[iStride3 + 1] = position.y
                 positionArray[iStride3 + 2] = position.z
@@ -212,6 +227,7 @@ export default class Space
         const nebula = this.nebula.clone()
         nebula.material = this.nebula.material.clone()
         nebula.material.uniforms.uIntensity.value = 0.6
+        nebula.material.uniforms.uMilkyIntensity.value = 0 // reflections keep the M2 look
         nebula.material.blending = THREE.AdditiveBlending
         nebula.material.transparent = true
         nebula.scale.setScalar(90 / NEBULA_RADIUS)
@@ -268,11 +284,18 @@ export default class Space
         starsFolder.add(this.stars.material.uniforms.uSize, 'value').min(0).max(1).step(0.0001).name('uSize')
         starsFolder.add(this.stars.material.uniforms.uBrightness, 'value').min(0).max(1).step(0.001).name('uBrightness')
         this.debug.ui.getFolder('view/space/nebula').add(this.nebula.material.uniforms.uIntensity, 'value', 0, 0.5, 0.005).name('intensity')
+        this.debug.ui.getFolder('view/space/nebula').add(this.nebula.material.uniforms.uMilkyIntensity, 'value', 0, 0.5, 0.005).name('milky way')
+    }
+
+    setConstellationLines(visible)
+    {
+        this.objects.setConstellationLines(visible)
     }
 
     update()
     {
         this.group.position.copy(this.view.camera.instance.position)
+        this.objects.update(this.state.time.delta)
 
         const amount = this.warp.amount
         this.warp.lines.visible = amount > 0.01
@@ -282,6 +305,7 @@ export default class Space
 
     resize()
     {
+        this.objects.resize()
         this.stars.material.uniforms.uHeightFragments.value = this.viewport.height * this.viewport.clampedPixelRatio
     }
 }

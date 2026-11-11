@@ -35,7 +35,7 @@ const arrowStyle = computed(() =>
 <template>
     <div v-if="hud" class="iw-flight">
         <div class="iw-flight__panel" role="status" aria-live="off">
-            <p class="iw-flight__label">Flying to</p>
+            <p class="iw-flight__label">{{ hud.autopilot ? 'Autopilot to' : 'Flying to' }}</p>
             <p class="iw-flight__name">{{ hud.name }}</p>
             <p class="iw-flight__distance">{{ distance }}</p>
             <div class="iw-flight__speed" :class="{ 'is-boosting': hud.boosting }" aria-hidden="true">

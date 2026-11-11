@@ -3,7 +3,7 @@ export default {
     // Site title card (intro + loading screen)
     site: { title: 'APEIRON', subtitle: 'the boundless' },
     name: 'Jefferson F. Laspiñas',
-    role: 'Frontend-Backend Developer',
+    role: 'Full-Stack Developer',
     status: 'Available',
     greeting: 'Hello!',
     bio: [

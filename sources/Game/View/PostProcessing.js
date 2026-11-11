@@ -29,7 +29,7 @@ const MIN_FPS = 45
 const LOW_FPS_SECONDS = 3
 
 // Quality levels (docs/milestones/M2a-revision.md §5):
-// Low = no post-processing (renderer MSAA), no shadows, no nebula/clouds.
+// Low = no post-processing (renderer MSAA), no shadows, no nebula/Milky Way/clouds, no drifting rocks.
 // Medium = bloom (half res) + tone mapping, 1024 shadows, 64 segments, 1K textures.
 // High = bloom + vignette/grain/grading, soft 2048 shadows, 128 segments, 2K textures (lazy, after Launch).
 // The composer renders into a 4× MSAA target, so Medium/High keep anti-aliasing.
@@ -103,6 +103,7 @@ export default class PostProcessing
         this.view.planets.setDetail(PLANET_SEGMENTS[quality])
         this.view.lights.setShadowQuality(quality)
         this.view.space.nebula.visible = quality !== 'low'
+        this.view.driftingRocks?.setEnabled(quality !== 'low') // meteors stay on Low
         this.view.earth.clouds.visible = quality !== 'low'
         this.updateTextures()
         this.fps.lowSeconds = 0

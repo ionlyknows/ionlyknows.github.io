@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 import View from '@/View/View.js'
@@ -9,11 +11,37 @@ import { BOOST } from '@/State/FlightPhysics.js'
 
 const IN_FLIGHT = [ 'boarding', 'takeoff', 'flying', 'landing' ]
 
+// The ship model (M5): Quaternius "Spaceship" (CC0, see CREDITS.md), its atlas colours split into
+// hull / trim / glass / accent groups, scaled to 5.1 m, nose +Z, belly at y = 0 (public/models/ship.glb)
+const MODEL = {
+    url: `${import.meta.env.BASE_URL}models/ship.glb`,
+    hatch: [ 0, 0.85, - 0.3 ], // the canopy
+    engines: [ [ 0.36, 0.5, - 1.92 ], [ - 0.36, 0.5, - 1.92 ] ],
+    engineRadius: 0.17,
+    navLights: [ [ 2.0, 0.9, - 1.55 ], [ - 2.0, 0.9, - 1.55 ] ] // red port (+X), green starboard
+}
+const FALLBACK_ENGINES = [ SHIP_SHAPE.engine ]
+
 const _projected = new THREE.Vector3()
 
-// The ship (M3): code-built PBR (off-white hull, orange accents, glass canopy, glowing engine,
-// nav lights). One parked on every launch pad (in view.world, so the floating origin moves it);
-// the flying one follows the flight's interpolated render pose. Also feeds the flight HUD.
+// Bake a GLB mesh's node transform (meshopt quantization) into float positions (for colliders)
+function bakedGeometry(mesh)
+{
+    const source = mesh.geometry.attributes.position
+    const array = new Float32Array(source.count * 3)
+    const vertex = new THREE.Vector3()
+    for(let i = 0; i < source.count; i++)
+        vertex.fromBufferAttribute(source, i).applyMatrix4(mesh.matrixWorld).toArray(array, i * 3)
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.BufferAttribute(array, 3))
+    if(mesh.geometry.index)
+        geometry.setIndex(mesh.geometry.index.clone())
+    return geometry
+}
+
+// The ships: one parked on every launch pad (in view.world, so the floating origin moves it) and the
+// flying one, which follows the flight's interpolated render pose. Until the GLB has loaded (or if it
+// fails) they are the code-built M3 ship. Also feeds the flight HUD.
 export default class Ship
 {
     constructor()
@@ -28,45 +56,150 @@ export default class Ship
             paint: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.15, envMapIntensity: 0.6, ...env }),
             metal: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.85, envMapIntensity: 0.6, ...env }),
             glass: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.08, metalness: 1, envMapIntensity: 1.2, ...env }),
-            glow: new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(1.5, 1.5, 1.5) })
+            glow: new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(1.5, 1.5, 1.5) }),
+            // GLB groups (Apeiron palette)
+            hull: new THREE.MeshStandardMaterial({ color: '#eeeae2', roughness: 0.38, metalness: 0.12, envMapIntensity: 0.7, ...env }),
+            trim: new THREE.MeshStandardMaterial({ color: '#3d434c', roughness: 0.4, metalness: 0.85, envMapIntensity: 0.8, ...env }),
+            canopy: new THREE.MeshStandardMaterial({ color: '#141b26', roughness: 0.05, metalness: 1, envMapIntensity: 1.4, ...env }),
+            accent: new THREE.MeshStandardMaterial({ color: '#ff7a2e', roughness: 0.42, metalness: 0.1, envMapIntensity: 0.6, ...env })
         }
+        this.flameMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.8, 0.35), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })
 
-        // One merged geometry per material (4 draw calls per ship)
+        // Code-built ship: one merged geometry per material (4 draw calls per ship)
         const groups = {}
         for(const { geometry, mat } of SHIP_SHAPE.build())
             (groups[mat] ||= []).push(geometry)
         this.geometries = Object.entries(groups).map(([ mat, geometries ]) => ({ mat, geometry: mergeGeometries(geometries) }))
+        this.engines = FALLBACK_ENGINES
 
         this.setFlying()
         this.setParked()
     }
 
+    // Called by View.loadCharacter(): resolves either way (the code-built ship stays on failure)
+    load()
+    {
+        const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
+        return loader.loadAsync(MODEL.url)
+            .then((gltf) => this.setModel(gltf))
+            .catch((error) => console.warn('[Ship] Ship model failed to load, keeping the code-built ship', error))
+    }
+
+    setModel(gltf)
+    {
+        const names = { hull: 'hull', trim: 'trim', glass: 'canopy', accent: 'accent' }
+        const root = gltf.scene
+        root.updateMatrixWorld(true)
+
+        const parts = []
+        root.traverse((object) =>
+        {
+            if(object.isMesh)
+                parts.push({ geometry: object.geometry, matrix: object.matrixWorld.clone(), mat: names[object.material.name] || 'hull', baked: bakedGeometry(object) })
+        })
+        if(!parts.length)
+            return
+
+        // Engine glow discs + nav lights (code-built, merged into one glow mesh)
+        const glow = []
+        for(const engine of MODEL.engines)
+        {
+            const disc = new THREE.CircleGeometry(MODEL.engineRadius, 24).toNonIndexed()
+            disc.rotateY(Math.PI) // faces backward (-Z)
+            disc.translate(engine[0], engine[1], engine[2] - 0.01)
+            glow.push(this.tint(disc, '#ffb46b'))
+        }
+        MODEL.navLights.forEach((position, i) =>
+        {
+            const light = new THREE.SphereGeometry(0.07, 10, 8).toNonIndexed()
+            light.translate(...position)
+            glow.push(this.tint(light, i === 0 ? '#ff3b3b' : '#3bff7a'))
+        })
+
+        this.model = { parts, glow: mergeGeometries(glow) }
+        this.engines = MODEL.engines
+
+        // Colliders follow the drawn mesh (F28); the astronaut boards at the canopy
+        this.state.planets.setShipShape(parts.map(({ baked }) => ({ geometry: baked })), MODEL.hatch)
+
+        // Swap every ship (same pivot and pose)
+        for(const ship of [ this.flying, ...this.parked.map(({ group }) => group) ])
+        {
+            ship.remove(...ship.children.filter((child) => child.userData.body))
+            this.addBody(ship)
+            if(ship === this.flying)
+                this.setFlames(ship)
+        }
+    }
+
+    tint(geometry, color)
+    {
+        const tint = new THREE.Color(color)
+        const colors = new Float32Array(geometry.attributes.position.count * 3)
+        for(let i = 0; i < colors.length; i += 3)
+            tint.toArray(colors, i)
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+        geometry.deleteAttribute('uv')
+        geometry.deleteAttribute('normal')
+        return geometry
+    }
+
+    addBody(group)
+    {
+        const meshes = this.model
+            ? [
+                ...this.model.parts.map(({ geometry, matrix, mat }) =>
+                {
+                    const mesh = new THREE.Mesh(geometry, this.materials[mat])
+                    mesh.matrix.copy(matrix)
+                    mesh.matrixAutoUpdate = false
+                    return mesh
+                }),
+                new THREE.Mesh(this.model.glow, this.materials.glow)
+            ]
+            : this.geometries.map(({ mat, geometry }) => new THREE.Mesh(geometry, this.materials[mat]))
+
+        for(const mesh of meshes)
+        {
+            const glows = mesh.material === this.materials.glow
+            mesh.castShadow = !glows
+            mesh.receiveShadow = !glows
+            mesh.userData.body = true
+            group.add(mesh)
+        }
+    }
+
     createShip(parent)
     {
         const group = new THREE.Group()
-        for(const { mat, geometry } of this.geometries)
-        {
-            const mesh = new THREE.Mesh(geometry, this.materials[mat])
-            mesh.castShadow = mat !== 'glow'
-            mesh.receiveShadow = mat !== 'glow'
-            group.add(mesh)
-        }
+        this.addBody(group)
         parent.add(group)
         return group
+    }
+
+    // Engine flames: additive cones behind each nozzle, longer with thrust
+    setFlames(ship)
+    {
+        for(const flame of this.flames || [])
+            ship.remove(flame)
+
+        const geometry = new THREE.ConeGeometry(this.engines.length > 1 ? 0.2 : 0.3, 1.6, 20, 1, true)
+        geometry.translate(0, 0.8, 0)
+        geometry.rotateX(- Math.PI / 2)
+        this.flames = this.engines.map((engine) =>
+        {
+            const flame = new THREE.Mesh(geometry, this.flameMaterial)
+            flame.position.fromArray(engine)
+            ship.add(flame)
+            return flame
+        })
     }
 
     setFlying()
     {
         this.flying = this.createShip(this.scene)
         this.flying.visible = false
-
-        // Engine flame: additive cone behind the nozzle, longer with thrust
-        const geometry = new THREE.ConeGeometry(0.3, 1.6, 20, 1, true)
-        geometry.translate(0, 0.8, 0)
-        geometry.rotateX(- Math.PI / 2)
-        this.flame = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.8, 0.35), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }))
-        this.flame.position.fromArray(SHIP_SHAPE.engine)
-        this.flying.add(this.flame)
+        this.setFlames(this.flying)
     }
 
     setParked()
@@ -101,8 +234,11 @@ export default class Ship
         this.flying.position.copy(render.position)
         this.flying.quaternion.copy(render.quaternion)
         const thrust = flight.body.thrust
-        this.flame.visible = thrust > 0.02
-        this.flame.scale.set(0.8 + thrust * 0.25, 0.8 + thrust * 0.25, 0.2 + thrust * 0.9)
+        for(const flame of this.flames)
+        {
+            flame.visible = thrust > 0.02
+            flame.scale.set(0.8 + thrust * 0.25, 0.8 + thrust * 0.25, 0.2 + thrust * 0.9)
+        }
 
         this.updateHud(flight)
     }
@@ -110,6 +246,9 @@ export default class Ship
     // Flight HUD (UI): destination, distance, speed and an arrow when the destination is off-screen
     updateHud(flight)
     {
+        if(flight.skipping || flight.skipped)
+            return
+
         const route = flight.route
         const body = flight.body
         const camera = this.view.camera.instance
@@ -128,8 +267,9 @@ export default class Ship
 
         this.bridge.emit('flight:hud', {
             name: route.to.name,
+            autopilot: route.autopilot,
             distance: Math.round(flight.render.position.distanceTo(route.endPad.position)),
-            speed: THREE.MathUtils.clamp(body.speed / (route.baseSpeed * BOOST), 0, 1),
+            speed: THREE.MathUtils.clamp(body.speed / (route.baseSpeed * (route.autopilot ? 1 : BOOST)), 0, 1),
             boosting: flight.boost > 0.5,
             skippable: body.phase !== 'landing',
             arrow: offScreen ? Math.atan2(y, x) : null

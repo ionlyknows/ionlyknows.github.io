@@ -6,6 +6,8 @@ import { SHIP_SHAPE, shipRestPose } from './PropShapes.js'
 // (State/Flight.js runs it in the game; the Node route check runs the same code).
 //
 // Phases: boarding (1 s) → takeoff (2 s) → flying (steerable) → landing (3 s) → establish (1.6 s).
+// Autopilot (M5): the same route and phases, no steering, a faster cruise (≈ 8 s from take-off to
+// touchdown) that slows down before the landing so the landing starts at its own speed.
 // The ship follows a route curve; the player moves inside a corridor around it. The offset is
 // stored in corridor units (`n`, inside the unit disk) and scaled by the corridor radius at the
 // current distance, so the corridor can widen after take-off and close before landing without
@@ -21,6 +23,10 @@ export const SLOW = 0.7
 export const SHIP_RADIUS = 2.2
 
 const FLIGHT_TIME = 13 // s of steering at normal speed (+ 2 s take-off + 3 s landing ≈ 18 s)
+const AUTO_FLIGHT_TIME = 3.2 // s of cruise on autopilot (+ accel/decel + 2 s take-off + 3 s landing ≈ 8.5 s)
+const AUTO_ACCEL = 90 // units/s²
+const AUTO_DECEL = 80 // units/s²
+export const AUTO_LANDING_SPEED = 40 // units/s when the landing starts (below its cap: no speed jump)
 const TAKEOFF_HEIGHT = 12
 const CLIMB = { up: 20, out: 35 } // route leaves the pad climbing at ~30°
 const CORRIDOR_RAMP_IN = 70 // corridor widens over the first 70 units
@@ -109,7 +115,7 @@ const closestOnSegment = (p, a, b, target) =>
 // Route between two planets: pad → climb out → (close pass by Earth or another planet when one
 // is near the way, else a gentle side arc) → approach from above → over the destination pad.
 // `bodies` = every planet + Earth ({ center, radius }).
-export function buildRoute(from, to, bodies)
+export function buildRoute(from, to, bodies, { autopilot = false } = {})
 {
     const startPad = shipRestPose(from.launchPad, from.landingPoint)
     const endPad = shipRestPose(to.launchPad, to.landingPoint)
@@ -167,7 +173,7 @@ export function buildRoute(from, to, bodies)
     const startDirection = new THREE.Vector3().copy(startUp).multiplyScalar(CLIMB.up).addScaledVector(out, CLIMB.out).normalize()
     const endDirection = new THREE.Vector3().copy(endUp).multiplyScalar(- CLIMB.up).addScaledVector(back, - CLIMB.out).normalize()
     const points = [ start, middle, end ]
-    const route = { from, to, startPad, endPad, scenic, points, startDirection, endDirection }
+    const route = { from, to, startPad, endPad, scenic, points, startDirection, endDirection, autopilot }
 
     // Keep the whole corridor clear of every surface: push the middle point away, re-check
     for(let attempt = 0; attempt < 12; attempt++)
@@ -182,7 +188,9 @@ export function buildRoute(from, to, bodies)
         middle.addScaledVector(away.normalize(), hit.depth + 5)
     }
 
-    route.baseSpeed = (route.length - LANDING_DISTANCE) / FLIGHT_TIME
+    route.baseSpeed = (route.length - LANDING_DISTANCE) / (autopilot ? AUTO_FLIGHT_TIME : FLIGHT_TIME)
+    if(autopilot)
+        route.baseSpeed = Math.max(route.baseSpeed, AUTO_LANDING_SPEED * 1.5)
 
     // Take-off: straight up off the pad, then into the route's first tangent
     const startTangent = route.tangents[0]
@@ -265,12 +273,14 @@ function findIntrusion(route, bodies)
     return worst
 }
 
-export function createBody(route, playerPosition)
+// hatch: where the astronaut boards (ship-local). cut: start in the take-off (the astronaut is
+// already inside: map trips)
+export function createBody(route, playerPosition, { hatch = SHIP_SHAPE.hatch, cut = false } = {})
 {
     const pad = route.startPad
     const body = {
         route,
-        phase: 'boarding',
+        phase: cut ? 'takeoff' : 'boarding',
         time: 0,
         s: 0,
         speed: 0,
@@ -293,11 +303,33 @@ export function createBody(route, playerPosition)
         playerStart: playerPosition.clone(),
         playerPosition: playerPosition.clone(),
         previousPlayerPosition: playerPosition.clone(),
-        hatch: new THREE.Vector3().fromArray(SHIP_SHAPE.hatch).applyQuaternion(pad.quaternion).add(pad.position),
-        playerVisibility: 1,
-        previousPlayerVisibility: 1
+        hatch: new THREE.Vector3().fromArray(hatch).applyQuaternion(pad.quaternion).add(pad.position),
+        playerVisibility: cut ? 0 : 1,
+        previousPlayerVisibility: cut ? 0 : 1
     }
     return body
+}
+
+// "Skip flight" / reduced motion: straight to the touchdown at the destination pad (the caller
+// fades to black first). `time` = how far into the establishing shot to start.
+export function jumpToEnd(body, time = 0)
+{
+    const pad = body.route.endPad
+    for(const [ current, previous, value ] of [ [ body.position, body.previousPosition, pad.position ], [ body.frameUp, body.previousFrameUp, pad.up ] ])
+    {
+        current.copy(value)
+        previous.copy(value)
+    }
+    body.quaternion.copy(pad.quaternion)
+    body.previousQuaternion.copy(pad.quaternion)
+    body.forward.copy(pad.forward)
+    body.thrust = 0
+    body.speed = 0
+    body.landing = null
+    body.playerVisibility = 0
+    body.previousPlayerVisibility = 0
+    setPhase(body, 'establish')
+    body.time = time
 }
 
 function setPhase(body, phase)
@@ -384,9 +416,20 @@ function stepFlying(body, input, dt)
 {
     const route = body.route
 
-    // Speed: normal / boost (Shift) / slow (Ctrl), eased
-    body.multiplier += ((input.boost ? BOOST : input.slow ? SLOW : 1) - body.multiplier) * (1 - Math.exp(- SPEED_RESPONSE * dt))
-    body.speed += (route.baseSpeed * body.multiplier - body.speed) * (1 - Math.exp(- SPEED_RESPONSE * dt))
+    if(route.autopilot)
+    {
+        // Accelerate to the cruise, then brake so the landing starts at AUTO_LANDING_SPEED
+        const remaining = Math.max(0, route.length - LANDING_DISTANCE - body.s)
+        const braking = Math.sqrt(AUTO_LANDING_SPEED * AUTO_LANDING_SPEED + 2 * AUTO_DECEL * remaining)
+        body.speed = Math.min(route.baseSpeed, braking, body.speed + AUTO_ACCEL * dt)
+        body.multiplier = 1
+    }
+    else
+    {
+        // Speed: normal / boost (Shift) / slow (Ctrl), eased
+        body.multiplier += ((input.boost ? BOOST : input.slow ? SLOW : 1) - body.multiplier) * (1 - Math.exp(- SPEED_RESPONSE * dt))
+        body.speed += (route.baseSpeed * body.multiplier - body.speed) * (1 - Math.exp(- SPEED_RESPONSE * dt))
+    }
 
     // Steering → sideways velocity; near the edge the outward part fades and a soft pull eases
     // the ship back (corridor units, so it scales with the corridor radius)

@@ -43,7 +43,7 @@ export const has = (v) => Array.isArray(v) ? v.length > 0 : v !== undefined && v
 
 ## Accessibility (NFR-04, NFR-05)
 - Every button is a `<button>` with a visible label or `aria-label`. Visible focus ring.
-- Keyboard: Esc closes the top panel, Tab cycles inside the open panel, M toggles mute.
+- Keyboard: Esc closes the top panel, Tab cycles inside the open panel, M opens/closes the map (M5), N toggles mute.
 - Videos: `preload="none"`, a poster, `controls`, and no autoplay with sound.
 
 ## Phones (BR-01)

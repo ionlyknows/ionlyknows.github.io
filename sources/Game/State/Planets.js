@@ -67,6 +67,8 @@ export default class Planets
             const rest = shipRestPose(launchPad, landingPoint)
             const shipMatrix = new THREE.Matrix4().compose(rest.position.clone().sub(center), rest.quaternion, new THREE.Vector3(1, 1, 1))
             const shipCollider = buildCollider(shipGeometry, shipMatrix, center, { keepTriangles })
+            if(shipCollider)
+                shipCollider.ship = true
 
             return {
                 id: planet.id,
@@ -78,6 +80,8 @@ export default class Planets
                 landingPoint,
                 contentPoints,
                 launchPad,
+                shipMatrix,
+                shipHatch: SHIP_SHAPE.hatch, // where the astronaut boards (ship-local)
                 interactives: [ ...contentPoints, launchPad, ...eggs ],
                 props,
                 colliders: [ ...props.map((prop) => prop.collider).filter(Boolean), ...beaconColliders, shipCollider ].filter(Boolean)
@@ -93,6 +97,22 @@ export default class Planets
         this.sunDirection = new THREE.Vector3().fromArray(sunDirection).normalize()
         this.current = this.get(spawnPlanetId)
         this.shiftOrigin(this.current.center.clone())
+    }
+
+    // The ship model has loaded (View/Ship.js): parked-ship colliders from its mesh, its hatch
+    setShipShape(parts, hatch)
+    {
+        for(const planet of this.items)
+        {
+            planet.colliders = planet.colliders.filter((collider) => !collider.ship)
+            const collider = buildCollider(parts, planet.shipMatrix, planet.center)
+            if(collider)
+            {
+                collider.ship = true
+                planet.colliders.push(collider)
+            }
+            planet.shipHatch = hatch
+        }
     }
 
     get(id)

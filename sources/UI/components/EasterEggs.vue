@@ -59,7 +59,7 @@ onBeforeUnmount(() =>
 .iw-eggs__counter
 {
     position: fixed;
-    top: 76px;
+    top: 144px; /* under the Map button */
     left: 24px;
     margin: 0;
     padding: 6px 12px;
@@ -111,6 +111,6 @@ onBeforeUnmount(() =>
 
 @media (max-width: 560px)
 {
-    .iw-eggs__counter { top: 72px; left: 16px; }
+    .iw-eggs__counter { top: 140px; left: 16px; }
 }
 </style>

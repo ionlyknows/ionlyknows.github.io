@@ -90,14 +90,11 @@ export default class Camera
         this.position[2] -= offset.z
     }
 
-    // Chase camera while the ship is the subject (and while "Skip flight" leaves the air)
+    // Chase camera while the ship is the subject
     usesChase()
     {
         const flight = this.state.flight
-        const travel = this.state.travel
-        if(flight.active)
-            return flight.phase !== 'establish'
-        return this.game.stateMachine.is(StateMachine.TRAVELING) && travel.fromFlight
+        return flight.active && flight.phase !== 'establish'
     }
 
     update()
@@ -112,7 +109,9 @@ export default class Camera
             if(source !== this.source)
             {
                 this.source = source
-                this.blend.t = 0
+                // Map trips and skipped landings cut (the screen is black); everything else blends
+                this.blend.t = this.state.flight.cameraCut ? 1 : 0
+                this.state.flight.cameraCut = false
                 this.blend.position.fromArray(this.position)
                 this.blend.quaternion.fromArray(this.quaternion)
                 this.blend.fov = this.fov

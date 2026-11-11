@@ -6,16 +6,21 @@ import View from '@/View/View.js'
 import State from '@/State/State.js'
 import StateMachine from '@/StateMachine.js'
 import UIBridge from '../../UI/UIBridge.js'
-import TravelCinematic from './TravelCinematic.js'
 import { BASE_FOV } from './Camera.js'
+import { DURATIONS as FLIGHT_DURATIONS } from '@/State/FlightPhysics.js'
 
 const INTRO_SEEN_KEY = 'apeiron.introSeen'
 const FOCUS_SPEED = 6 // ≈ 0.6 s ease toward the beacon
+const ORBIT_DISTANCE = 2.8 // × destination radius (arrival establishing shot)
+const ORBIT_SWEEP = 0.9 // rad
 
 const _target = new THREE.Vector3()
 const _head = new THREE.Vector3()
 const _direction = new THREE.Vector3()
 const _matrix = new THREE.Matrix4()
+const _position = new THREE.Vector3()
+const _offset = new THREE.Vector3()
+const _up = new THREE.Vector3()
 
 export function lookAtPose(override, position, target, up)
 {
@@ -27,7 +32,7 @@ export function lookAtPose(override, position, target, up)
 const smooth = (t) => t * t * (3 - 2 * t)
 const damp = (current, target, speed, delta) => current + (target - current) * (1 - Math.exp(- speed * delta))
 
-// Opening sequence, focus shot and full-screen fades (black, flash, dim).
+// Opening sequence, focus shot, arrival establishing shot and full-screen fades (black, flash, dim).
 // Writes only into view.camera.override (an input of the camera system, never the camera
 // itself); the gameplay camera is used when weight = 0. Idle drift lives in CameraThirdPerson.
 export default class Cinematics
@@ -44,7 +49,7 @@ export default class Cinematics
         this.intro = null
 
         this.setScreen()
-        this.travel = new TravelCinematic(this)
+        this.warp = this.view.space.warp
 
         this.game.stateMachine.events.on('change', (state, previous) => this.onStateChange(state, previous))
         this.state.controls.events.on('escapeDown', () => this.skipIntro())
@@ -73,8 +78,8 @@ export default class Cinematics
         {
             // Control is back: nothing cinematic may keep writing
             gsap.killTweensOf(this.override)
-            this.travel.reset()
-            if(previous === StateMachine.TRAVELING || previous === StateMachine.INTRO || previous === StateMachine.LANDING)
+            this.resetFlight()
+            if(previous === StateMachine.INTRO || previous === StateMachine.LANDING)
                 this.override.weight = 0
             this.state.controls.lastInputTime = performance.now()
             if(this.screen.black > 0 && !this.intro)
@@ -221,9 +226,41 @@ export default class Cinematics
         this.override.weight = smooth(this.focus.weight)
     }
 
+    // Arrival (after touchdown): a wide shot of the destination sweeping around its landing point,
+    // a white flash, then it settles behind the astronaut. Reduced motion / skip: no flash.
+    updateFlightEstablish(flight)
+    {
+        const t = THREE.MathUtils.clamp(flight.body.time / FLIGHT_DURATIONS.establish, 0, 1)
+        this.screen.flash = flight.skipped ? 0 : Math.max(0, 1 - flight.body.time / 0.5)
+        this.override.fov = BASE_FOV
+        if(flight.quick)
+        {
+            this.override.weight = 0
+            return
+        }
+
+        const planet = flight.route.to
+        const player = this.state.player
+        const progress = t
+        _up.subVectors(planet.landingPoint, planet.center).normalize()
+        _offset.copy(_up).multiplyScalar(0.55).addScaledVector(player.facing, 0.85).normalize()
+        _offset.applyAxisAngle(_up, - ORBIT_SWEEP * (1 - progress))
+        _position.copy(planet.center).addScaledVector(_offset, planet.radius * ORBIT_DISTANCE)
+        _target.copy(planet.center).addScaledVector(_up, planet.radius * 0.4)
+        lookAtPose(this.override, _position, _target, _up)
+        this.override.weight = 1 - smooth(THREE.MathUtils.clamp((t - 0.35) / 0.65, 0, 1))
+    }
+
+    resetFlight()
+    {
+        this.warp.amount = 0
+        this.screen.flash = 0
+    }
+
     updateScreen()
     {
-        const { black, flash, dim } = this.screen
+        const { flash, dim } = this.screen
+        const black = Math.max(this.screen.black, this.state.flight.fade)
         const opacity = Math.max(black, flash, dim * 0.35)
 
         this.screen.mesh.visible = opacity > 0.001
@@ -238,20 +275,15 @@ export default class Cinematics
 
         if(stateMachine.is(StateMachine.INTRO) && this.intro)
             this.updateIntro()
-        else if(stateMachine.is(StateMachine.TRAVELING))
-        {
-            this.focus.weight = 0
-            this.travel.update()
-        }
         else if(this.state.flight.phase === 'establish')
         {
             this.focus.weight = 0
-            this.travel.reset()
-            this.travel.updateFlightEstablish(this.state.flight)
+            this.resetFlight()
+            this.updateFlightEstablish(this.state.flight)
         }
         else
         {
-            this.travel.reset()
+            this.resetFlight()
             this.updateFocus(delta)
         }
 

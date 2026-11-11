@@ -13,7 +13,7 @@ const FOCUS_DURATION = 0.6 // camera eases to the beacon before the panel opens
 const _input = { forward: new THREE.Vector3(), x: 0, z: 0, run: false }
 
 // The astronaut. Player.update is the ONLY writer of the player position: walking runs in
-// fixed 1/120 s steps (State/PlayerPhysics.js), travel is sampled from State/Travel.js.
+// fixed 1/120 s steps (State/PlayerPhysics.js); every trip is sampled from State/Flight.js.
 // `renderPosition` interpolates the last two steps; the model draws exactly that.
 export default class Player
 {
@@ -133,29 +133,6 @@ export default class Player
         })
     }
 
-    updateTravel()
-    {
-        const travel = this.state.travel
-
-        // Arrival: floating-origin shift + full physics reset, done here so that nothing
-        // else ever writes the player position
-        if(travel.arrival)
-        {
-            const planet = travel.arrival
-            travel.arrival = null
-            this.state.shiftOrigin(planet.center.clone())
-            this.place(planet)
-            return
-        }
-
-        if((travel.phase === 'land' || travel.phase === 'establish') && this.planets.current !== travel.to)
-            this.place(travel.to)
-
-        travel.sample(this)
-        this.isGrounded = travel.phase === 'establish'
-        this.snap()
-    }
-
     updateFlight()
     {
         const flight = this.state.flight
@@ -184,11 +161,7 @@ export default class Player
         if(!stateMachine.is(StateMachine.PANEL_OPEN))
             this.focusPoint = null
 
-        if(stateMachine.is(StateMachine.TRAVELING) || this.state.travel.arrival)
-        {
-            this.updateTravel()
-        }
-        else if(this.state.flight.active || this.state.flight.arrival)
+        if(this.state.flight.active || this.state.flight.arrival)
         {
             this.updateFlight()
         }

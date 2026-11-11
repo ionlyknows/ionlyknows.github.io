@@ -5,6 +5,7 @@ import Cinematics from './Cinematics.js'
 import ControlHints, { WALK_HINTS, FLIGHT_HINTS } from './ControlHints.js'
 import Ship from './Ship.js'
 import Asteroids from './Asteroids.js'
+import DriftingRocks from './DriftingRocks.js'
 import Confetti from './Confetti.js'
 import Game from '@/Game.js'
 import StateMachine from '@/StateMachine.js'
@@ -59,6 +60,7 @@ export default class View
         this.player = new PlayerModel()
         this.ship = new Ship()
         this.asteroids = new Asteroids()
+        this.driftingRocks = new DriftingRocks()
         this.confetti = new Confetti()
 
         // Control hints: own scene, drawn after bloom
@@ -77,7 +79,7 @@ export default class View
             height: 3.4,
             side: 3.8, // clear of the wings
             autoShow: true,
-            isActive: () => stateMachine.is(StateMachine.TAKEOFF) || stateMachine.is(StateMachine.FLYING),
+            isActive: () => (stateMachine.is(StateMachine.TAKEOFF) || stateMachine.is(StateMachine.FLYING)) && !state.flight.route?.autopilot,
             isUsed: () => state.flight.body?.steering
         })
         this.cinematics = new Cinematics()
@@ -90,10 +92,10 @@ export default class View
         return Promise.all([ setSurfaceResolution('1k', [ 'regolith', 'metal' ]), this.earth.ready ])
     }
 
-    // The astronaut GLB (resolves even if it fails: the placeholder stays)
+    // The astronaut and ship GLBs (resolve even if they fail: the code-built ones stay)
     loadCharacter()
     {
-        return this.player.load()
+        return Promise.all([ this.player.load(), this.ship.load() ])
     }
 
     // PMREM environment: built while the textures download, then given to every material that
@@ -162,6 +164,7 @@ export default class View
         this.player.update()
         this.ship.update()
         this.asteroids.update()
+        this.driftingRocks.update()
         this.confetti.update()
         this.hints.update()
         this.flightHints.update()

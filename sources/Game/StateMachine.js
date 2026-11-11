@@ -13,7 +13,6 @@ export default class StateMachine
     static INTRO = 'INTRO'
     static ON_FOOT = 'ON_FOOT'
     static PANEL_OPEN = 'PANEL_OPEN'
-    static TRAVELING = 'TRAVELING'
     static QUICK_VIEW = 'QUICK_VIEW'
     static BOARDING = 'BOARDING'
     static TAKEOFF = 'TAKEOFF'

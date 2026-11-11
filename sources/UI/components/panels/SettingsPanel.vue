@@ -3,7 +3,7 @@ import { reactive, ref, onUnmounted } from 'vue'
 import PanelShell from './PanelShell.vue'
 import { useUIBridge } from '../../composables/useUIBridge.js'
 
-// S7 / FR-13: quality, brightness, volume, mute, replay intro, reset. Every change applies live and is
+// S7 / FR-13: quality, brightness, constellation lines, volume, mute, replay intro, reset. Every change applies live and is
 // saved right away in `apeiron.settings`.
 const props = defineProps({ settings: { type: Object, required: true } })
 const emit = defineEmits([ 'close' ])
@@ -13,7 +13,7 @@ let notificationTimer = null
 
 const apply = () => props.settings.apply(values)
 
-// Auto quality drop (fps < 45 for 3 s), mute button and M key update the form
+// Auto quality drop (fps < 45 for 3 s), mute button and N key update the form
 const { listen } = useUIBridge()
 const stopSettingsChange = listen('settings:change', ({ quality, sound }) =>
 {
@@ -64,6 +64,10 @@ onUnmounted(() =>
                 <label>Brightness <output>{{ Math.round(values.brightness * 100) }}%</output>
                     <input v-model.number="values.brightness" type="range" min="0.5" max="1" step="0.05" @input="apply">
                 </label>
+                <label class="iw-settings__toggle">
+                    <input v-model="values.constellationLines" type="checkbox" @change="apply">
+                    Constellation lines
+                </label>
             </section>
 
             <section class="iw-settings__group">
@@ -73,7 +77,7 @@ onUnmounted(() =>
                 </label>
                 <label class="iw-settings__toggle">
                     <input v-model="values.sound.muted" type="checkbox" @change="apply">
-                    Mute (M)
+                    Mute (N)
                 </label>
             </section>
 
