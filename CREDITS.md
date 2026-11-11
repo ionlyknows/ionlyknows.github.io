@@ -19,8 +19,8 @@ Every 3D model, texture, sound, and font used on the site is listed here. CC-BY 
 | Black Marble 2012 → `public/textures/earth/night.webp` | Texture (Earth city lights) | NASA Earth Observatory / Suomi NPP | https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps (file: `BlackMarble_2012_01deg.jpg`) | Public domain (NASA) |
 | Blue Marble 2002 (land + clouds), cloud cover extracted against the cloud-free map above → `public/textures/earth/clouds.webp` | Texture (Earth clouds) | NASA Goddard Space Flight Center (MODIS) | https://commons.wikimedia.org/wiki/File:BlueMarble-2001-2002.jpg | Public domain (NASA) |
 | “Outer Space Loop” → `public/audio/ambient.mp3` (ambient music, re-encoded to 128 kbps) | Music | wipics | https://opengameart.org/content/outer-space-loop | CC0 1.0 |
-| `spaceEngineLarge_000` → `public/audio/warp.mp3` (launch / travel) | Sound effect | Kenney (Sci-Fi Sounds) | https://opengameart.org/content/sci-fi-sounds | CC0 1.0 |
-| `maximize_001` → `public/audio/panel.mp3` (panel open) | Sound effect | Kenney (Interface Sounds) | https://opengameart.org/content/interface-sounds | CC0 1.0 |
+| “Air Woosh Move” (`air_move.wav`) → `public/audio/warp.mp3` (launch / travel whoosh; slowed to 2.2 s without pitch change, band-limited 70 Hz–7 kHz, faded in/out, mono 96 kbps) | Sound effect | Almitory | https://opengameart.org/content/air-woosh-move | CC0 1.0 |
+| `maximize_001` → `public/audio/panel.mp3` (panel open; low-passed at 4.5 kHz and faded so it isn't harsh) | Sound effect | Kenney (Interface Sounds) | https://opengameart.org/content/interface-sounds | CC0 1.0 |
 | `confirmation_001` → `public/audio/beacon.mp3` (beacon in range) | Sound effect | Kenney (Interface Sounds) | https://opengameart.org/content/interface-sounds | CC0 1.0 |
 | Inter (loaded from Google Fonts) | Font | Rasmus Andersson | https://fonts.google.com/specimen/Inter | SIL Open Font License 1.1 |
 | JetBrains Mono (loaded from Google Fonts) | Font | JetBrains | https://fonts.google.com/specimen/JetBrains+Mono | SIL Open Font License 1.1 |

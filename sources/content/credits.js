@@ -5,6 +5,7 @@ export default [
     { what: 'Surface textures', name: 'ambientCG', url: 'https://ambientcg.com', license: 'CC0' },
     { what: 'Earth imagery', name: 'NASA Earth Observatory (Blue Marble, Black Marble)', url: 'https://science.nasa.gov/earth/earth-observatory/', license: 'Public domain' },
     { what: 'Music', name: '“Outer Space Loop” by wipics', url: 'https://opengameart.org/content/outer-space-loop', license: 'CC0' },
-    { what: 'Sound effects', name: 'Kenney (Sci-Fi Sounds, Interface Sounds)', url: 'https://kenney.nl', license: 'CC0' },
+    { what: 'Sound effects', name: 'Kenney (Interface Sounds)', url: 'https://kenney.nl', license: 'CC0' },
+    { what: 'Travel whoosh', name: '“Air Woosh Move” by Almitory', url: 'https://opengameart.org/content/air-woosh-move', license: 'CC0' },
     { what: 'Fonts', name: 'Inter, JetBrains Mono (Google Fonts)', url: 'https://fonts.google.com', license: 'SIL Open Font License' }
 ]
