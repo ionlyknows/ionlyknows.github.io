@@ -22,6 +22,10 @@ Every 3D model, texture, sound, and font used on the site is listed here. CC-BY 
 | “Air Woosh Move” (`air_move.wav`) → `public/audio/warp.mp3` (launch / travel whoosh; slowed to 2.2 s without pitch change, band-limited 70 Hz–7 kHz, faded in/out, mono 96 kbps) | Sound effect | Almitory | https://opengameart.org/content/air-woosh-move | CC0 1.0 |
 | `maximize_001` → `public/audio/panel.mp3` (panel open; low-passed at 4.5 kHz and faded so it isn't harsh) | Sound effect | Kenney (Interface Sounds) | https://opengameart.org/content/interface-sounds | CC0 1.0 |
 | `confirmation_001` → `public/audio/beacon.mp3` (beacon in range) | Sound effect | Kenney (Interface Sounds) | https://opengameart.org/content/interface-sounds | CC0 1.0 |
+| “Astronaut” (model + animations Idle, Walk, Run, Wave, Interact) → `public/models/astronaut.glb` (meshopt-compressed with gltf-transform; recoloured in code to the Apeiron palette; source kept in `art/astronaut/astronaut-quaternius-source.glb`) | 3D model + animations | Quaternius | https://poly.pizza/m/3hC2i0CTuO | CC0 1.0 |
+| Ship, rubber duck, antenna dish, beacons, launch pads (built in code: `sources/Game/State/PropShapes.js`) | 3D models | Jefferson F. Laspiñas | this repo | Own work |
+| Rubber-duck squeak (synthesized in `sources/Game/Audio.js`, no file) | Sound effect | Jefferson F. Laspiñas | this repo | Own work |
+| Share image `public/media/og-image.webp` (render of the site itself + title text) | Image | Jefferson F. Laspiñas | this repo | Own work |
 | Inter (loaded from Google Fonts) | Font | Rasmus Andersson | https://fonts.google.com/specimen/Inter | SIL Open Font License 1.1 |
 | JetBrains Mono (loaded from Google Fonts) | Font | JetBrains | https://fonts.google.com/specimen/JetBrains+Mono | SIL Open Font License 1.1 |
 

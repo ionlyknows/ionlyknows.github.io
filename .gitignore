@@ -18,3 +18,7 @@ node_modules
 .env
 .env.local
 .env.*.local
+
+# Raw Mixamo / FBX sources never ship (M4)
+art/*.fbx
+art/**/*.fbx

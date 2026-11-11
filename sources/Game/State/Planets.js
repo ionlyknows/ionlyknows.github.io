@@ -51,6 +51,7 @@ export default class Planets
 
             const contentPoints = planet.contentPoints.map((p) => point(p.id, p.position, p.opens))
             const launchPad = point('launchpad', planet.launchPad, 'destinations')
+            const eggs = (planet.eggs || []).map((egg) => point(egg.id, egg.position, 'egg'))
 
             // Beacon bases collide (small, their visible base only); launch pads are flat
             const beaconColliders = contentPoints.map((p) =>
@@ -77,7 +78,7 @@ export default class Planets
                 landingPoint,
                 contentPoints,
                 launchPad,
-                interactives: [ ...contentPoints, launchPad ],
+                interactives: [ ...contentPoints, launchPad, ...eggs ],
                 props,
                 colliders: [ ...props.map((prop) => prop.collider).filter(Boolean), ...beaconColliders, shipCollider ].filter(Boolean)
             }

@@ -109,6 +109,13 @@ export default class Player
         if(pointId !== null && pointId !== point.id)
             return
 
+        // Easter eggs (State/Eggs.js): no panel, no camera move
+        if(point.opens === 'egg')
+        {
+            this.bridge.emit('egg:interact', { id: point.id })
+            return
+        }
+
         // Launch pads open the destination picker right away
         if(point.opens === 'destinations')
         {

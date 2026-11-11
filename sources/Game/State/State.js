@@ -5,6 +5,7 @@ import Planets from './Planets.js'
 import Player from './Player.js'
 import Travel from './Travel.js'
 import Flight from './Flight.js'
+import Eggs from './Eggs.js'
 
 export default class State
 {
@@ -29,6 +30,7 @@ export default class State
         this.player = new Player()
         this.travel = new Travel()
         this.flight = new Flight()
+        this.eggs = new Eggs()
     }
 
     resize()

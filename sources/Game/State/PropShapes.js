@@ -97,6 +97,23 @@ export const PROP_BUILDERS = {
         part(new THREE.CylinderGeometry(0.35, 0.55, 2.6, 4), '#e0b04a', 'polished', { position: [ 0, 1.7, 0 ], rotation: [ 0, Math.PI / 4, 0 ] }),
         part(new THREE.ConeGeometry(0.35, 0.5, 4), '#fff0c0', 'polished', { position: [ 0, 3.25, 0 ], rotation: [ 0, Math.PI / 4, 0 ] })
     ] },
+    // Easter egg 1 (The Forge): a small rubber duck, below knee height
+    duck: { build: () => [
+        part(new THREE.SphereGeometry(0.2, 16, 12), '#ffd23f', 'paint', { position: [ 0, 0.17, 0 ], scale: [ 1, 0.8, 1.25 ] }),
+        part(new THREE.SphereGeometry(0.13, 16, 12), '#ffd23f', 'paint', { position: [ 0, 0.37, 0.14 ] }),
+        part(new THREE.ConeGeometry(0.055, 0.13, 12), '#ff8a1f', 'paint', { position: [ 0, 0.35, 0.3 ], rotation: [ Math.PI / 2, 0, 0 ] }),
+        part(new THREE.SphereGeometry(0.022, 8, 6), '#15171a', 'paint', { position: [ 0.065, 0.4, 0.24 ] }),
+        part(new THREE.SphereGeometry(0.022, 8, 6), '#15171a', 'paint', { position: [ - 0.065, 0.4, 0.24 ] }),
+        part(new THREE.ConeGeometry(0.09, 0.16, 12), '#ffd23f', 'paint', { position: [ 0, 0.24, - 0.25 ], rotation: [ - 1.1, 0, 0 ] })
+    ] },
+    // Easter egg 2 (Home Station): a small antenna dish
+    dish: { build: () => [
+        part(new THREE.BoxGeometry(0.5, 0.12, 0.5), '#6b7079', 'metal', { position: [ 0, 0.06, 0 ] }),
+        part(new THREE.CylinderGeometry(0.06, 0.08, 0.9, 10), '#9aa0a8', 'metal', { position: [ 0, 0.55, 0 ] }),
+        part(new THREE.CylinderGeometry(0.5, 0.1, 0.16, 28), '#e8ebef', 'paint', { position: [ 0, 1.05, 0.08 ], rotation: [ - 0.8, 0, 0 ] }),
+        part(new THREE.CylinderGeometry(0.02, 0.02, 0.38, 6), '#9aa0a8', 'metal', { position: [ 0, 1.17, 0.21 ], rotation: [ - 0.8, 0, 0 ] }),
+        part(new THREE.SphereGeometry(0.05, 10, 8), '#7ff9ff', 'glow', { position: [ 0, 1.3, 0.34 ] })
+    ] },
     banner: { build: () => [
         part(new THREE.CylinderGeometry(0.05, 0.05, 3, 10), '#c9ced6', 'metal', { position: [ 0, 1.5, 0 ] }),
         part(new THREE.BoxGeometry(1.2, 0.7, 0.03), '#b3263f', 'cloth', { position: [ 0.62, 2.5, 0 ] }),

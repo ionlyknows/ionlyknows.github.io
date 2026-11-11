@@ -19,6 +19,7 @@ import DestinationPicker from './components/panels/DestinationPicker.vue'
 import SettingsPanel from './components/panels/SettingsPanel.vue'
 import QuickView from './components/QuickView.vue'
 import FlightHUD from './components/FlightHUD.vue'
+import EasterEggs from './components/EasterEggs.vue'
 import SoundToggle from './components/SoundToggle.vue'
 import { track } from '../Game/Analytics.js'
 
@@ -186,6 +187,7 @@ onUnmounted(() =>
 
     <Navigation v-if="onFoot || inFlight" :location="inFlight ? '' : location.name" @open-panel="openPanel" @quick="openQuick('button')" />
     <FlightHUD v-if="inFlight" @skip="skipFlight" />
+    <EasterEggs v-if="!showLoading" :count="game.state.eggs.count" :show-counter="onFoot || inFlight" />
 
     <template v-if="onFoot">
         <LocationNav :current="location.id" @travel="travelTo" />

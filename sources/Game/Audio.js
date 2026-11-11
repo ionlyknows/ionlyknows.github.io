@@ -39,6 +39,7 @@ export default class Audio
         this.bridge.on('panel:open', () => this.play('panel'))
         this.bridge.on('prompt:show', () => this.play('beacon'))
         this.bridge.on('flight:boost', () => this.play('boost'))
+        this.bridge.on('egg:found', ({ id }) => id === 'duck' ? this.squeak() : this.play('beacon'))
         this.game.stateMachine.events.on('change', (state, previous) =>
         {
             // The quick-view pauses the scene: keep the sound where it was
@@ -169,6 +170,29 @@ export default class Audio
         source.connect(gain).connect(this.master)
         source.start(now)
         source.stop(end)
+    }
+
+    // Rubber-duck squeak (easter egg), synthesized: two soft rising sine chirps, no file
+    squeak()
+    {
+        if(!this.context)
+            return
+        const now = this.context.currentTime
+        for(const start of [ 0, 0.16 ])
+        {
+            const oscillator = this.context.createOscillator()
+            const gain = this.context.createGain()
+            oscillator.type = 'sine'
+            oscillator.frequency.setValueAtTime(900, now + start)
+            oscillator.frequency.exponentialRampToValueAtTime(1700, now + start + 0.07)
+            oscillator.frequency.exponentialRampToValueAtTime(1150, now + start + 0.13)
+            gain.gain.setValueAtTime(0, now + start)
+            gain.gain.linearRampToValueAtTime(0.18, now + start + 0.015)
+            gain.gain.linearRampToValueAtTime(0, now + start + 0.13)
+            oscillator.connect(gain).connect(this.master)
+            oscillator.start(now + start)
+            oscillator.stop(now + start + 0.14)
+        }
     }
 
     set(volume, muted)

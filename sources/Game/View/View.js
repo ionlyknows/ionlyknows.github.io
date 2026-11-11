@@ -5,6 +5,7 @@ import Cinematics from './Cinematics.js'
 import ControlHints, { WALK_HINTS, FLIGHT_HINTS } from './ControlHints.js'
 import Ship from './Ship.js'
 import Asteroids from './Asteroids.js'
+import Confetti from './Confetti.js'
 import Game from '@/Game.js'
 import StateMachine from '@/StateMachine.js'
 import Earth from './Earth.js'
@@ -58,6 +59,7 @@ export default class View
         this.player = new PlayerModel()
         this.ship = new Ship()
         this.asteroids = new Asteroids()
+        this.confetti = new Confetti()
 
         // Control hints: own scene, drawn after bloom
         const stateMachine = Game.getInstance().stateMachine
@@ -88,12 +90,19 @@ export default class View
         return Promise.all([ setSurfaceResolution('1k', [ 'regolith', 'metal' ]), this.earth.ready ])
     }
 
+    // The astronaut GLB (resolves even if it fails: the placeholder stays)
+    loadCharacter()
+    {
+        return this.player.load()
+    }
+
     // PMREM environment: built while the textures download, then given to every material that
     // asked for it (before the scene's shaders compile, so they include it)
     // Returns a promise for the real map; materials get a same-shaped placeholder right away
     createEnvironment()
     {
         const { placeholder, ready } = this.space.createEnvironment(this.renderer.instance)
+        this.environmentPlaceholder = placeholder
         const assign = (texture) => this.scene.traverse((object) =>
         {
             const materials = Array.isArray(object.material) ? object.material : [ object.material ]
@@ -153,6 +162,7 @@ export default class View
         this.player.update()
         this.ship.update()
         this.asteroids.update()
+        this.confetti.update()
         this.hints.update()
         this.flightHints.update()
         this.lights.update()

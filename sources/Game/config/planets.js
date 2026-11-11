@@ -1,7 +1,8 @@
 // Planet layout. Positions on a planet are { lat, long } in degrees.
 // Names/descriptions live in sources/content/locations.js (same ids).
 // Content points reference panels by type; the UI resolves the text.
-// Prop types: rock, crystal, antenna, panel, telescope, floatingCrystal, monument, banner.
+// Prop types: rock, crystal, antenna, panel, telescope, floatingCrystal, monument, banner, duck, dish.
+// eggs: easter eggs (M4, BR-11), interactive like content points but without a beacon.
 // Prop size = collider radius (world units).
 export default [
     {
@@ -24,8 +25,10 @@ export default [
             { type: 'panel', position: { lat: 55, long: 150 }, size: 1 },
             { type: 'rock', position: { lat: - 65, long: - 20 }, size: 0.8 },
             { type: 'rock', position: { lat: 20, long: - 150 }, size: 0.7 },
-            { type: 'rock', position: { lat: - 35, long: 60 }, size: 0.6 }
-        ]
+            { type: 'rock', position: { lat: - 35, long: 60 }, size: 0.6 },
+            { type: 'dish', position: { lat: 15, long: 130 }, size: 1 } // easter egg: faces Earth, far from the beacons
+        ],
+        eggs: [ { id: 'signal', position: { lat: 15, long: 130 } } ]
     },
     {
         id: 'forge',
@@ -45,8 +48,10 @@ export default [
             { type: 'rock', position: { lat: - 70, long: - 110 }, size: 0.9 },
             { type: 'crystal', position: { lat: - 14, long: 30 }, size: 0.9 },
             { type: 'crystal', position: { lat: 65, long: - 60 }, size: 1.1 },
-            { type: 'crystal', position: { lat: - 5, long: 175 }, size: 1 }
-        ]
+            { type: 'crystal', position: { lat: - 5, long: 175 }, size: 1 },
+            { type: 'duck', position: { lat: 12, long: - 165 }, size: 1 } // easter egg: on the dark side
+        ],
+        eggs: [ { id: 'duck', position: { lat: 12, long: - 165 } } ]
     },
     {
         id: 'observatory',

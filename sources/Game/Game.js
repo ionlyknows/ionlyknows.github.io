@@ -86,11 +86,16 @@ export default class Game
         // same-shaped placeholder map). Compile for the target the scene really renders into:
         // with post-processing that is the composer's render target, otherwise the screen.
         const environment = this.view.createEnvironment().then(() => step(0.1))
+        // The astronaut GLB (~0.5 MB) arrives first so its skinned shaders compile with the rest
         const renderer = this.view.renderer.instance
         const postProcessing = this.view.postProcessing
-        renderer.setRenderTarget(postProcessing.quality === 'low' ? null : postProcessing.composer.renderTarget1)
-        const compiling = renderer.compileAsync(this.view.scene, this.view.camera.instance)
-        renderer.setRenderTarget(null)
+        const compiling = this.view.loadCharacter().then(() =>
+        {
+            renderer.setRenderTarget(postProcessing.quality === 'low' ? null : postProcessing.composer.renderTarget1)
+            const compiled = renderer.compileAsync(this.view.scene, this.view.camera.instance)
+            renderer.setRenderTarget(null)
+            return compiled
+        })
         const post = postProcessing.quality === 'low' ? Promise.resolve() : this.view.compilePostProcessing()
 
         await Promise.all([

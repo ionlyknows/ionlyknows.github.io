@@ -165,7 +165,8 @@ export default class Planets
 
         // Beacons for content points, plus the launch pad
         for(const point of planet.interactives)
-            this.createMarker(item, point, point.opens === 'destinations')
+            if(point.opens !== 'egg') // easter eggs stay hidden
+                this.createMarker(item, point, point.opens === 'destinations')
 
         item.atmosphere = createAtmosphere(planet.radius, planet.accent, ATMOSPHERE_INTENSITY, this.sunDirection)
         group.add(item.atmosphere)

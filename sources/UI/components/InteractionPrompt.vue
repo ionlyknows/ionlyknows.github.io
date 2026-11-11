@@ -13,7 +13,8 @@ const labels = {
     skills: 'View skills',
     achievements: 'View achievements',
     activities: 'View activities',
-    destinations: 'Travel'
+    destinations: 'Travel',
+    egg: 'Inspect'
 }
 
 const label = computed(() => labels[props.type] || '')

@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import View from '@/View/View.js'
 import State from '@/State/State.js'
 import { createAtmosphere } from './Materials/atmosphere.js'
+import UIBridge from '../../UI/UIBridge.js'
 
 const BASE = `${import.meta.env.BASE_URL}textures/earth/`
 const BEACON_COLOR = new THREE.Color('#7ff9ff').multiplyScalar(1.4) // a small glowing point
@@ -47,6 +48,10 @@ export default class Earth
         this.setClouds()
         this.setBeacon()
         this.group.add(createAtmosphere(this.data.radius, '#6fb4ff', 0.36, this.sunDirection))
+
+        // Easter egg "Signal from home": the Philippines beacon flashes for a few seconds
+        this.flash = 0
+        UIBridge.getInstance().on('egg:found', ({ id }) => { if(id === 'signal') this.flash = 1 })
 
         this.view.world.updateMatrixWorld(true)
         this.beaconPosition = this.beacon.getWorldPosition(new THREE.Vector3())
@@ -116,8 +121,10 @@ export default class Earth
     update()
     {
         const pulse = 1 + Math.sin(this.state.time.elapsed * 3) * 0.15
-        this.beacon.scale.setScalar(pulse)
-        this.beam.material.opacity = 0.2 + (pulse - 1) * 0.3
+        this.flash = Math.max(0, this.flash - this.state.time.delta / 4)
+        const blink = this.flash * (0.5 + 0.5 * Math.sin(this.state.time.elapsed * 14))
+        this.beacon.scale.setScalar(pulse * (1 + blink * 2.5))
+        this.beam.material.opacity = 0.2 + (pulse - 1) * 0.3 + blink * 0.5
         this.clouds.rotation.y += this.state.time.delta * 0.004
     }
 }
