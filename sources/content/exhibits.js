@@ -7,6 +7,11 @@ export default {
     hangar: { console: 'Destinations' }, // M6b: the hangar console (opens the destination picker)
     featured: { eyebrow: 'How I build', problem: 'Problem', outcome: 'Outcome', architecture: 'Architecture', frontend: 'Frontend', backend: 'Backend', database: 'Database', deployment: 'Deployment' },
     goals: { title: 'Where I\'m going', currentlyLearning: 'Currently learning', next: 'Next', goal: 'Goal' },
+    // M7 The Observatory's exploration stations (the goal under the telescope's caption is goals.goal)
+    telescope: { caption: 'Looking ahead', hint: 'Drag to look around · Scroll to zoom' },
+    radio: { title: 'Radio dish', hint: 'Drag the dial or use ← → · E or Esc to leave', dial: 'Tuning dial', static: 'Static… keep tuning' },
+    lab: { eyebrow: 'Science lab', source: 'Source: NASA Science' },
+    rover: { hint: 'W / S drive · A / D steer · Shift boost · Space brake · E (stopped) get out' },
     // Hologram bodies that are not locations (names only; locations use locations.js)
     hologram: { sun: { name: 'Sun', description: '' }, earth: { name: 'Earth', description: '' } }
 }

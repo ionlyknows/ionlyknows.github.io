@@ -12,6 +12,7 @@ const TARGET_DAMPING = 18 // camera target: 1 - exp(-k·dt) (the only smoothing 
 const DISTANCE_RECOVERY = 4 // how fast the camera moves back out after a prop
 const IDLE_DELAY = 8 // s without input before the camera drifts
 const IDLE_SPEED = 0.06 // rad/s
+const DRIVE = { distance: 8.5, pitch: 17 * Math.PI / 180, follow: 3, pullIn: 23 } // M7 rover: behind it, turning with it
 
 const _desired = new THREE.Vector3()
 const _direction = new THREE.Vector3()
@@ -58,6 +59,7 @@ export default class CameraThirdPerson
         this.forward.copy(this.player.facing)
         this.target.copy(this.player.renderPosition).addScaledVector(this.player.renderUp, this.targetOffset)
         this.currentDistance = this.state.interior?.active ? this.indoorDistance : this.distance
+        this.driveBlend = 0
     }
 
     shift(offset)
@@ -117,7 +119,16 @@ export default class CameraThirdPerson
             else
                 this.distance = THREE.MathUtils.clamp(this.distance + this.controls.pointer.wheel * 0.01, this.distanceLimits.min, this.distanceLimits.max)
         }
-        const distance = indoor ? this.indoorDistance : this.distance
+        // Driving (M7): the camera swings in behind the rover (damped), at a fixed distance and pitch
+        const driving = this.game.stateMachine.is(StateMachine.DRIVING)
+        if(driving)
+            this.forward.lerp(player.facing, 1 - Math.exp(- DRIVE.follow * delta))
+        // Distance and pitch ease between walking and driving (no jump getting in or out; walking
+        // itself is unchanged: blend 0)
+        this.driveBlend += ((driving ? 1 : 0) - this.driveBlend) * (1 - Math.exp(- 4 * delta))
+        const walkDistance = indoor ? this.indoorDistance : this.distance
+        const distance = walkDistance + (DRIVE.distance - walkDistance) * this.driveBlend
+        const pitch = this.pitch + (DRIVE.pitch - this.pitch) * this.driveBlend
 
         // Keep forward tangent to the current up
         this.forward.projectOnPlane(this.up)
@@ -131,14 +142,18 @@ export default class CameraThirdPerson
 
         // Behind and above the player; pulled in (immediately) if a prop is in the way,
         // eased back out once it's clear
-        _direction.copy(this.forward).multiplyScalar(- Math.cos(this.pitch)).addScaledVector(this.up, Math.sin(this.pitch)).normalize()
+        _direction.copy(this.forward).multiplyScalar(- Math.cos(pitch)).addScaledVector(this.up, Math.sin(pitch)).normalize()
         // Indoors the ray is tested against every wall and the ceiling, so it never clips through
         const allowed = indoor
             ? planarCameraClearance(this.state.interior.room, this.target, _direction, distance)
             : cameraClearance(this.state.planets.current, this.target, _direction, distance)
-        this.currentDistance = allowed < this.currentDistance
-            ? allowed
-            : this.currentDistance + (Math.min(allowed, distance) - this.currentDistance) * (1 - Math.exp(- DISTANCE_RECOVERY * delta))
+        // Walking: pulled in at once. Driving (M7): a prop the rover passes would snap the camera from
+        // 8.5 to 1.5 m in one frame, so it is pulled in very fast instead (90% in 0.1 s; the camera
+        // spheres are larger than the props, so it stays clear of them)
+        if(allowed < this.currentDistance)
+            this.currentDistance = this.driveBlend > 0.5 ? this.currentDistance + (allowed - this.currentDistance) * (1 - Math.exp(- DRIVE.pullIn * delta)) : allowed
+        else
+            this.currentDistance += (Math.min(allowed, distance) - this.currentDistance) * (1 - Math.exp(- DISTANCE_RECOVERY * delta))
 
         this.position.copy(this.target).addScaledVector(_direction, this.currentDistance)
 

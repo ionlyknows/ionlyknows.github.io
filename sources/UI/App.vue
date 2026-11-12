@@ -19,7 +19,11 @@ import DestinationPicker from './components/panels/DestinationPicker.vue'
 import MapOverlay from './components/panels/MapOverlay.vue'
 import PhotoPanel from './components/panels/PhotoPanel.vue'
 import GoalsPanel from './components/panels/GoalsPanel.vue'
+import FactPanel from './components/panels/FactPanel.vue'
+import RadioPanel from './components/panels/RadioPanel.vue'
 import HologramOverlay from './components/HologramOverlay.vue'
+import TelescopeOverlay from './components/TelescopeOverlay.vue'
+import DriveHint from './components/DriveHint.vue'
 import SettingsPanel from './components/panels/SettingsPanel.vue'
 import QuickView from './components/QuickView.vue'
 import FlightHUD from './components/FlightHUD.vue'
@@ -45,10 +49,12 @@ const panels = {
     destinations: DestinationPicker,
     map: MapOverlay,
     photo: PhotoPanel,
-    goals: GoalsPanel
+    goals: GoalsPanel,
+    fact: FactPanel,
+    radio: RadioPanel
 }
 // Panels that open on one item (M6: a station screen / frame / console, a Forge banner)
-const ITEM_PANELS = [ 'work', 'achievements', 'activities', 'skills', 'photo' ]
+const ITEM_PANELS = [ 'work', 'achievements', 'activities', 'skills', 'photo', 'fact' ]
 
 const gameState = ref('LOADING')
 const loadProgress = ref(0)
@@ -225,6 +231,8 @@ onUnmounted(() =>
     </template>
 
     <HologramOverlay v-if="gameState === 'HOLOGRAM'" :current="location.id" />
+    <TelescopeOverlay v-if="gameState === 'TELESCOPE'" />
+    <DriveHint v-if="gameState === 'DRIVING'" />
     <QuickView v-if="quickOpen" @close="closeQuick" />
     <SoundToggle />
 

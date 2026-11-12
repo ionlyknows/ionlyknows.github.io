@@ -18,7 +18,11 @@ const labels = {
     goals: 'View goals',
     hologram: 'Explore the hologram',
     destinations: 'Travel',
-    egg: 'Inspect'
+    egg: 'Inspect',
+    telescope: 'Look through the telescope',
+    rover: 'Drive the rover',
+    sample: 'Scan sample',
+    radio: 'Tune the radio'
 }
 
 // Launch pads and the station's hangar console (M6b) both open the destination picker

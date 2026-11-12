@@ -61,6 +61,34 @@ function rockGeometry()
     return geometry
 }
 
+// M7 telescope: pivot (top of the fork) and the tube's axis (up and away from the visitor), local
+export const TELESCOPE = { pivot: [ 0, 2.05, 0 ], elevation: 55 * Math.PI / 180, top: 2.3 }
+TELESCOPE.axis = [ 0, Math.sin(TELESCOPE.elevation), - Math.cos(TELESCOPE.elevation) ]
+
+// A part along the tube: `along` from the pivot, lifted `lift` above the tube's axis
+function telescopeTube(along, lift)
+{
+    const [ px, py, pz ] = TELESCOPE.pivot
+    const [ ax, ay, az ] = TELESCOPE.axis
+    // above the tube, perpendicular to its axis, toward local +Y
+    const ux = 0
+    const uy = Math.cos(TELESCOPE.elevation)
+    const uz = Math.sin(TELESCOPE.elevation)
+    return { position: [ px + ax * along + ux * lift, py + ay * along + uy * lift, pz + az * along + uz * lift ], rotation: [ - (Math.PI / 2 - TELESCOPE.elevation), 0, 0 ] }
+}
+
+// M7 science lab: a sample stand's pedestal (the sample sits at about 1.2 m)
+export const SAMPLE_HEIGHT = 1.22
+function samplePedestal()
+{
+    return [
+        part(new THREE.CylinderGeometry(0.34, 0.4, 0.12, 20), '#9aa0a8', 'metal', { position: [ 0, 0.06, 0 ] }),
+        part(new THREE.CylinderGeometry(0.12, 0.16, 0.9, 14), '#eef1f4', 'paint', { position: [ 0, 0.55, 0 ] }),
+        part(new THREE.CylinderGeometry(0.3, 0.26, 0.08, 20), '#3d434c', 'metal', { position: [ 0, 1.02, 0 ] }),
+        part(new THREE.TorusGeometry(0.29, 0.015, 6, 28), '#5ff2e0', 'glow', { position: [ 0, 1.06, 0 ], rotation: [ Math.PI / 2, 0, 0 ] })
+    ]
+}
+
 // `scaled` props scale with size; `varied` props get a per-instance non-uniform scale
 export const PROP_BUILDERS = {
     rock: { scaled: true, varied: true, build: () => [ { geometry: rockGeometry(), mat: 'rock' } ] },
@@ -127,6 +155,51 @@ export const PROP_BUILDERS = {
         part(new THREE.BoxGeometry(1.9, 1.15, 0.12), '#3d434c', 'metal', { position: [ 0, 1.45, - 0.1 ], rotation: [ - 0.35, 0, 0 ] }),
         part(new THREE.BoxGeometry(1.7, 0.05, 0.05), '#7ff9ec', 'glow', { position: [ 0, 0.96, 0.36 ] })
     ] },
+    // M7, The Observatory: the big telescope. Local +Z faces the visitor; the tube points up and
+    // away (−Z) along TELESCOPE.axis from the fork's pivot; the telescope view looks out of its top end
+    observatoryTelescope: { build: () => [
+        part(new THREE.CylinderGeometry(0.95, 1.1, 0.5, 28), '#c9ced6', 'paint', { position: [ 0, 0.25, 0 ] }),
+        part(new THREE.CylinderGeometry(0.32, 0.42, 1.1, 18), '#e8ebef', 'paint', { position: [ 0, 1.05, 0 ] }),
+        part(new THREE.BoxGeometry(1.5, 0.18, 0.5), '#9aa0a8', 'metal', { position: [ 0, 1.6, 0 ] }),
+        part(new THREE.BoxGeometry(0.14, 0.75, 0.42), '#9aa0a8', 'metal', { position: [ 0.68, 1.95, 0 ] }),
+        part(new THREE.BoxGeometry(0.14, 0.75, 0.42), '#9aa0a8', 'metal', { position: [ - 0.68, 1.95, 0 ] }),
+        part(new THREE.CylinderGeometry(0.5, 0.5, 3.4, 28), '#f4f1ea', 'paint', telescopeTube(0.5, 0)),
+        part(new THREE.CylinderGeometry(0.56, 0.56, 0.22, 28), '#2a9d8f', 'paint', telescopeTube(1.95, 0)),
+        part(new THREE.CylinderGeometry(0.47, 0.47, 0.03, 28), '#5ff2e0', 'glow', telescopeTube(2.21, 0)),
+        part(new THREE.CylinderGeometry(0.09, 0.09, 1.1, 10), '#3d434c', 'metal', telescopeTube(0.9, 0.62)),
+        part(new THREE.CylinderGeometry(0.06, 0.06, 0.35, 10), '#3d434c', 'metal', telescopeTube(- 1.25, 0))
+    ] },
+    // M7, The Observatory: the science lab hut (closed; +Z faces the sample stands) with the scanner
+    // on its front
+    labHut: { build: () => [
+        part(new THREE.BoxGeometry(4, 0.2, 3), '#9aa0a8', 'metal', { position: [ 0, 0.1, 0 ] }),
+        part(new THREE.BoxGeometry(3.8, 2.4, 2.8), '#eef1f4', 'paint', { position: [ 0, 1.4, 0 ] }),
+        part(new THREE.BoxGeometry(4.1, 0.18, 3.2), '#2a9d8f', 'paint', { position: [ 0, 2.69, 0 ] }),
+        part(new THREE.BoxGeometry(1.0, 1.9, 0.06), '#3d434c', 'metal', { position: [ - 1.1, 1.15, 1.42 ] }), // door
+        part(new THREE.BoxGeometry(1.5, 0.6, 0.05), '#5ff2e0', 'glow', { position: [ 0.75, 1.75, 1.42 ] }), // window
+        part(new THREE.BoxGeometry(1.1, 0.9, 0.5), '#3d434c', 'metal', { position: [ 0.75, 0.65, 1.62 ] }), // scanner
+        part(new THREE.BoxGeometry(0.8, 0.04, 0.05), '#5ff2e0', 'glow', { position: [ 0.75, 0.95, 1.88 ] }), // scanner slot
+        part(new THREE.CylinderGeometry(0.03, 0.03, 1.2, 8), '#c9ced6', 'metal', { position: [ 1.5, 3.35, - 0.8 ] }),
+        part(new THREE.SphereGeometry(0.07, 10, 8), '#ff3b3b', 'glow', { position: [ 1.5, 3.98, - 0.8 ] })
+    ] },
+    // M7, The Observatory: the radio dish (+Z faces the visitor; the dish looks up and away) with its
+    // tuner console in front
+    radioDish: { build: () => [
+        part(new THREE.CylinderGeometry(0.8, 1.0, 0.4, 24), '#9aa0a8', 'metal', { position: [ 0, 0.2, - 0.6 ] }),
+        part(new THREE.CylinderGeometry(0.22, 0.3, 2.6, 14), '#e8ebef', 'paint', { position: [ 0, 1.6, - 0.6 ] }),
+        part(new THREE.BoxGeometry(0.9, 0.3, 0.5), '#9aa0a8', 'metal', { position: [ 0, 2.95, - 0.6 ] }),
+        // Bowl (the bottom cap of a 1.9 m sphere, 2.6 m across), its lowest point on the mount, open
+        // up and away along (0, 0.73, −0.68); double-sided (seen from below and from above)
+        part(new THREE.SphereGeometry(1.9, 32, 10, 0, Math.PI * 2, Math.PI - 0.75, 0.75), '#f4f1ea', 'cloth', { position: [ 0, 4.39, - 1.9 ], rotation: [ - 0.75, 0, 0 ] }),
+        part(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 8), '#9aa0a8', 'metal', { position: [ 0, 3.55, - 1.11 ], rotation: [ - 0.75, 0, 0 ] }), // feed
+        part(new THREE.SphereGeometry(0.1, 12, 8), '#5ff2e0', 'glow', { position: [ 0, 4.1, - 1.62 ] }),
+        part(new THREE.BoxGeometry(1.2, 0.9, 0.6), '#eef1f4', 'paint', { position: [ 0, 0.45, 0.9 ] }),
+        part(new THREE.BoxGeometry(1.25, 0.6, 0.1), '#3d434c', 'metal', { position: [ 0, 1.15, 0.78 ], rotation: [ - 0.4, 0, 0 ] }),
+        part(new THREE.BoxGeometry(0.9, 0.05, 0.05), '#5ff2e0', 'glow', { position: [ 0, 0.92, 1.21 ] })
+    ] },
+    // M7 sample stands (rock / crystal on a pedestal); the planet's own rock and crystal materials
+    sampleRock: { build: () => [ ...samplePedestal(), part(new THREE.DodecahedronGeometry(0.22, 0), '#ffffff', 'rock', { position: [ 0, 1.2, 0 ], rotation: [ 0.4, 0.7, 0.2 ], scale: [ 1.2, 0.8, 1 ] }) ] },
+    sampleCrystal: { build: () => [ ...samplePedestal(), part(new THREE.OctahedronGeometry(0.2, 0), '#ffffff', 'crystal', { position: [ 0, 1.3, 0 ], scale: [ 0.7, 1.5, 0.7 ] }) ] },
     // M6: where a worker stands (collider only; the worker is drawn by View/CrewModels.js)
     worker: { build: () => [
         part(new THREE.CylinderGeometry(0.4, 0.4, 1.8, 12), '#000000', 'hidden', { position: [ 0, 0.9, 0 ] })
@@ -180,6 +253,38 @@ export const SHIP_SHAPE = {
         part(new THREE.SphereGeometry(0.07, 10, 8), '#ff3b3b', 'glow', { position: [ 2.08, 0.8, - 0.7 ] }),
         part(new THREE.SphereGeometry(0.07, 10, 8), '#3bff7a', 'glow', { position: [ - 2.08, 0.8, - 0.7 ] })
     ]
+}
+
+// M7 rover (The Observatory), built in code: +Z = front, +Y = up, origin on the ground under its
+// middle. `body` = everything that rides on the suspension (View/Rover.js bobs and leans it), the six
+// `wheels` spin (local centres). Shared by the meshes and the parked rover's collider.
+const ROVER_WHITE = '#eef1f4'
+const ROVER_TEAL = '#2a9d8f'
+const ROVER_DARK = '#3d434c'
+export const ROVER_SHAPE = {
+    wheelRadius: 0.38,
+    wheels: [ - 0.95, 0.95 ].flatMap((x) => [ - 0.95, 0, 0.95 ].map((z) => [ x, 0.38, z ])),
+    seat: [ 0, 1.05, - 0.2 ], // where the driver sits (local)
+    body: () => [
+        part(new THREE.BoxGeometry(1.6, 0.42, 2.5), ROVER_WHITE, 'paint', { position: [ 0, 0.78, 0 ] }),
+        part(new THREE.BoxGeometry(1.64, 0.08, 2.54), ROVER_TEAL, 'paint', { position: [ 0, 0.6, 0 ] }),
+        part(new THREE.BoxGeometry(1.2, 0.08, 0.5), ROVER_DARK, 'metal', { position: [ 0, 1.03, - 0.2 ] }), // seat
+        part(new THREE.BoxGeometry(1.2, 0.5, 0.08), ROVER_DARK, 'metal', { position: [ 0, 1.28, - 0.47 ] }), // seat back
+        part(new THREE.BoxGeometry(0.9, 0.35, 0.35), ROVER_DARK, 'metal', { position: [ 0, 1.15, 0.85 ], rotation: [ - 0.4, 0, 0 ] }), // console
+        part(new THREE.BoxGeometry(1.5, 0.08, 0.08), ROVER_DARK, 'metal', { position: [ 0, 1.0, 1.25 ] }), // light bar
+        part(new THREE.BoxGeometry(1.3, 0.05, 0.05), '#fff1cf', 'glow', { position: [ 0, 1.0, 1.3 ] }),
+        part(new THREE.CylinderGeometry(0.025, 0.025, 1.4, 8), '#c9ced6', 'metal', { position: [ 0.6, 1.7, - 1.0 ] }), // antenna mast
+        part(new THREE.CylinderGeometry(0.3, 0.06, 0.08, 18), ROVER_WHITE, 'paint', { position: [ 0.6, 2.45, - 1.0 ], rotation: [ - 0.5, 0, 0 ] }), // dish
+        part(new THREE.SphereGeometry(0.05, 8, 6), '#ff3b3b', 'glow', { position: [ - 0.65, 1.05, - 1.22 ] }),
+        ...[ - 0.95, 0.95 ].map((x) => part(new THREE.BoxGeometry(0.12, 0.1, 2.3), ROVER_DARK, 'metal', { position: [ x * 0.86, 0.5, 0 ] })) // suspension rails
+    ],
+    wheel: () => [
+        // one material (vertex colours): one draw per wheel
+        part(new THREE.CylinderGeometry(0.38, 0.38, 0.3, 18), '#2b2f36', 'paint', { rotation: [ 0, 0, Math.PI / 2 ] }),
+        part(new THREE.CylinderGeometry(0.2, 0.2, 0.32, 6), ROVER_TEAL, 'paint', { rotation: [ 0, 0, Math.PI / 2 ] })
+    ],
+    // Everything at rest, for the parked rover's collider
+    build: () => [ ...ROVER_SHAPE.body(), ...ROVER_SHAPE.wheels.flatMap((centre) => ROVER_SHAPE.wheel().map((item) => { item.geometry.translate(...centre); return item })) ]
 }
 
 const PAD_TOP = 0.16 // pad thickness (MARKER_SHAPES.pad)

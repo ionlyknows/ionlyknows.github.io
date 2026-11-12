@@ -6,7 +6,8 @@ import State from '@/State/State.js'
 import StateMachine from '@/StateMachine.js'
 import UIBridge from '../../UI/UIBridge.js'
 import Camera from './Camera.js'
-import { FIXED_STEP, MAX_STEPS, WALK_SPEED, RUN_SPEED, resetBody, stepBody } from './PlayerPhysics.js'
+import { FIXED_STEP, MAX_STEPS, WALK_SPEED, RUN_SPEED, createBody, resetBody, stepBody } from './PlayerPhysics.js'
+import { stepRover } from './Rover.js'
 import { resetPlanar, stepPlanar } from './PlanarPhysics.js'
 
 const FOCUS_DURATION = 0.6 // camera eases to the beacon before the panel opens
@@ -14,6 +15,8 @@ const INTERACTION_RANGE = 3 // BR-03
 const STEP_OUT = 0.35 // s, the astronaut appearing beside the docked ship (M6b)
 
 const _input = { forward: new THREE.Vector3(), x: 0, z: 0, run: false }
+const _drive = { throttle: 0, steer: 0, boost: false, handbrake: false }
+const _exitBody = createBody()
 
 // The astronaut. Player.update is the ONLY writer of the player position: walking runs in
 // fixed 1/120 s steps (State/PlayerPhysics.js on planets, State/PlanarPhysics.js inside Apeiron
@@ -129,6 +132,23 @@ export default class Player
             return
         }
 
+        // M7 exploration stations (The Observatory)
+        if(point.opens === 'telescope')
+        {
+            this.state.telescope.enter(this.planets.current.stations.telescope)
+            return
+        }
+        if(point.opens === 'rover')
+        {
+            this.state.rover.enter()
+            return
+        }
+        if(point.opens === 'sample')
+        {
+            this.state.lab.start(this.planets.current.stations.lab?.samples.find((sample) => sample.id === point.id))
+            return
+        }
+
         // Easter eggs (State/Eggs.js): no panel, no camera move
         if(point.opens === 'egg')
         {
@@ -136,8 +156,9 @@ export default class Player
             return
         }
 
-        // Launch pads (and the station's hangar console) open the destination picker right away
-        if(point.opens === 'destinations')
+        // Launch pads (and the station's hangar console) open the destination picker right away; the
+        // radio dish's console (M7) opens the tuner the same way
+        if(point.opens === 'destinations' || point.opens === 'radio')
         {
             this.bridge.emit('panel:open', { type: point.opens, id: point.id })
             return
@@ -199,7 +220,23 @@ export default class Player
         else
         {
             const indoor = interior.active
-            if(this.visibility < 1)
+            const planet = this.planets.current
+            const rover = this.state.rover
+            const driving = stateMachine.is(StateMachine.DRIVING)
+
+            // Just got out of the rover (M7): beside it, appearing like after docking
+            if(rover.exit)
+            {
+                rover.exit = false
+                resetBody(this, planet, rover.exitPosition(_exitBody))
+                this.facing.copy(rover.body.facing)
+                this.snap()
+                this.visibility = 0
+            }
+
+            if(driving)
+                this.visibility = 0 // the rover is drawn instead (View/Rover.js)
+            else if(this.visibility < 1)
                 this.visibility = Math.min(1, this.visibility + this.time.delta / STEP_OUT)
             const keys = this.controls.keys.down
             const canMove = this.camera.mode === Camera.MODE_THIRDPERSON && stateMachine.is(StateMachine.ON_FOOT)
@@ -207,15 +244,27 @@ export default class Player
             _input.z = canMove ? (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0) : 0
             _input.x = canMove ? (keys.strafeRight ? 1 : 0) - (keys.strafeLeft ? 1 : 0) : 0
             _input.run = keys.boost
+            _drive.throttle = driving ? (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0) : 0
+            _drive.steer = driving ? (keys.strafeRight ? 1 : 0) - (keys.strafeLeft ? 1 : 0) : 0
+            _drive.boost = keys.boost
+            _drive.handbrake = keys.jump
 
             // Fixed timestep with an accumulator; the render position interpolates the last two steps
-            const planet = this.planets.current
             this.accumulator += this.time.delta
             let steps = 0
             while(this.accumulator >= FIXED_STEP && steps < MAX_STEPS)
             {
                 this.previousPosition.copy(this.position)
-                if(indoor)
+                if(driving)
+                {
+                    // The astronaut rides the rover: its body steps, the player follows it exactly
+                    stepRover(rover.body, planet, _drive, FIXED_STEP)
+                    this.position.copy(rover.body.position)
+                    this.up.copy(rover.body.up)
+                    this.facing.copy(rover.body.facing)
+                    this.speed = 0
+                }
+                else if(indoor)
                     stepPlanar(this, interior.room, _input, FIXED_STEP)
                 else
                     stepBody(this, planet, _input, FIXED_STEP)
@@ -236,7 +285,7 @@ export default class Player
             this.isRunning = this.isMoving && this.speed > (WALK_SPEED + RUN_SPEED) * 0.5
 
             // Interaction prompt (BR-03): only the nearest in-range point
-            const nearest = indoor ? interior.findNearest(this.position, INTERACTION_RANGE) : this.planets.findNearest(this.position)
+            const nearest = driving ? null : indoor ? interior.findNearest(this.position, INTERACTION_RANGE) : this.planets.findNearest(this.position)
             if(nearest !== this.nearestPoint)
             {
                 this.nearestPoint = nearest

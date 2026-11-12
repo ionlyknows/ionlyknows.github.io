@@ -9,6 +9,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 export const PALETTES = {
     // Station crew: off-white suits, teal accents
     crew: { SciFi_Main: '#2ec4b6', SciFi_MainDark: '#aab3bd', Grey: '#1b2a3a', HelmetShell: '#e9ecef', HelmetTrim: '#8a96a3' },
+    // Observatory scientists (M7): white suits, violet accents, light-grey trim
+    scientist: { SciFi_Main: '#8f7bff', SciFi_MainDark: '#e9ecef', SciFi_Light_Accent: '#c9ced6', Grey: '#161b2e', HelmetShell: '#f4f1ea', HelmetTrim: '#8f7bff' },
     // Forge workers: dark overalls, amber accents
     worker: { SciFi_Main: '#ffb24a', SciFi_MainDark: '#4a4f57', SciFi_Light_Accent: '#8e939b', Grey: '#2a1f14', HelmetShell: '#d8b46a', HelmetTrim: '#6b7079' }
 }
