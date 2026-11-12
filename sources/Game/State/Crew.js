@@ -61,9 +61,15 @@ function nextIndex(member)
     return next
 }
 
-// player = { x, z } in the same local frame; room = interior collision data (+ noStop zones)
+// player = { x, z } in the same local frame (+ `extra`: how much bigger than an astronaut the visitor
+// is, M7: the rover); room = interior collision data (+ noStop zones)
 export function stepCrew(member, player, room, dt)
 {
+    const extra = player.extra || 0
+    const contact = CONTACT + extra
+    const yieldDistance = YIELD_DISTANCE + extra * 2
+    const clearDistance = CLEAR_DISTANCE + extra * 2
+    const personalSpace = PERSONAL_SPACE + extra
     const target = member.path[member.index]
     let dirX = target.x - member.baseX
     let dirZ = target.z - member.baseZ
@@ -107,7 +113,7 @@ export function stepCrew(member, player, room, dt)
     // Make room: step aside when the visitor is ahead and close, or very close from any side
     // (also while pausing or waving). In a doorway or in front of an exhibit it never stops: it
     // keeps walking while it steps aside.
-    const inWay = (member.state === 'walk' && distance < YIELD_DISTANCE && ahead > 0.3) || distance < PERSONAL_SPACE
+    const inWay = (member.state === 'walk' && distance < yieldDistance && ahead > 0.3) || distance < personalSpace
     if(inWay && !member.yielding)
     {
         member.yielding = true
@@ -125,7 +131,7 @@ export function stepCrew(member, player, room, dt)
         else if(lateral < - 0.4)
             member.sideTarget = SIDESTEP
     }
-    if(member.yielding && distance > CLEAR_DISTANCE)
+    if(member.yielding && distance > clearDistance)
     {
         member.yielding = false
         member.sideTarget = 0
@@ -152,7 +158,7 @@ export function stepCrew(member, player, room, dt)
         const step = Math.min(WALK_SPEED * dt, remaining)
         const nextX = member.baseX + dirX * step + (- dirZ) * member.side
         const nextZ = member.baseZ + dirZ * step + dirX * member.side
-        if(Math.hypot(player.x - nextX, player.z - nextZ) > CONTACT || Math.hypot(player.x - nextX, player.z - nextZ) > distance)
+        if(Math.hypot(player.x - nextX, player.z - nextZ) > contact || Math.hypot(player.x - nextX, player.z - nextZ) > distance)
         {
             member.baseX += dirX * step
             member.baseZ += dirZ * step
@@ -176,7 +182,7 @@ export function stepCrew(member, player, room, dt)
     // steps aside: its side then points at them)
     const sideStep = Math.max(- SIDESTEP_SPEED * dt, Math.min(SIDESTEP_SPEED * dt, member.sideTarget - member.side))
     const at = (side) => ({ x: member.baseX + (- dirZ) * side, z: member.baseZ + dirX * side })
-    const tooClose = (p) => { const d = Math.hypot(player.x - p.x, player.z - p.z); return d < CONTACT && d < distance }
+    const tooClose = (p) => { const d = Math.hypot(player.x - p.x, player.z - p.z); return d < contact && d < distance }
     if(!tooClose(at(member.side + sideStep)))
         member.side += sideStep
     const point = at(member.side)

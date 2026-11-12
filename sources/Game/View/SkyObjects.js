@@ -55,9 +55,17 @@ export default class SkyObjects
         const b = new THREE.Vector3()
         const direction = new THREE.Vector3()
 
+        // M7 telescope: each constellation's own bright lines (shown when centred) and its centre
+        this.highlights = []
+        const highlightMaterial = new THREE.LineBasicMaterial({ color: '#bfe3ff', transparent: true, opacity: 0, depthWrite: false, fog: false })
+        this.highlightMaterial = highlightMaterial
+
         for(const constellation of constellations)
         {
             const points = constellation.stars.map(([ ra, dec ]) => skyDirection(ra, dec).multiplyScalar(SKY_RADIUS))
+            const own = []
+            const centre = points.reduce((sum, point) => sum.add(point), new THREE.Vector3()).normalize()
+            const extent = Math.max(...points.map((point) => point.clone().normalize().angleTo(centre)))
             constellation.stars.forEach(([ , , magnitude ], i) =>
             {
                 positions.push(...points[i].toArray())
@@ -74,7 +82,16 @@ export default class SkyObjects
                 a.copy(points[i]).addScaledVector(direction, gap)
                 b.copy(points[j]).addScaledVector(direction, - gap)
                 lines.push(...a.toArray(), ...b.toArray())
+                own.push(...a.toArray(), ...b.toArray())
             }
+
+            const highlightGeometry = new THREE.BufferGeometry()
+            highlightGeometry.setAttribute('position', new THREE.Float32BufferAttribute(own, 3))
+            const mesh = new THREE.LineSegments(highlightGeometry, highlightMaterial)
+            mesh.frustumCulled = false
+            mesh.visible = false
+            this.group.add(mesh)
+            this.highlights.push({ id: constellation.id, centre, extent, mesh })
         }
 
         const geometry = new THREE.BufferGeometry()
@@ -116,6 +133,40 @@ export default class SkyObjects
         this.lines = new THREE.LineSegments(lineGeometry, new THREE.LineBasicMaterial({ color: '#8fb3e8', transparent: true, opacity: 0.16, depthWrite: false, fog: false }))
         this.lines.frustumCulled = false
         this.group.add(this.lines)
+    }
+
+    // M7 telescope view: the constellation nearest the centre of view (within its own size plus a
+    // little, less when zoomed in) gets bright lines; returns its id (or null). direction = null: off
+    updateTelescope(direction, zoom, delta)
+    {
+        let best = null
+        let bestAngle = Infinity
+        if(direction)
+        {
+            for(const item of this.highlights)
+            {
+                const angle = direction.angleTo(item.centre)
+                if(angle < item.extent * 0.9 + 0.12 / zoom && angle < bestAngle)
+                {
+                    best = item
+                    bestAngle = angle
+                }
+            }
+        }
+        if(best !== this.highlighted)
+        {
+            if(this.highlighted)
+                this.highlighted.mesh.visible = false
+            this.highlighted = best
+            this.highlightMaterial.opacity = 0
+            if(best)
+                best.mesh.visible = true
+        }
+        if(best)
+            this.highlightMaterial.opacity += (0.75 - this.highlightMaterial.opacity) * (1 - Math.exp(- 6 * delta))
+        // Galaxies show more through the telescope (zoomed in: brighter and larger on screen)
+        this.galaxies.material.uniforms.uBoost.value = direction ? 1.6 : 1
+        return best?.id || null
     }
 
     setConstellationLines(visible)
@@ -172,6 +223,7 @@ export default class SkyObjects
         geometry.setIndex(indices)
 
         this.galaxies = new THREE.Mesh(geometry, new THREE.ShaderMaterial({
+            uniforms: { uBoost: { value: 1 } },
             vertexShader: /* glsl */`
                 attribute vec2 aUv;
                 attribute vec4 aParams;
@@ -184,6 +236,7 @@ export default class SkyObjects
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }`,
             fragmentShader: /* glsl */`
+                uniform float uBoost;
                 varying vec2 vUv;
                 varying vec4 vParams;
                 void main()
@@ -202,7 +255,7 @@ export default class SkyObjects
                         disk = exp(- r * r * 7.0) * 0.8;
                     float alpha = (core * 1.3 + disk) * smoothstep(1.0, 0.55, r);
                     vec3 color = mix(vec3(1.0, 0.88, 0.72), vec3(0.72, 0.82, 1.0), smoothstep(0.1, 0.6, r) * (1.0 - vParams.x));
-                    gl_FragColor = vec4(color * alpha * vParams.z, 1.0);
+                    gl_FragColor = vec4(color * alpha * vParams.z * uBoost, 1.0);
                 }`,
             blending: THREE.AdditiveBlending,
             depthWrite: false,

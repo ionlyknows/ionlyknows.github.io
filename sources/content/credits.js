@@ -7,6 +7,8 @@ export default [
     { what: 'Astronaut', name: 'Quaternius', url: 'https://poly.pizza/m/3hC2i0CTuO', license: 'CC0' },
     { what: 'Spaceship', name: 'Quaternius', url: 'https://poly.pizza/m/uCeLfsdmNP', license: 'CC0' },
     { what: 'Star data', name: 'Yale Bright Star Catalogue (NASA HEASARC)', url: 'https://heasarc.gsfc.nasa.gov/W3Browse/star-catalog/bsc5p.html', license: 'Public domain' },
+    { what: 'Space facts (science lab)', name: 'NASA Science', url: 'https://science.nasa.gov', license: 'Public domain' },
+    { what: 'Radio recordings (Sputnik, Voyager, Cassini, Kepler)', name: 'NASA Historical Sounds', url: 'https://www.nasa.gov/historical-sounds/', license: 'Public domain' },
     { what: 'Music', name: '“Outer Space Loop” by wipics', url: 'https://opengameart.org/content/outer-space-loop', license: 'CC0' },
     { what: 'Sound effects', name: 'Kenney (Interface Sounds)', url: 'https://kenney.nl', license: 'CC0' },
     { what: 'Travel whoosh', name: '“Air Woosh Move” by Almitory', url: 'https://opengameart.org/content/air-woosh-move', license: 'CC0' },

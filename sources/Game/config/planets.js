@@ -2,7 +2,7 @@
 // Names/descriptions live in sources/content/locations.js (same ids).
 // Content points reference panels by type; the UI resolves the text.
 // Prop types: rock, crystal, antenna, panel, telescope, floatingCrystal, monument, banner, duck, dish,
-// exhibit, console, worker (State/PropShapes.js).
+// exhibit, console, worker, observatoryTelescope, radioDish, labHut, sampleRock, sampleCrystal (State/PropShapes.js).
 // eggs: easter eggs (M4, BR-11), interactive like content points but without a beacon.
 // M6: featured (The Forge's featured-build exhibit), activities (one banner per activity in
 // content/activities.js, from `start` in `step`s), workers (ambient crew standing at work), goals
@@ -82,8 +82,26 @@ export default [
         launchPad: { lat: - 24, long: - 10 },
         contentPoints: [], // M6: skills live in the station; The Observatory tells "Where I'm going"
         goals: { position: { lat: 10, long: - 22 }, facing: { lat: 0, long: 0 } },
-        // Kept flat and empty for the M7 exploration stations (no props here)
-        reserved: { telescope: { lat: 5, long: 24 }, rover: { lat: - 18, long: 18 }, lab: { lat: 26, long: 22 }, radioDish: { lat: - 12, long: - 30 } },
+        // M7 ambient scientists (State/Scientists.js): paths between the stations, pausing beside them
+        // (never on their interaction points); `scientistAnchor` = middle of their flat walking map
+        scientistAnchor: { lat: - 4, long: 2 },
+        scientists: [
+            { loop: true, path: [ { lat: 12, long: 33, pause: 4 }, { lat: 16, long: 42 }, { lat: 15, long: 8, pause: 3 } ] }, // telescope ↔ lab
+            { loop: false, path: [ { lat: - 16, long: - 38, pause: 4 }, { lat: - 2, long: - 33 }, { lat: 14, long: - 28, pause: 3 } ] }, // radio dish ↔ goals console
+            { loop: true, path: [ { lat: - 12, long: 26, pause: 4 }, { lat: - 24, long: 28, pause: 3 }, { lat: - 28, long: 10 }, { lat: - 10, long: 8 } ] } // round the rover
+        ],
+        // M7 exploration stations (State/Planets.js builds their props and walk-up points)
+        stations: {
+            telescope: { position: { lat: 5, long: 24 }, facing: { lat: 0, long: 0 } },
+            rover: { position: { lat: - 18, long: 18 }, facing: { lat: - 10, long: 0 } }, // parking spot (the rover is not a prop: it drives)
+            radio: { position: { lat: - 12, long: - 30 }, facing: { lat: 0, long: 0 } },
+            // Science lab: the hut, and six sample stands in a row in front of it (rock / crystal alternating)
+            lab: {
+                hut: { position: { lat: 31, long: 22 }, facing: { lat: 0, long: 20 } },
+                samples: [ 12, 16.5, 21, 25.5, 30, 34.5 ].map((long) => ({ lat: 22.5, long })),
+                facing: { lat: 0, long: 22 }
+            }
+        },
         props: [
             { type: 'telescope', position: { lat: 20, long: - 30 }, size: 1 },
             { type: 'telescope', position: { lat: - 30, long: 40 }, size: 1.1 },

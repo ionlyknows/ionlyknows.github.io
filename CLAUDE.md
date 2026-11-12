@@ -99,4 +99,4 @@ Work may move between Claude Code and Antigravity. Continue work from repo state
 - At the end of a task: run `npm run build`, tick the milestone checklist, update `docs/audit.md` (findings status + change log), and list what changed and anything left open.
 
 ## Current milestone
-M6b — Orbital Space Station → `docs/milestones/M6b-orbital-station.md` (finished milestones are in `docs/milestones/done/`; roadmap: `docs/roadmap-v2.md`)
+M7 — Observatory Exploration → `docs/milestones/M7-observatory-exploration.md` (finished milestones are in `docs/milestones/done/`; roadmap: `docs/roadmap-v2.md`)

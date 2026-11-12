@@ -90,6 +90,17 @@ export default class Camera
         this.position[2] -= offset.z
     }
 
+    // Gameplay source this frame: the chase camera while the ship is the subject, the telescope
+    // view while looking through it (M7), else the third-person camera
+    currentSource()
+    {
+        if(this.usesChase())
+            return this.chase
+        if(this.game.stateMachine.is(StateMachine.TELESCOPE))
+            return this.state.telescope
+        return this.thirdPerson
+    }
+
     // Chase camera while the ship is the subject
     usesChase()
     {
@@ -105,7 +116,7 @@ export default class Camera
 
         if(this.mode === Camera.MODE_THIRDPERSON)
         {
-            const source = this.usesChase() ? this.chase : this.thirdPerson
+            const source = this.currentSource()
             if(source !== this.source)
             {
                 this.source = source
@@ -118,7 +129,7 @@ export default class Camera
             }
             this.blend.t = Math.min(1, this.blend.t + this.state.time.delta / BLEND_TIME)
 
-            const sourceFov = source === this.chase ? this.chase.fov : WALK_FOV
+            const sourceFov = source.fov ?? WALK_FOV
             const weight = smooth(this.blend.t)
             _position.copy(this.blend.position).lerp(source.position, weight)
             _quaternion.copy(this.blend.quaternion).slerp(source.quaternion, weight)

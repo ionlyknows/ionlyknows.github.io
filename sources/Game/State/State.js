@@ -6,6 +6,10 @@ import Player from './Player.js'
 import Flight from './Flight.js'
 import Interior from './Interior.js'
 import Eggs from './Eggs.js'
+import Telescope from './Telescope.js'
+import Rover from './Rover.js'
+import ScienceLab from './ScienceLab.js'
+import Scientists from './Scientists.js'
 
 export default class State
 {
@@ -31,6 +35,10 @@ export default class State
         this.player = new Player()
         this.flight = new Flight()
         this.eggs = new Eggs()
+        this.telescope = new Telescope() // M7 (after the player: E enters there first)
+        this.rover = new Rover()
+        this.lab = new ScienceLab()
+        this.scientists = new Scientists()
     }
 
     resize()
@@ -60,7 +68,11 @@ export default class State
         this.controls.update()
         this.flight.update()
         this.interior.update()
+        this.scientists.update() // before the player: it collides with them
         this.player.update()
+        this.telescope.update()
+        this.rover.update()
+        this.lab.update()
         this.player.camera.update()
     }
 }

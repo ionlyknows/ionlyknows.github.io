@@ -9,6 +9,7 @@ import warpFragmentShader from './Materials/shaders/warp/fragment.glsl'
 import nebulaVertexShader from './Materials/shaders/nebula/vertex.glsl'
 import nebulaFragmentShader from './Materials/shaders/nebula/fragment.glsl'
 import SkyObjects, { galacticPole } from './SkyObjects.js'
+import UIBridge from '../../UI/UIBridge.js'
 
 const WARP_STREAKS = 400
 const WARP_LENGTH = 420
@@ -296,6 +297,22 @@ export default class Space
     {
         this.group.position.copy(this.view.camera.instance.position)
         this.objects.update(this.state.time.delta)
+
+        // M7 telescope view: the centred constellation is highlighted and named (TelescopeOverlay.vue);
+        // the Milky Way and the galaxies show more
+        const telescope = this.state.telescope
+        const looking = telescope.active
+        const target = this.objects.updateTelescope(looking ? telescope.direction : null, telescope.zoom, this.state.time.delta)
+        if(target !== this.telescopeTarget)
+        {
+            this.telescopeTarget = target
+            UIBridge.getInstance().emit('telescope:target', { id: target })
+        }
+        if(looking !== !!this.looking)
+        {
+            this.looking = looking
+            this.nebula.material.uniforms.uMilkyIntensity.value *= looking ? 1.5 : 1 / 1.5
+        }
 
         const amount = this.warp.amount
         this.warp.lines.visible = amount > 0.01

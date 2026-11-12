@@ -8,6 +8,9 @@ import Asteroids from './Asteroids.js'
 import DriftingRocks from './DriftingRocks.js'
 import Confetti from './Confetti.js'
 import Workers from './Workers.js'
+import Rover from './Rover.js'
+import ScienceLab from './ScienceLab.js'
+import Scientists from './Scientists.js'
 import Game from '@/Game.js'
 import StateMachine from '@/StateMachine.js'
 import Earth from './Earth.js'
@@ -77,6 +80,9 @@ export default class View
         this.driftingRocks = new DriftingRocks()
         this.confetti = new Confetti()
         this.workers = new Workers()
+        this.rover = new Rover() // M7 (after the planets: it uses their materials)
+        this.lab = new ScienceLab()
+        this.scientists = new Scientists()
 
         // Control hints: own scene, drawn after bloom
         const stateMachine = Game.getInstance().stateMachine
@@ -285,8 +291,11 @@ export default class View
         this.planets.update()
         this.stationInterior?.update(Game.getInstance().stateMachine)
         this.workers.update()
+        this.scientists.update()
         this.earth.update()
         this.player.update()
+        this.rover.update()
+        this.lab.update()
         this.ship.update()
         this.asteroids.update()
         this.driftingRocks.update()

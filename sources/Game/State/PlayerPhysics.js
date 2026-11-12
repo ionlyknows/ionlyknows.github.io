@@ -142,6 +142,31 @@ export function contact(collider, position, up, outNormal, only = - 1)
     return best
 }
 
+// Moving obstacles (M7 scientists, `planet.movers`: { position, r }): out to touching, in the tangent
+// plane, like a footprint. Returns whether it moved.
+export function resolveMovers(body, planet, radius, foot)
+{
+    let pushed = false
+    for(const mover of planet.movers || [])
+    {
+        _d.subVectors(foot, mover.position).projectOnPlane(body.up)
+        const limit = radius + mover.r + SKIN
+        const distance = _d.length()
+        if(distance >= limit - 1e-9)
+            continue
+        if(distance < 1e-9)
+            _d.copy(body.facing)
+        else
+            _d.divideScalar(distance)
+        body.position.addScaledVector(_d, limit - distance)
+        body.position.sub(planet.center).setLength(planet.radius + body.height).add(planet.center)
+        body.up.subVectors(body.position, planet.center).normalize()
+        foot.copy(body.up).multiplyScalar(planet.radius).add(planet.center)
+        pushed = true
+    }
+    return pushed
+}
+
 // Push the position out of every overlapping footprint (all colliders, up to 3 passes) to
 // exactly PLAYER_RADIUS + SKIN. Push-out is in the tangent plane and the radius is restored
 // right after, so it never changes the height. For one convex footprint this is the exact
@@ -167,6 +192,8 @@ function resolve(body, planet)
                 }
             }
         }
+        if(resolveMovers(body, planet, PLAYER_RADIUS, footPoint(body, planet, _foot)))
+            pushed = true
         if(!pushed)
             break
     }

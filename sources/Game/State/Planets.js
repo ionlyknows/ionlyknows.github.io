@@ -42,6 +42,7 @@ function createStation(planet)
         color: planet.color,
         accent: planet.accent,
         landingPoint: rest.position.clone(),
+        stations: {},
         contentPoints: [],
         launchPad: null,
         shipMatrix: null,
@@ -168,6 +169,39 @@ export default class Planets
                 screens.push({ kind: 'goals', prop })
             }
 
+            // M7 exploration stations (The Observatory): walk-up points, no beacons (BR-03 prompt only)
+            const stations = {}
+            if(planet.stations?.telescope)
+            {
+                const { position, facing } = planet.stations.telescope
+                const prop = addProp('observatoryTelescope', position, facing)
+                exhibitPoint(prop, [ 0, 0, 2.6 ], 'telescope', 'telescope')
+                stations.telescope = { prop }
+            }
+            if(planet.stations?.rover)
+                stations.rover = planet.stations.rover // its parking spot (State/Rover.js: it drives, not a prop)
+            if(planet.stations?.radio)
+            {
+                const { position, facing } = planet.stations.radio
+                const prop = addProp('radioDish', position, facing)
+                exhibitPoint(prop, [ 0, 0, 2.2 ], 'radio', 'radio')
+                stations.radio = { prop }
+            }
+            if(planet.stations?.lab)
+            {
+                const { hut, samples, facing } = planet.stations.lab
+                addProp('labHut', hut.position, hut.facing)
+                stations.lab = {
+                    samples: samples.map((position, i) =>
+                    {
+                        const prop = addProp(i % 2 ? 'sampleCrystal' : 'sampleRock', position, facing)
+                        const id = `sample-${i + 1}`
+                        exhibitPoint(prop, [ 0, 0, 1.1 ], id, 'sample')
+                        return { id, prop, kind: i % 2 ? 'crystal' : 'rock' }
+                    })
+                }
+            }
+
             // Beacon bases collide (small, their visible base only); launch pads are flat
             const beaconColliders = contentPoints.map((p) =>
             {
@@ -201,6 +235,10 @@ export default class Planets
                 lookAt: (contentPoints[0] || exhibits[0] || launchPad).position, // what you face on landing
                 screens,
                 workers,
+                stations,
+                scientists: planet.scientists || [],
+                scientistAnchor: planet.scientistAnchor,
+                movers: [], // M7 scientists (State/Scientists.js)
                 props,
                 colliders: [ ...props.map((prop) => prop.collider).filter(Boolean), ...beaconColliders, shipCollider ].filter(Boolean)
             }
