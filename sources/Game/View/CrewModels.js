@@ -60,7 +60,12 @@ export function createCrewModel(gltf, palette, { walkSpeed = 1.3, envMap = null 
 }
 
 // Every skinned part → one SkinnedMesh on the first part's skeleton and bind matrix (positions moved
-// into that bind space), the part's colour (palette, else its own) as a vertex colour
+// into that skeleton's bind space), the part's colour (palette, else its own) as a vertex colour.
+// The GLB is quantized per mesh (KHR_mesh_quantization: normalized Int16 positions); each mesh's
+// dequantization is baked into its own skin's inverse bind matrices, so the four skins (feet, legs,
+// body, head) have different bone inverses. A part's vertices are therefore moved by
+// first.bindMatrixInverse · first.boneInverse⁻¹ · part.boneInverse · part.bindMatrix (the same for
+// every bone: the skins differ only by the dequantization), as floats (they leave the Int16 range).
 function mergeSkinned(root, palette, material)
 {
     const parts = []
@@ -72,6 +77,7 @@ function mergeSkinned(root, palette, material)
     if(!parts.length)
         return
     const first = parts[0]
+    const firstBoneToBind = first.skeleton.boneInverses[0].clone().invert()
     const toFirst = new THREE.Matrix4()
     const color = new THREE.Color()
     const geometries = parts.map((part) =>
@@ -80,7 +86,19 @@ function mergeSkinned(root, palette, material)
         for(const name of Object.keys(geometry.attributes))
             if(![ 'position', 'normal', 'skinIndex', 'skinWeight' ].includes(name))
                 geometry.deleteAttribute(name)
-        toFirst.copy(first.bindMatrixInverse).multiply(part.bindMatrix)
+        for(const name of [ 'position', 'normal' ])
+        {
+            const source = geometry.attributes[name]
+            const floats = new Float32Array(source.count * 3)
+            for(let i = 0; i < source.count; i++)
+            {
+                floats[i * 3] = source.getX(i) // dequantized (normalized attributes)
+                floats[i * 3 + 1] = source.getY(i)
+                floats[i * 3 + 2] = source.getZ(i)
+            }
+            geometry.setAttribute(name, new THREE.BufferAttribute(floats, 3))
+        }
+        toFirst.copy(first.bindMatrixInverse).multiply(firstBoneToBind).multiply(part.skeleton.boneInverses[0]).multiply(part.bindMatrix)
         geometry.applyMatrix4(toFirst) // normals follow
         color.set(palette[part.material.name] || part.material.color)
         const colors = new Float32Array(geometry.attributes.position.count * 3)

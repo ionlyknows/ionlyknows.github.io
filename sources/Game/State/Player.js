@@ -143,6 +143,14 @@ export default class Player
             return
         }
 
+        // Inside the station the camera never moves for an exhibit (the modules are too narrow for a
+        // focus shot): the panel opens right away and only the scene dims (View/Cinematics.js)
+        if(this.state.interior.active)
+        {
+            this.bridge.emit('panel:open', { type: point.opens, id: point.id })
+            return
+        }
+
         // Content points: focus shot first, then the panel (input is locked from now on)
         this.focusPoint = point
         stateMachine.set(StateMachine.PANEL_OPEN)

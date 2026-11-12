@@ -70,6 +70,20 @@ Installed third-party skills (general reference only; **CLAUDE.md and the projec
 - `frontend-design` (Anthropic): UI visual quality
 - `threejs-*` (cloudai-x): Three.js API reference
 
+Skills and agents exist in two places (`.claude/` for Claude Code, `.agents/` for Antigravity). When you change one, update both copies identically.
+
+## Tool workflow
+- Claude Code is the primary builder; Antigravity is the backup and visual-bug checker.
+- **Claude Code:** Opus medium for new milestones and 3D/camera/physics/flight; Opus high only after medium fails once; Sonnet for content, UI tweaks, small fixes, docs, audit rows, cleanup.
+- **Antigravity:** Gemini 4 Argon for backup building and visual bugs; Gemini Flash for docs, syncing `.claude/` and `.agents/`, cleanup; Opus only for a hard bug after Argon fails twice; Sonnet only when Argon and Flash are out.
+- Work in one tool at a time. Switch only after a clean commit, in a new chat, with a handoff prompt (last commit, task, files allowed).
+- Never run git commit/push/merge/rebase/reset; the owner commits.
+- Every task ends with the standard report; root-cause fixes only; smoke test before reporting.
+- Screenshots only for visual bugs. Sync `.claude/` and `.agents/` once per milestone.
+
+## Switching tools
+Work may move between Claude Code and Antigravity. Continue work from repo state only: `git status` / `git diff`, `docs/audit.md`, and the current milestone file. Never rely on chat history.
+
 ## QA policy (keep token use low)
 - The **only** automated check is `npm run build` (plus `npx vite preview` at the end of the milestone).
 - At the end of every milestone, run a headless browser smoke test on the production build (load → Launch → intro → one trip to every location → open the map) and fix until there are zero console errors. This is the only browser QA; keep it short.

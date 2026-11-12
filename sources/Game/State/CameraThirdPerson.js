@@ -81,6 +81,10 @@ export default class CameraThirdPerson
         if(!this.active)
             return
 
+        // A panel is open: the camera holds its pose exactly (only the scene dims, View/Cinematics.js)
+        if(this.game.stateMachine.is(StateMachine.PANEL_OPEN))
+            return
+
         const delta = this.time.delta
         const player = this.player
 
