@@ -18,9 +18,10 @@
 
     /* Location accents (HUD, destination picker) */
     --iw-loc-station: #6fd6ff;
+    --iw-loc-moon: #b8c6d9; /* Signal Moon (M6b) */
     --iw-loc-forge: #ff8a3d;
     --iw-loc-observatory: #2ec4b6;
-    --iw-loc-trophy: #ffcf5a;
+    --iw-gold: #ffcf5a; /* certificates and activities (the Trophy Moon is gone, M6) */
 
     --iw-radius-sm: 6px;
     --iw-radius-md: 12px;

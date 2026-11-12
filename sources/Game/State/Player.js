@@ -7,13 +7,17 @@ import StateMachine from '@/StateMachine.js'
 import UIBridge from '../../UI/UIBridge.js'
 import Camera from './Camera.js'
 import { FIXED_STEP, MAX_STEPS, WALK_SPEED, RUN_SPEED, resetBody, stepBody } from './PlayerPhysics.js'
+import { resetPlanar, stepPlanar } from './PlanarPhysics.js'
 
 const FOCUS_DURATION = 0.6 // camera eases to the beacon before the panel opens
+const INTERACTION_RANGE = 3 // BR-03
+const STEP_OUT = 0.35 // s, the astronaut appearing beside the docked ship (M6b)
 
 const _input = { forward: new THREE.Vector3(), x: 0, z: 0, run: false }
 
 // The astronaut. Player.update is the ONLY writer of the player position: walking runs in
-// fixed 1/120 s steps (State/PlayerPhysics.js); every trip is sampled from State/Flight.js.
+// fixed 1/120 s steps (State/PlayerPhysics.js on planets, State/PlanarPhysics.js inside Apeiron
+// Station, M6/M6b); every trip is sampled from State/Flight.js.
 // `renderPosition` interpolates the last two steps; the model draws exactly that.
 export default class Player
 {
@@ -57,32 +61,41 @@ export default class Player
         // Input only queues a jump; the next fixed step applies it
         this.controls.events.on('jumpDown', () =>
         {
-            if(this.camera.mode === Camera.MODE_THIRDPERSON)
+            if(this.camera.mode === Camera.MODE_THIRDPERSON && this.game.stateMachine.is(StateMachine.ON_FOOT))
                 this.jumpRequested = true
         })
 
         this.controls.events.on('interactDown', () => this.interact())
     }
 
-    // Stand at the planet's landing point, facing its main content point (BR-05).
-    // Full physics reset and every smoothed position snapped (spawn and every arrival).
-    place(planet)
+    // Stand at the planet's landing point, facing its main content point (BR-05); at the station:
+    // in the hangar beside the docked ship (planar floor). Full physics reset, every smoothed
+    // position snapped. stepOut: appear over STEP_OUT s (just docked).
+    place(planet, { stepOut = false } = {})
     {
         this.planets.current = planet
-        resetBody(this, planet, planet.landingPoint)
-
-        this.facing.set(1, 0, 0)
-        if(planet.contentPoints.length)
-            this.facing.subVectors(planet.contentPoints[0].position, this.position)
-        this.facing.projectOnPlane(this.up)
-        if(this.facing.lengthSq() < 1e-6)
-            this.facing.set(0, 0, 1).projectOnPlane(this.up)
-        this.facing.normalize()
+        if(planet.kind === 'station')
+        {
+            const interior = this.state.interior
+            const spawn = interior.layout.spawn
+            resetPlanar(this, interior.room, spawn.x, spawn.z, spawn.facing[0], spawn.facing[1])
+        }
+        else
+        {
+            resetBody(this, planet, planet.landingPoint)
+            this.facing.set(1, 0, 0)
+            if(planet.lookAt)
+                this.facing.subVectors(planet.lookAt, this.position)
+            this.facing.projectOnPlane(this.up)
+            if(this.facing.lengthSq() < 1e-6)
+                this.facing.set(0, 0, 1).projectOnPlane(this.up)
+            this.facing.normalize()
+        }
 
         this.snap()
         this.isMoving = false
         this.isRunning = false
-        this.visibility = 1
+        this.visibility = stepOut ? 0 : 1
         this.accumulator = 0
 
         if(this.nearestPoint)
@@ -109,6 +122,13 @@ export default class Player
         if(pointId !== null && pointId !== point.id)
             return
 
+        // Station hologram (M6, State/Interior.js)
+        if(point.opens === 'hologram')
+        {
+            this.state.interior.enterHologram()
+            return
+        }
+
         // Easter eggs (State/Eggs.js): no panel, no camera move
         if(point.opens === 'egg')
         {
@@ -116,7 +136,7 @@ export default class Player
             return
         }
 
-        // Launch pads open the destination picker right away
+        // Launch pads (and the station's hangar console) open the destination picker right away
         if(point.opens === 'destinations')
         {
             this.bridge.emit('panel:open', { type: point.opens, id: point.id })
@@ -144,11 +164,13 @@ export default class Player
             const planet = flight.arrival
             flight.arrival = null
             this.state.shiftOrigin(planet.center.clone())
-            this.place(planet)
+            this.place(planet, { stepOut: planet.kind === 'station' && !flight.skipped })
             return
         }
 
         flight.sample(this)
+        if(flight.phase === 'establish' && this.visibility < 1)
+            this.visibility = Math.min(1, this.visibility + this.time.delta / STEP_OUT)
     }
 
     update()
@@ -161,14 +183,18 @@ export default class Player
         if(!stateMachine.is(StateMachine.PANEL_OPEN))
             this.focusPoint = null
 
+        const interior = this.state.interior
         if(this.state.flight.active || this.state.flight.arrival)
         {
             this.updateFlight()
         }
         else
         {
+            const indoor = interior.active
+            if(this.visibility < 1)
+                this.visibility = Math.min(1, this.visibility + this.time.delta / STEP_OUT)
             const keys = this.controls.keys.down
-            const canMove = this.camera.mode === Camera.MODE_THIRDPERSON
+            const canMove = this.camera.mode === Camera.MODE_THIRDPERSON && stateMachine.is(StateMachine.ON_FOOT)
             _input.forward.copy(this.camera.thirdPerson.forward)
             _input.z = canMove ? (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0) : 0
             _input.x = canMove ? (keys.strafeRight ? 1 : 0) - (keys.strafeLeft ? 1 : 0) : 0
@@ -181,7 +207,10 @@ export default class Player
             while(this.accumulator >= FIXED_STEP && steps < MAX_STEPS)
             {
                 this.previousPosition.copy(this.position)
-                stepBody(this, planet, _input, FIXED_STEP)
+                if(indoor)
+                    stepPlanar(this, interior.room, _input, FIXED_STEP)
+                else
+                    stepBody(this, planet, _input, FIXED_STEP)
                 this.accumulator -= FIXED_STEP
                 steps++
             }
@@ -189,14 +218,17 @@ export default class Player
                 this.accumulator = Math.min(this.accumulator, FIXED_STEP * 0.999)
 
             this.renderPosition.lerpVectors(this.previousPosition, this.position, this.accumulator / FIXED_STEP)
-            this.renderUp.subVectors(this.renderPosition, planet.center).normalize()
+            if(indoor)
+                this.renderUp.set(0, 1, 0)
+            else
+                this.renderUp.subVectors(this.renderPosition, planet.center).normalize()
 
             // Hysteresis so the walk animation never flickers while sliding slowly
             this.isMoving = this.isMoving ? this.speed > 0.3 : this.speed > 0.8
             this.isRunning = this.isMoving && this.speed > (WALK_SPEED + RUN_SPEED) * 0.5
 
             // Interaction prompt (BR-03): only the nearest in-range point
-            const nearest = this.planets.findNearest(this.position)
+            const nearest = indoor ? interior.findNearest(this.position, INTERACTION_RANGE) : this.planets.findNearest(this.position)
             if(nearest !== this.nearestPoint)
             {
                 this.nearestPoint = nearest

@@ -62,7 +62,8 @@ export default class Game
         this.update()
     }
 
-    // Real loading steps (FR-01). Textures download while the shaders compile in parallel
+    // Real loading steps (FR-01): only what the intro's first shots need (M6b realism pass: the rest loads
+    // during the intro, View.loadDeferred). Textures download while the shaders compile in parallel
     // (KHR_parallel_shader_compile, nothing renders during LOADING so the main thread stays free);
     // then one warm-up frame behind the loading screen compiles the rest (shadows,
     // post-processing) so nothing stalls after Launch.
@@ -86,10 +87,11 @@ export default class Game
         // same-shaped placeholder map). Compile for the target the scene really renders into:
         // with post-processing that is the composer's render target, otherwise the screen.
         const environment = this.view.createEnvironment().then(() => step(0.1))
-        // The astronaut GLB (~0.5 MB) arrives first so its skinned shaders compile with the rest
         const renderer = this.view.renderer.instance
         const postProcessing = this.view.postProcessing
-        const compiling = this.view.loadCharacter().then(() =>
+        // The ship GLB (~20 KB: it docks in the intro). The astronaut, the station interior and the
+        // crew load after the loading screen (View.loadDeferred), so Launch is ready sooner
+        const compiling = this.view.ship.load().then(() =>
         {
             renderer.setRenderTarget(postProcessing.quality === 'low' ? null : postProcessing.composer.renderTarget1)
             const compiled = renderer.compileAsync(this.view.scene, this.view.camera.instance)
@@ -109,6 +111,10 @@ export default class Game
         this.warmUp = true
         await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)))
         this.warmUp = false
+        // In the intro's first shot: linked and uploaded now (its night map is a shader uniform)
+        await this.view.warm(this.view.earth.group)
+        for(const texture of Object.values(this.view.earth.textures))
+            await this.view.upload(texture)
         step(0.1)
 
         try { await document.fonts?.ready }
@@ -118,6 +124,7 @@ export default class Game
         const planet = this.state.planets.current
         this.bridge.emit('location:change', { id: planet.id, name: planet.name })
         this.stateMachine.ready()
+        this.view.loadDeferred()
     }
 
     update()

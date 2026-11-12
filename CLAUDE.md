@@ -43,6 +43,8 @@ Allowed dev tool if needed: `@gltf-transform/cli` (asset compression).
 - Compress models (glTF/GLB + meshopt) and textures (WebP).
 - Work **only** on the current milestone's checklist. No extra features.
 - Keep it simple. Choose the simplest solution that meets the requirement.
+- **Bug fixes:** always fix the root cause, never only hide the symptom. Add a guard only as extra protection, and say in the report which is which.
+- After fixing a bug, check other code that uses the same data for the same mistake.
 
 ## Execution loop (every milestone)
 1. **Plan:** read the milestone file and split its tasks into the parallel tracks it lists. No long written plans.
@@ -70,6 +72,7 @@ Installed third-party skills (general reference only; **CLAUDE.md and the projec
 
 ## QA policy (keep token use low)
 - The **only** automated check is `npm run build` (plus `npx vite preview` at the end of the milestone).
+- At the end of every milestone, run a headless browser smoke test on the production build (load → Launch → intro → one trip to every location → open the map) and fix until there are zero console errors. This is the only browser QA; keep it short.
 - Do **not**: write tests, run a separate review/QA agent, re-audit the codebase, take screenshots, or re-read files you just wrote.
 - Jefferson does the real QA by testing on localhost.
 
@@ -82,4 +85,4 @@ Installed third-party skills (general reference only; **CLAUDE.md and the projec
 - At the end of a task: run `npm run build`, tick the milestone checklist, update `docs/audit.md` (findings status + change log), and list what changed and anything left open.
 
 ## Current milestone
-M5 — Universe & Navigation → `docs/milestones/M5-universe-navigation.md` (finished milestones are in `docs/milestones/done/`; roadmap: `docs/roadmap-v2.md`)
+M6b — Orbital Space Station → `docs/milestones/M6b-orbital-station.md` (finished milestones are in `docs/milestones/done/`; roadmap: `docs/roadmap-v2.md`)

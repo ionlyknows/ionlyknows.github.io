@@ -1,5 +1,8 @@
 // The only place project data lives. Empty fields are hidden (BR-07);
 // a project without title or summary is not shown at all.
+// Optional (M6, The Forge's featured-build exhibit): problem, outcome,
+// architecture: { frontend, backend, database, deployment }. Filled only from data already here
+// (the stack); everything else stays empty until Jefferson writes it.
 export default [
     {
         id: 'interactive-3d-portfolio',
@@ -19,7 +22,10 @@ export default [
         demoUrl: '',
         status: 'Live',
         featured: true,
-        order: 1
+        order: 1,
+        problem: '',
+        outcome: '',
+        architecture: { frontend: 'Three.js · Vue.js · GSAP', backend: '', database: '', deployment: '' }
     },
     {
         id: 'onsite-event-registration-system',
@@ -39,7 +45,10 @@ export default [
         demoUrl: 'https://drive.google.com/file/d/1sMgAcB-Ov99gvSC_WX1v8r-GWxa8QfVJ/view',
         status: 'Completed',
         featured: true,
-        order: 2
+        order: 2,
+        problem: '',
+        outcome: '',
+        architecture: { frontend: 'Swing', backend: 'Java', database: 'JSON', deployment: '' }
     },
     {
         id: 'gdg-qa',

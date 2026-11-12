@@ -5,6 +5,9 @@ import skills from '../../../content/skills.js'
 import achievements from '../../../content/achievements.js'
 import activities from '../../../content/activities.js'
 import credits from '../../../content/credits.js'
+import goals from '../../../content/goals.js'
+import photos from '../../../content/photos.js'
+import exhibits from '../../../content/exhibits.js'
 import { has, visibleProjects } from '../../visibleContent.js'
 import { track } from '../../../Game/Analytics.js'
 
@@ -18,12 +21,17 @@ const skillGroups = skills.filter((group) => has(group.items))
 const certificates = achievements.filter((item) => has(item.title))
 const activityItems = activities.filter((item) => has(item.title))
 const education = [ profile.program, profile.school, profile.year ].filter(has)
+const photoItems = photos.filter((photo) => has(photo.src))
+const goalParts = [ 'currentlyLearning', 'next' ].filter((key) => has(goals[key]))
+const showGoals = goalParts.length > 0 || has(goals.goal)
 
 const sections = [
     { id: 'qv-projects', label: 'Projects', show: featured.length || archive.length },
     { id: 'qv-skills', label: 'Skills', show: skillGroups.length },
     { id: 'qv-achievements', label: 'Achievements', show: certificates.length },
     { id: 'qv-activities', label: 'Activities', show: activityItems.length },
+    { id: 'qv-goals', label: 'Goals', show: showGoals },
+    { id: 'qv-photos', label: 'Photos', show: photoItems.length },
     { id: 'qv-about', label: 'About', show: has(profile.bio) || has(profile.experience) }
 ].filter((section) => section.show)
 
@@ -123,7 +131,7 @@ const external = (url) => /^https?:/.test(url)
             </div>
         </section>
 
-        <section v-if="certificates.length" id="qv-achievements" class="qv-section qv-section--trophy">
+        <section v-if="certificates.length" id="qv-achievements" class="qv-section qv-section--gold">
             <h2 class="qv-section__title">Achievements</h2>
             <ul class="qv-grid">
                 <li v-for="item in certificates" :key="item.id" class="qv-card qv-cert">
@@ -137,7 +145,7 @@ const external = (url) => /^https?:/.test(url)
             </ul>
         </section>
 
-        <section v-if="activityItems.length" id="qv-activities" class="qv-section qv-section--trophy">
+        <section v-if="activityItems.length" id="qv-activities" class="qv-section qv-section--gold">
             <h2 class="qv-section__title">Activities</h2>
             <ul class="qv-grid">
                 <li v-for="item in activityItems" :key="item.id" class="qv-card">
@@ -145,6 +153,32 @@ const external = (url) => /^https?:/.test(url)
                     <h3 class="qv-card__title">{{ item.title }}</h3>
                     <p v-if="has(item.description)" class="qv-card__text">{{ item.description }}</p>
                     <a v-if="has(item.url)" class="qv-link" :href="item.url" target="_blank" rel="noopener noreferrer">Open page ↗</a>
+                </li>
+            </ul>
+        </section>
+
+        <section v-if="showGoals" id="qv-goals" class="qv-section qv-section--observatory">
+            <h2 class="qv-section__title">{{ exhibits.goals.title }}</h2>
+            <div class="qv-grid">
+                <div v-for="key in goalParts" :key="key" class="qv-card">
+                    <p class="qv-eyebrow">{{ exhibits.goals[key] }}</p>
+                    <ul class="qv-list">
+                        <li v-for="item in goals[key].filter(has)" :key="item">{{ item }}</li>
+                    </ul>
+                </div>
+                <div v-if="has(goals.goal)" class="qv-card">
+                    <p class="qv-eyebrow">{{ exhibits.goals.goal }}</p>
+                    <p class="qv-card__text">{{ goals.goal }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section v-if="photoItems.length" id="qv-photos" class="qv-section qv-section--station">
+            <h2 class="qv-section__title">{{ exhibits.rooms.photos }}</h2>
+            <ul class="qv-grid">
+                <li v-for="photo in photoItems" :key="photo.id" class="qv-card qv-cert">
+                    <img class="qv-photo" :src="photo.src" :alt="photo.alt || photo.caption || ''" loading="lazy">
+                    <p v-if="has(photo.caption)" class="qv-card__text">{{ photo.caption }}</p>
                 </li>
             </ul>
         </section>
@@ -348,7 +382,8 @@ const external = (url) => /^https?:/.test(url)
 
 .qv-section--forge { --qv-accent: var(--iw-loc-forge); }
 .qv-section--observatory { --qv-accent: var(--iw-loc-observatory); }
-.qv-section--trophy { --qv-accent: var(--iw-loc-trophy); }
+.qv-section--gold { --qv-accent: var(--iw-gold); }
+.qv-photo { width: 100%; border-radius: var(--iw-radius-sm); }
 .qv-section--station { --qv-accent: var(--iw-loc-station); }
 
 .qv-section__title

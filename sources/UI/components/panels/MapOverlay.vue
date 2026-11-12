@@ -17,7 +17,7 @@ const HEIGHT = 600
 const PAD = 90
 
 // Top-down: x → right, z → down. Uniform scale to fit every body (Earth included) with a margin.
-const bodies = [ ...config.map((planet) => ({ x: planet.center[0], z: planet.center[2], r: planet.radius })), { x: earth.center[0], z: earth.center[2], r: earth.radius } ]
+const bodies = [ ...config.map((planet) => ({ x: planet.center[0], z: planet.center[2], r: planet.mapRadius ?? planet.radius })), { x: earth.center[0], z: earth.center[2], r: earth.radius } ]
 const minX = Math.min(...bodies.map((b) => b.x - b.r))
 const maxX = Math.max(...bodies.map((b) => b.x + b.r))
 const minZ = Math.min(...bodies.map((b) => b.z - b.r))
@@ -32,7 +32,7 @@ const places = config
     {
         const location = locations.find((item) => item.id === planet.id)
         const { x, y } = project(planet.center[0], planet.center[2])
-        return { id: planet.id, name: location?.name, description: location?.description, x, y, size: Math.max(22, planet.radius * scale * 2.2) }
+        return { id: planet.id, name: location?.name, description: location?.description, x, y, size: Math.max(22, (planet.mapRadius ?? planet.radius) * scale * 2.2) }
     })
     .filter((place) => has(place.name))
 

@@ -7,12 +7,20 @@ import State from '@/State/State.js'
 import StateMachine from '@/StateMachine.js'
 import UIBridge from '../../UI/UIBridge.js'
 import { BASE_FOV } from './Camera.js'
+import { ATMOSPHERE_SCALE } from './Materials/atmosphere.js'
 import { DURATIONS as FLIGHT_DURATIONS } from '@/State/FlightPhysics.js'
+import { HANGAR_SHOTS } from '@/State/CameraChase.js'
 
 const INTRO_SEEN_KEY = 'apeiron.introSeen'
 const FOCUS_SPEED = 6 // ≈ 0.6 s ease toward the beacon
 const ORBIT_DISTANCE = 2.8 // × destination radius (arrival establishing shot)
 const ORBIT_SWEEP = 0.9 // rad
+// M6b intro (first visit): the ship starts its docking approach at SHIP s; the camera, after the
+// title and the Earth pass, meets it behind the ship at HANDOVER s and hands over to the chase camera.
+// Launch to on foot in the hangar: about 13 s (the docking takes about 6.4 s after SHIP, then the arrival shot)
+const INTRO_TIMES = { ship: 4.8, handover: 6.2 }
+const CHASE = { distance: 11, height: 3.2, ahead: 8 } // State/CameraChase.js pose
+const INTRO_FOV = 60 // = the flight camera's FOV
 
 const _target = new THREE.Vector3()
 const _head = new THREE.Vector3()
@@ -21,6 +29,8 @@ const _matrix = new THREE.Matrix4()
 const _position = new THREE.Vector3()
 const _offset = new THREE.Vector3()
 const _up = new THREE.Vector3()
+const _worldUp = new THREE.Vector3(0, 1, 0)
+const _right = new THREE.Vector3()
 
 export function lookAtPose(override, position, target, up)
 {
@@ -32,7 +42,8 @@ export function lookAtPose(override, position, target, up)
 const smooth = (t) => t * t * (3 - 2 * t)
 const damp = (current, target, speed, delta) => current + (target - current) * (1 - Math.exp(- speed * delta))
 
-// Opening sequence, focus shot, arrival establishing shot and full-screen fades (black, flash, dim).
+// Opening sequence (M6b: stars, title, Earth pass, the ship docking at Apeiron Station, the astronaut
+// in the hangar), focus shot, arrival establishing shot and full-screen fades (black, flash, dim).
 // Writes only into view.camera.override (an input of the camera system, never the camera
 // itself); the gameplay camera is used when weight = 0. Idle drift lives in CameraThirdPerson.
 export default class Cinematics
@@ -74,6 +85,10 @@ export default class Cinematics
         if(state === StateMachine.INTRO)
             this.playIntro()
 
+        // The intro's docking finished (State/Flight.js): on foot in the hangar
+        if(state === StateMachine.ON_FOOT && previous === StateMachine.INTRO && this.intro)
+            this.finishIntro()
+
         if(state === StateMachine.ON_FOOT)
         {
             // Control is back: nothing cinematic may keep writing
@@ -90,96 +105,122 @@ export default class Cinematics
             gsap.to(this.screen, { dim: state === StateMachine.PANEL_OPEN ? 1 : 0, duration: 0.3, ease: 'power2.out', overwrite: true })
     }
 
+    // First visit: stars → APEIRON title → Earth pass with the name and role → the camera meets the
+    // ship on its approach → automatic docking (State/Flight.js) → the astronaut in the hangar → hints.
+    // Returning visitors: the title over the docking only. Reduced motion: no flight, a fade into the
+    // hangar with the title.
     playIntro()
     {
         let seen = false
         try { seen = window.localStorage.getItem(INTRO_SEEN_KEY) === '1' }
         catch {}
-        const short = seen || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        const flight = this.state.flight
 
-        const player = this.state.player
-        const up = player.up.clone()
-        const station = this.state.planets.current
-        const earth = this.state.planets.earth
-        const beacon = this.view.earth.beaconPosition
-
-        const endPosition = player.camera.thirdPerson.position.clone()
-        const endTarget = player.position.clone().addScaledVector(up, player.camera.thirdPerson.targetOffset)
-        const behindHigh = endTarget.clone().addScaledVector(up, 22).addScaledVector(player.facing, - 18)
-
-        const toEarth = new THREE.Vector3().subVectors(earth.center, station.center).normalize()
-        const side = new THREE.Vector3().crossVectors(toEarth, up).normalize()
-        const middle = new THREE.Vector3().addVectors(station.center, earth.center).multiplyScalar(0.5)
-
-        let cameraPoints
-        let targetPoints
-        if(short)
-        {
-            cameraPoints = [ behindHigh.clone().addScaledVector(up, 25).addScaledVector(player.facing, - 15), behindHigh, endPosition ]
-            targetPoints = [ station.center, endTarget, endTarget ]
-        }
-        else
-        {
-            const start = middle.clone().addScaledVector(side, 150).addScaledVector(up, 40)
-            cameraPoints = [
-                start,
-                earth.center.clone().addScaledVector(toEarth, - (earth.radius + 30)).addScaledVector(side, 30).addScaledVector(up, 10),
-                earth.center.clone().addScaledVector(toEarth, - (earth.radius + 55)).addScaledVector(side, - 15).addScaledVector(up, - 5),
-                behindHigh,
-                endPosition
-            ]
-            targetPoints = [ start.clone().addScaledVector(side, 200).addScaledVector(up, 30), beacon, beacon, endTarget, endTarget ]
-        }
-
-        this.intro = {
-            u: 0,
-            fov: BASE_FOV,
-            up,
-            camera: new THREE.CatmullRomCurve3(cameraPoints),
-            target: new THREE.CatmullRomCurve3(targetPoints)
-        }
-
+        this.intro = { u: 0, fov: BASE_FOV, weight: 0, up: _worldUp.clone(), camera: null, target: null }
         const intro = this.intro
         const beat = (name) => () => this.bridge.emit('intro:beat', { beat: name })
-        const timeline = gsap.timeline({ onComplete: () => this.finishIntro() })
-
+        const timeline = gsap.timeline()
+        intro.timeline = timeline
         this.screen.black = 1
-        if(short)
+
+        // The hangar is shown only once the station interior has loaded (View.loadDeferred): the
+        // timeline holds (on black, or on the shot over the station) until then
+        const hold = () =>
         {
-            timeline.to(this.screen, { black: 0, duration: 0.4 }, 0)
-            timeline.call(beat('title'), null, 0.1)
-            timeline.call(beat(null), null, 2.2)
-            timeline.to(intro, { u: 1, duration: 3, ease: 'power2.inOut' }, 0)
-        }
-        else
-        {
-            timeline.to(this.screen, { black: 0, duration: 1.6, ease: 'power1.out' }, 0)
-            timeline.call(beat('title'), null, 1.2)
-            timeline.to(intro, { u: 0.12, duration: 3.8, ease: 'none' }, 0)
-            timeline.to(intro, { u: 0.55, duration: 4.4, ease: 'power1.inOut' }, 3.8)
-            timeline.call(beat('name'), null, 4.6)
-            timeline.call(beat(null), null, 8.6)
-            timeline.to(intro, { u: 1, duration: 4.2, ease: 'power2.inOut' }, 8.2)
-            timeline.to(intro, { fov: 62, duration: 2, ease: 'sine.inOut' }, 8.2)
-            timeline.to(intro, { fov: BASE_FOV, duration: 2.2, ease: 'sine.inOut' }, 10.2)
+            if(this.view.stationInterior)
+                return
+            timeline.pause()
+            this.view.loadDeferred().then(() => { if(this.intro?.timeline === timeline) timeline.resume() })
         }
 
-        this.intro.timeline = timeline
+        if(reduced)
+        {
+            timeline.call(hold, null, 0)
+            timeline.to(this.screen, { black: 0, duration: 0.6 }, 0)
+            timeline.call(beat('title'), null, 0.2)
+            timeline.call(beat(null), null, 2.2)
+            timeline.call(() => this.finishIntro(), null, 2.4)
+            return
+        }
+        if(seen)
+        {
+            // Returning visitors (about 3 s): the title over the ship settling on the pad
+            timeline.call(hold, null, 0)
+            timeline.call(() => flight.arriveIntro(true), null, 0.01)
+            timeline.to(this.screen, { black: 0, duration: 0.6 }, 0.01)
+            timeline.call(beat('title'), null, 0.2)
+            timeline.call(beat(null), null, 2.6)
+            return
+        }
+
+        const { cameraPoints, targetPoints } = this.introPath(flight.previewIntro(false, INTRO_TIMES.handover - INTRO_TIMES.ship))
+        intro.camera = new THREE.CatmullRomCurve3(cameraPoints)
+        intro.target = new THREE.CatmullRomCurve3(targetPoints)
+        intro.weight = 1
+
+        const { ship, handover } = INTRO_TIMES
+        const pass = 2.2 // end of the slow opening (stars, title), start of the Earth pass
+        const meet = 4.6 // the Earth pass ends over the station; the camera goes to meet the ship
+        timeline.to(this.screen, { black: 0, duration: 1.2, ease: 'power1.out' }, 0)
+        timeline.call(beat('title'), null, 0.6)
+        timeline.to(intro, { u: 0.15, duration: pass, ease: 'none' }, 0)
+        timeline.to(intro, { u: 0.62, duration: meet - pass, ease: 'power1.inOut' }, pass)
+        timeline.call(beat('name'), null, 2.6)
+        timeline.call(hold, null, ship - 0.05)
+        timeline.call(beat(null), null, 5.8)
+        timeline.to(intro, { u: 1, duration: handover - meet, ease: 'power2.inOut' }, meet)
+        timeline.to(intro, { fov: INTRO_FOV, duration: handover - meet, ease: 'sine.inOut' }, meet)
+        timeline.call(() => flight.arriveIntro(false), null, ship)
+        timeline.to(intro, { weight: 0, duration: 1.0, ease: 'sine.inOut' }, handover)
     }
 
+    // Camera path of the first-visit intro (scene space): far out with Earth ahead, a low pass over
+    // Earth toward the Philippines beacon, over Apeiron Station, then behind the arriving ship
+    // (where the chase camera will be at the handover)
+    introPath(ship)
+    {
+        const station = this.state.interior.center
+        const earth = this.state.planets.earth
+        const beacon = this.view.earth.beaconPosition
+        const up = _worldUp
+        const toEarth = new THREE.Vector3().subVectors(earth.center, station).normalize()
+        const around = (angle, distance, height) => toEarth.clone().negate().applyAxisAngle(up, angle).multiplyScalar(distance).add(earth.center).addScaledVector(up, height)
+
+        const far = around(1.4, earth.radius + 130, 45)
+        const pass = around(0.85, earth.radius * ATMOSPHERE_SCALE + 15, 7) // 15 above the atmosphere shell
+        const over = station.clone().addScaledVector(up, 34).addScaledVector(toEarth, 6)
+        const behind = ship.position.clone().addScaledVector(ship.forward, - CHASE.distance).addScaledVector(ship.up, CHASE.height)
+        const ahead = ship.position.clone().addScaledVector(ship.forward, CHASE.ahead).addScaledVector(ship.up, 1)
+
+        return {
+            cameraPoints: [ far, pass, over, behind ],
+            targetPoints: [ earth.center.clone().addScaledVector(up, 20), beacon.clone(), station.clone(), ahead ]
+        }
+    }
+
+    // Esc / Skip: straight into the hangar (once the interior has loaded)
     skipIntro()
     {
-        if(this.intro && this.game.stateMachine.is(StateMachine.INTRO))
-            this.finishIntro()
+        if(!this.intro || !this.game.stateMachine.is(StateMachine.INTRO))
+            return
+        if(this.view.stationInterior)
+            return this.finishIntro(true)
+        const intro = this.intro
+        intro.timeline.pause()
+        gsap.to(this.screen, { black: 1, duration: 0.3 })
+        this.view.loadDeferred().then(() => { if(this.intro === intro) this.finishIntro(true) })
     }
 
-    finishIntro()
+    // skipped: Esc / Skip (straight to standing in the hangar, from black)
+    finishIntro(skipped = false)
     {
-        this.intro?.timeline.kill()
+        if(!this.intro)
+            return
+        this.intro.timeline.kill()
         this.intro = null
 
         gsap.killTweensOf(this.screen)
-        this.screen.black = 0
         this.override.weight = 0
         this.override.fov = BASE_FOV
         this.bridge.emit('intro:beat', { beat: null })
@@ -187,6 +228,8 @@ export default class Cinematics
         try { window.localStorage.setItem(INTRO_SEEN_KEY, '1') }
         catch {}
 
+        this.state.flight.endIntro()
+        this.screen.black = skipped ? 1 : 0 // fades in on ON_FOOT
         this.game.stateMachine.set(StateMachine.ON_FOOT)
         this.view.hints.show()
     }
@@ -198,7 +241,7 @@ export default class Cinematics
         intro.target.getPoint(intro.u, _target)
         lookAtPose(this.override, this.override.position, _target, intro.up)
         this.override.fov = intro.fov
-        this.override.weight = 1
+        this.override.weight = smooth(intro.weight)
     }
 
     // Ease toward the beacon before a panel opens, ease back on close
@@ -242,6 +285,20 @@ export default class Cinematics
         const planet = flight.route.to
         const player = this.state.player
         const progress = t
+
+        // Apeiron Station: the docking shot inside the hangar, then behind the astronaut (no flash)
+        if(planet.hangar)
+        {
+            const pad = flight.route.endPad
+            const [ side, ahead, height ] = HANGAR_SHOTS.dock
+            this.screen.flash = 0
+            _right.crossVectors(pad.forward, pad.up)
+            _position.copy(pad.position).addScaledVector(pad.up, height).addScaledVector(_right, side).addScaledVector(pad.forward, ahead)
+            _target.copy(pad.position).addScaledVector(pad.up, 1.4)
+            lookAtPose(this.override, _position, _target, pad.up)
+            this.override.weight = 1 - smooth(THREE.MathUtils.clamp((t - 0.35) / 0.65, 0, 1))
+            return
+        }
         _up.subVectors(planet.landingPoint, planet.center).normalize()
         _offset.copy(_up).multiplyScalar(0.55).addScaledVector(player.facing, 0.85).normalize()
         _offset.applyAxisAngle(_up, - ORBIT_SWEEP * (1 - progress))
@@ -249,6 +306,18 @@ export default class Cinematics
         _target.copy(planet.center).addScaledVector(_up, planet.radius * 0.4)
         lookAtPose(this.override, _position, _target, _up)
         this.override.weight = 1 - smooth(THREE.MathUtils.clamp((t - 0.35) / 0.65, 0, 1))
+    }
+
+    // M6 hologram orbit mode: around the miniature system above the station projector
+    updateOrbit()
+    {
+        const interior = this.state.interior
+        const orbit = interior.orbit
+        _target.copy(interior.center).y += 2.6
+        _position.set(Math.sin(orbit.yaw) * Math.cos(orbit.pitch), Math.sin(orbit.pitch), Math.cos(orbit.yaw) * Math.cos(orbit.pitch)).multiplyScalar(orbit.distance).add(_target)
+        lookAtPose(this.override, _position, _target, _worldUp)
+        this.override.fov = BASE_FOV
+        this.override.weight = smooth(Math.min(1, orbit.weight))
     }
 
     resetFlight()
@@ -273,13 +342,22 @@ export default class Cinematics
         const stateMachine = this.game.stateMachine
         const delta = this.state.time.delta
 
-        if(stateMachine.is(StateMachine.INTRO) && this.intro)
-            this.updateIntro()
-        else if(this.state.flight.phase === 'establish')
+        if(this.state.flight.phase === 'establish')
         {
             this.focus.weight = 0
             this.resetFlight()
             this.updateFlightEstablish(this.state.flight)
+        }
+        else if(stateMachine.is(StateMachine.INTRO) && this.intro?.camera && this.intro.weight > 0.001)
+        {
+            this.resetFlight()
+            this.updateIntro()
+        }
+        else if(this.state.interior.orbit.weight > 0.001)
+        {
+            this.focus.weight = 0
+            this.resetFlight()
+            this.updateOrbit()
         }
         else
         {

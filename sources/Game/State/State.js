@@ -4,6 +4,7 @@ import Viewport from './Viewport.js'
 import Planets from './Planets.js'
 import Player from './Player.js'
 import Flight from './Flight.js'
+import Interior from './Interior.js'
 import Eggs from './Eggs.js'
 
 export default class State
@@ -26,6 +27,7 @@ export default class State
         this.controls = new Controls()
         this.viewport = new Viewport()
         this.planets = new Planets()
+        this.interior = new Interior() // before the player: it spawns in the station's hangar (M6b)
         this.player = new Player()
         this.flight = new Flight()
         this.eggs = new Eggs()
@@ -57,6 +59,7 @@ export default class State
         this.time.update()
         this.controls.update()
         this.flight.update()
+        this.interior.update()
         this.player.update()
         this.player.camera.update()
     }

@@ -7,6 +7,7 @@ import Ship from './Ship.js'
 import Asteroids from './Asteroids.js'
 import DriftingRocks from './DriftingRocks.js'
 import Confetti from './Confetti.js'
+import Workers from './Workers.js'
 import Game from '@/Game.js'
 import StateMachine from '@/StateMachine.js'
 import Earth from './Earth.js'
@@ -16,8 +17,20 @@ import PlayerModel from './PlayerModel.js'
 import PostProcessing from './PostProcessing.js'
 import Renderer from './Renderer.js'
 import Space from './Space.js'
+import Station from './Station.js'
 import State from '@/State/State.js'
-import { setSurfaceResolution } from './Materials/surface.js'
+import { setSurfaceResolution, setTextureUploader } from './Materials/surface.js'
+
+// Yield to the event loop (frames render in between). A MessageChannel task: chained timeouts are
+// clamped to 4 ms each
+const channel = new MessageChannel()
+const waiting = []
+channel.port1.onmessage = () => waiting.shift()?.()
+const nextTask = () => new Promise((resolve) =>
+{
+    waiting.push(resolve)
+    channel.port2.postMessage(0)
+})
 
 export default class View
 {
@@ -56,12 +69,14 @@ export default class View
         this.environment = null // PMREM map, built during loading (createEnvironment)
         this.lights = new Lights()
         this.planets = new Planets()
+        this.station = new Station() // Apeiron Station's exterior (M6b); also says if the camera is near / inside
         this.earth = new Earth()
         this.player = new PlayerModel()
         this.ship = new Ship()
         this.asteroids = new Asteroids()
         this.driftingRocks = new DriftingRocks()
         this.confetti = new Confetti()
+        this.workers = new Workers()
 
         // Control hints: own scene, drawn after bloom
         const stateMachine = Game.getInstance().stateMachine
@@ -84,18 +99,125 @@ export default class View
         })
         this.cinematics = new Cinematics()
         this.postProcessing = new PostProcessing()
+        setTextureUploader((texture) => this.upload(texture)) // surface sets upload before they are used
     }
 
-    // Textures needed before Launch: the spawn planet's 1K sets + Earth (the rest after Launch)
+    // Before Launch: only what the intro's first shots need (Earth's maps; the ship GLB, Game.load)
     load()
     {
-        return Promise.all([ setSurfaceResolution('1k', [ 'regolith', 'metal' ]), this.earth.ready ])
+        return this.earth.ready
     }
 
-    // The astronaut and ship GLBs (resolve even if they fail: the code-built ones stay)
-    loadCharacter()
+    // After the loading screen (READY and the intro): the astronaut GLB, the station's surface sets,
+    // then the station interior and its crew (clones of the astronaut). Resolves (either way) once the
+    // station is ready to show: the intro waits for it before it shows the hangar (View/Cinematics.js).
+    loadDeferred()
     {
-        return Promise.all([ this.player.load(), this.ship.load() ])
+        if(!this.deferred)
+        {
+            this.deferred = Promise.all([ this.warm(this.station.group), this.loadAstronaut(), setSurfaceResolution('1k', [ 'metal', 'regolith' ]) ])
+                .then(() => this.loadInterior())
+                .catch((error) => console.warn('[View] Deferred loading failed', error))
+            // Then, in the background: whatever was hidden or off screen at the warm-up frame
+            this.deferred.then(() => this.warm(this.scene, { all: true })).catch((error) => console.warn('[View] Warm-up failed', error))
+        }
+        return this.deferred
+    }
+
+    // The astronaut GLB: hidden until warm() has made it ready to draw
+    async loadAstronaut()
+    {
+        await this.player.load()
+        const character = this.player.character
+        if(!character)
+            return
+        character.visible = false
+        await this.warm(character)
+        character.visible = true
+    }
+
+    // Make `object` ready to draw before it is first drawn (M6b realism pass: things that load during
+    // the intro): compile its programs (and its skinned shadow casters' depth program) while it is
+    // visible only for the compile call, then finish every program's first use (the driver's link) and
+    // upload every texture, one step per task, so no frame compiles or uploads anything
+    // all: also what is hidden right now (made visible only for the compile call)
+    async warm(object, { all = false } = {})
+    {
+        const renderer = this.renderer.instance
+        const standIns = new THREE.Group()
+        const depth = new THREE.MeshDepthMaterial({ side: THREE.BackSide }) // three's shadow map: plain depth, side flipped
+        object.traverse((child) =>
+        {
+            if(child.isSkinnedMesh && child.castShadow && !standIns.children.length)
+            {
+                const standIn = new THREE.SkinnedMesh(child.geometry, depth)
+                standIn.bind(child.skeleton, child.bindMatrix)
+                standIn.frustumCulled = false
+                standIns.add(standIn)
+            }
+        })
+        const hidden = []
+        if(all)
+            object.traverse((child) => { if(!child.visible) { hidden.push(child); child.visible = true } })
+        const visible = object.visible
+        object.visible = true
+        this.scene.add(standIns)
+        renderer.setRenderTarget(this.postProcessing.quality === 'low' ? null : this.postProcessing.composer.renderTarget1)
+        const compiled = Promise.all([ renderer.compileAsync(object, this.camera.instance, this.scene), renderer.compileAsync(standIns, this.camera.instance, this.scene) ])
+        renderer.setRenderTarget(null)
+        this.scene.remove(standIns)
+        object.visible = visible
+        for(const child of hidden)
+            child.visible = false
+        try { await compiled }
+        catch(error) { console.warn('[View] Shader warm-up failed', error) }
+
+        const materials = new Set()
+        const textures = new Set()
+        object.traverse((child) =>
+        {
+            for(const material of child.material ? [].concat(child.material) : [])
+            {
+                materials.add(material)
+                for(const value of [ ...Object.values(material), ...Object.values(material.uniforms || {}).map((uniform) => uniform?.value) ])
+                    if(value?.isTexture)
+                        textures.add(value)
+            }
+        })
+        materials.add(depth)
+        for(const material of materials)
+        {
+            const program = renderer.properties.get(material).currentProgram
+            if(!program)
+                continue
+            await nextTask()
+            program.getUniforms()
+        }
+        for(const texture of textures)
+            await this.upload(texture)
+        depth.dispose()
+    }
+
+    // Upload one texture in its own task (not in a frame)
+    upload(texture)
+    {
+        return nextTask().then(() => this.renderer.instance.initTexture(texture))
+    }
+
+    // The station interior (its own chunk): built, its textures uploaded and its shaders compiled
+    // asynchronously (the intro keeps running)
+    loadInterior()
+    {
+        if(!this.interiorLoading)
+        {
+            this.interiorLoading = import('./StationInterior.js').then(async ({ default: StationInterior }) =>
+            {
+                const interior = new StationInterior(this, State.getInstance())
+                await interior.load()
+                this.stationInterior = interior
+            })
+        }
+        return this.interiorLoading
     }
 
     // PMREM environment: built while the textures download, then given to every material that
@@ -158,8 +280,11 @@ export default class View
     {
         this.cinematics.update()
         this.camera.update()
+        this.station.update() // first: near / inside from this frame's camera
         this.space.update()
         this.planets.update()
+        this.stationInterior?.update(Game.getInstance().stateMachine)
+        this.workers.update()
         this.earth.update()
         this.player.update()
         this.ship.update()

@@ -106,13 +106,30 @@ export const PROP_BUILDERS = {
         part(new THREE.SphereGeometry(0.022, 8, 6), '#15171a', 'paint', { position: [ - 0.065, 0.4, 0.24 ] }),
         part(new THREE.ConeGeometry(0.09, 0.16, 12), '#ffd23f', 'paint', { position: [ 0, 0.24, - 0.25 ], rotation: [ - 1.1, 0, 0 ] })
     ] },
-    // Easter egg 2 (Home Station): a small antenna dish
+    // Easter egg 2 (Signal Moon): a small antenna dish
     dish: { build: () => [
         part(new THREE.BoxGeometry(0.5, 0.12, 0.5), '#6b7079', 'metal', { position: [ 0, 0.06, 0 ] }),
         part(new THREE.CylinderGeometry(0.06, 0.08, 0.9, 10), '#9aa0a8', 'metal', { position: [ 0, 0.55, 0 ] }),
         part(new THREE.CylinderGeometry(0.5, 0.1, 0.16, 28), '#e8ebef', 'paint', { position: [ 0, 1.05, 0.08 ], rotation: [ - 0.8, 0, 0 ] }),
         part(new THREE.CylinderGeometry(0.02, 0.02, 0.38, 6), '#9aa0a8', 'metal', { position: [ 0, 1.17, 0.21 ], rotation: [ - 0.8, 0, 0 ] }),
         part(new THREE.SphereGeometry(0.05, 10, 8), '#7ff9ff', 'glow', { position: [ 0, 1.3, 0.34 ] })
+    ] },
+    // M6, The Forge: frame of the featured-build board (the screen is View/ExhibitScreens.js)
+    exhibit: { build: () => [
+        part(new THREE.BoxGeometry(6.4, 3.8, 0.22), '#3d434c', 'metal', { position: [ 0, 2.75, 0 ] }),
+        part(new THREE.BoxGeometry(0.3, 1.3, 0.3), '#2f343b', 'metal', { position: [ - 2.6, 0.35, 0 ] }),
+        part(new THREE.BoxGeometry(0.3, 1.3, 0.3), '#2f343b', 'metal', { position: [ 2.6, 0.35, 0 ] }),
+        part(new THREE.BoxGeometry(6.2, 0.06, 0.08), '#ff9d5c', 'glow', { position: [ 0, 0.82, 0.12 ] })
+    ] },
+    // M6, The Observatory: the goals console (the screen is View/ExhibitScreens.js)
+    console: { build: () => [
+        part(new THREE.BoxGeometry(1.8, 0.95, 0.75), '#e8ebef', 'paint', { position: [ 0, 0.47, 0 ] }),
+        part(new THREE.BoxGeometry(1.9, 1.15, 0.12), '#3d434c', 'metal', { position: [ 0, 1.45, - 0.1 ], rotation: [ - 0.35, 0, 0 ] }),
+        part(new THREE.BoxGeometry(1.7, 0.05, 0.05), '#7ff9ec', 'glow', { position: [ 0, 0.96, 0.36 ] })
+    ] },
+    // M6: where a worker stands (collider only; the worker is drawn by View/CrewModels.js)
+    worker: { build: () => [
+        part(new THREE.CylinderGeometry(0.4, 0.4, 1.8, 12), '#000000', 'hidden', { position: [ 0, 0.9, 0 ] })
     ] },
     banner: { build: () => [
         part(new THREE.CylinderGeometry(0.05, 0.05, 3, 10), '#c9ced6', 'metal', { position: [ 0, 1.5, 0 ] }),
@@ -181,13 +198,26 @@ export function shipRestPose(launchPad, landingPoint, target = { position: new T
     return target
 }
 const _right = new THREE.Vector3()
+const _faceX = new THREE.Vector3()
+const _faceZ = new THREE.Vector3()
+const _faceMatrix = new THREE.Matrix4()
 
 // Placement of one prop, relative to its planet's center (identical for mesh and collider)
 export function propMatrix(prop, index, planetRadius, target = new THREE.Matrix4())
 {
     const builder = PROP_BUILDERS[prop.type]
-    _quaternion.setFromUnitVectors(_yAxis, prop.up)
-    _quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(_yAxis, index * 2.4 + planetRadius))
+    if(prop.face)
+    {
+        // Turned so local +Z points along `face` (a tangent direction)
+        _faceZ.copy(prop.face).projectOnPlane(prop.up).normalize()
+        _faceX.crossVectors(prop.up, _faceZ).normalize()
+        _quaternion.setFromRotationMatrix(_faceMatrix.makeBasis(_faceX, prop.up, _faceZ))
+    }
+    else
+    {
+        _quaternion.setFromUnitVectors(_yAxis, prop.up)
+        _quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(_yAxis, index * 2.4 + planetRadius))
+    }
 
     const size = builder.scaled ? prop.size : 1
     if(builder.varied)

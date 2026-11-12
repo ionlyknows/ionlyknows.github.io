@@ -1,11 +1,12 @@
 <script setup>
-import { ref, nextTick, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import PanelShell from './PanelShell.vue'
 import { useUIBridge } from '../../composables/useUIBridge.js'
 import achievements from '../../../content/achievements.js'
 import { has } from '../../visibleContent.js'
 import { track } from '../../../Game/Analytics.js'
 
+const props = defineProps({ itemId: { type: String, default: '' } }) // M6: opened from a station frame
 const emit = defineEmits([ 'close' ])
 const { listen } = useUIBridge()
 
@@ -36,6 +37,18 @@ function close() { emit('close') }
 onUnmounted(listen('escapePressed', () => viewing.value ? closeViewer() : close()))
 
 const meta = (item) => [ item.issuer, item.year ].filter(has).join(' · ')
+
+// Opened from a certificate frame in the station: straight to its viewer (credential link)
+onMounted(async () =>
+{
+    const item = items.find((entry) => entry.id === props.itemId)
+    if(!item)
+        return
+    viewing.value = item
+    track('certificate_open', { id: item.id })
+    await nextTick()
+    viewerEl.value?.focus()
+})
 </script>
 
 <template>
@@ -103,13 +116,13 @@ const meta = (item) => [ item.issuer, item.year ].filter(has).join(' · ')
 
 .iw-achievements__card:hover
 {
-    border-color: var(--iw-loc-trophy);
+    border-color: var(--iw-gold);
     transform: translateY(-2px);
 }
 
 .iw-achievements__card:focus-visible
 {
-    outline: 2px solid var(--iw-loc-trophy);
+    outline: 2px solid var(--iw-gold);
     outline-offset: 2px;
 }
 
@@ -177,7 +190,7 @@ const meta = (item) => [ item.issuer, item.year ].filter(has).join(' · ')
 
 .iw-cert__details dt
 {
-    color: var(--iw-loc-trophy);
+    color: var(--iw-gold);
     font-family: var(--iw-font-mono);
     font-size: 12px;
     letter-spacing: 0.1em;
@@ -195,7 +208,7 @@ const meta = (item) => [ item.issuer, item.year ].filter(has).join(' · ')
     justify-self: start;
     padding: 12px 20px;
     border-radius: 999px;
-    background: var(--iw-loc-trophy);
+    background: var(--iw-gold);
     color: var(--iw-ink);
     font-weight: 700;
     text-decoration: none;
@@ -204,7 +217,7 @@ const meta = (item) => [ item.issuer, item.year ].filter(has).join(' · ')
 .iw-cert__back:focus-visible,
 .iw-cert__credential:focus-visible
 {
-    outline: 2px solid var(--iw-loc-trophy);
+    outline: 2px solid var(--iw-gold);
     outline-offset: 3px;
 }
 </style>

@@ -4,16 +4,22 @@ import View from '@/View/View.js'
 import State from '@/State/State.js'
 import { createAtmosphere } from './Materials/atmosphere.js'
 import UIBridge from '../../UI/UIBridge.js'
+import Game from '@/Game.js'
+import StateMachine from '@/StateMachine.js'
 
 const BASE = `${import.meta.env.BASE_URL}textures/earth/`
 const BEACON_COLOR = new THREE.Color('#7ff9ff').multiplyScalar(1.4) // a small glowing point
 const BEAM_COLOR = new THREE.Color('#7ff9ff')
+// Beacon sizes per unit of Earth radius (2.5× the pre-size-up 34-radius Earth's 0.45 / 1.2 / 5 / 0.12)
+const BEACON = { size: 0.0132, lift: 0.035, beam: 0.147, beamRadius: 0.0035 }
 
 const _direction = new THREE.Vector3()
 
-// Non-walkable Earth near the Home Station: NASA Blue Marble day map, Black Marble city
+// Non-walkable Earth below Apeiron Station (M6b): NASA Blue Marble day map, Black Marble city
 // lights on the dark side, and a thin cloud layer (public domain, see CREDITS.md).
 // The Philippines beacon sits at its real coordinates; the globe is turned so it faces the station.
+// Fog off: Earth is a distant backdrop (≈ 135 below the station), the indoor fog would grey it.
+// High quality: a 4K day map replaces the 2K one, loaded only after the loading screen.
 export default class Earth
 {
     constructor()
@@ -61,7 +67,7 @@ export default class Earth
     setSurface()
     {
         // Day side not overexposed: the map is darkened a little, oceans glint less
-        const material = new THREE.MeshStandardMaterial({ map: this.textures.day, color: '#d6d6d6', roughness: 0.9, metalness: 0 })
+        const material = new THREE.MeshStandardMaterial({ map: this.textures.day, color: '#d6d6d6', roughness: 0.9, metalness: 0, fog: false })
         const uniforms = { uNight: { value: this.textures.night }, uSunDirection: { value: this.sunDirection } }
 
         material.onBeforeCompile = (shader) =>
@@ -94,7 +100,7 @@ export default class Earth
         this.clouds = new THREE.Mesh(
             new THREE.SphereGeometry(this.data.radius * 1.012, 96, 48),
             // Grey enough that sunlit clouds stay under the bloom threshold
-            new THREE.MeshStandardMaterial({ color: '#c4c4c4', alphaMap: this.textures.clouds, transparent: true, opacity: 0.9, depthWrite: false, roughness: 1, metalness: 0 })
+            new THREE.MeshStandardMaterial({ color: '#c4c4c4', alphaMap: this.textures.clouds, transparent: true, opacity: 0.9, depthWrite: false, roughness: 1, metalness: 0, fog: false })
         )
         this.clouds.rotation.y = - Math.PI / 2
         this.group.add(this.clouds)
@@ -105,21 +111,38 @@ export default class Earth
         const direction = this.data.beaconDirection
         const material = new THREE.MeshBasicMaterial({ color: BEACON_COLOR })
 
-        this.beacon = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), material)
-        this.beacon.position.copy(direction).multiplyScalar(this.data.radius + 1.2)
+        const radius = this.data.radius
+        this.beacon = new THREE.Mesh(new THREE.OctahedronGeometry(radius * BEACON.size, 0), material)
+        this.beacon.position.copy(direction).multiplyScalar(radius * (1 + BEACON.lift))
         this.group.add(this.beacon)
 
         this.beam = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.12, 0.12, 5, 12, 1, true),
+            new THREE.CylinderGeometry(radius * BEACON.beamRadius, radius * BEACON.beamRadius, radius * BEACON.beam, 12, 1, true),
             new THREE.MeshBasicMaterial({ color: BEAM_COLOR, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false })
         )
-        this.beam.position.copy(direction).multiplyScalar(this.data.radius + 2.5)
+        this.beam.position.copy(direction).multiplyScalar(radius * (1 + BEACON.beam / 2))
         this.beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
         this.group.add(this.beam)
     }
 
+    // High only, after loading: the 4K day map (the 2K one stays for the other qualities)
+    updateDayMap()
+    {
+        const high = this.view.postProcessing.quality === 'high'
+        if(high && !this.day4k && !Game.getInstance().stateMachine.is(StateMachine.LOADING))
+        {
+            this.day4k = new THREE.TextureLoader().load(`${BASE}day-4k.webp`, (texture) => { texture.loaded = true }, undefined, () => console.warn('[Earth] Could not load day-4k'))
+            this.day4k.colorSpace = THREE.SRGBColorSpace
+            this.day4k.anisotropy = 8
+        }
+        const map = high && this.day4k?.loaded ? this.day4k : this.textures.day
+        if(this.surface.material.map !== map)
+            this.surface.material.map = map
+    }
+
     update()
     {
+        this.updateDayMap()
         const pulse = 1 + Math.sin(this.state.time.elapsed * 3) * 0.15
         this.flash = Math.max(0, this.flash - this.state.time.delta / 4)
         const blink = this.flash * (0.5 + 0.5 * Math.sin(this.state.time.elapsed * 14))

@@ -76,7 +76,7 @@ export default class Ship
         this.setParked()
     }
 
-    // Called by View.loadCharacter(): resolves either way (the code-built ship stays on failure)
+    // Called by Game.load(): resolves either way (the code-built ship stays on failure)
     load()
     {
         const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
@@ -207,7 +207,8 @@ export default class Ship
         const origin = this.state.planets.origin
         this.parked = this.state.planets.items.map((planet) =>
         {
-            const pose = shipRestPose(planet.launchPad, planet.landingPoint)
+            // Apeiron Station (M6b): the ship rests on the hangar pad, nose to the bay door
+            const pose = planet.hangar ? planet.hangar.rest : shipRestPose(planet.launchPad, planet.landingPoint)
             const group = this.createShip(this.view.world)
             group.position.copy(pose.position).add(origin) // layout space
             group.quaternion.copy(pose.quaternion)
@@ -223,8 +224,9 @@ export default class Ship
         const route = flight.route
 
         // The ship you board leaves its pad; the one at the destination is the one you land
+        const indoor = this.view.station.inside // the planets' ships are hidden behind the station walls
         for(const { planet, group } of this.parked)
-            group.visible = !(flight.active && (planet === route.from || (planet === route.to && inFlight)))
+            group.visible = !(indoor && !planet.hangar) && !(flight.active && (planet === route.from || (planet === route.to && inFlight)))
 
         this.flying.visible = inFlight
         if(!inFlight)

@@ -15,7 +15,6 @@ const SFX = {
 }
 const MUSIC_GAIN = 0.45
 const FLIGHT_DUCK = 0.71 // −3 dB during a flight (M3)
-const FLIGHT_STATES = [ StateMachine.BOARDING, StateMachine.TAKEOFF, StateMachine.FLYING, StateMachine.LANDING ]
 const DUCK_DOWN = 0.5 // s
 const DUCK_UP = 1 // s, after arrival
 const LOOP_TRIM = 0.05 // s: skips the MP3 encoder padding at both ends of the loop
@@ -49,7 +48,7 @@ export default class Audio
             if(state === StateMachine.TAKEOFF)
                 this.play('warp')
 
-            const duck = FLIGHT_STATES.includes(state) ? FLIGHT_DUCK : 1
+            const duck = StateMachine.FLIGHT_STATES.includes(state) ? FLIGHT_DUCK : 1 // read at run time (module order)
             if(duck === this.duck)
                 return
             this.rampMusic(MUSIC_GAIN * duck, duck < this.duck ? DUCK_DOWN : DUCK_UP)

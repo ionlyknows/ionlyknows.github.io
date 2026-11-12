@@ -119,7 +119,9 @@ export default class PostProcessing
         if(waiting)
             return
         this.launched = true
-        setSurfaceResolution(this.quality === 'high' ? '2k' : '1k')
+        // After the station's own assets (View.loadDeferred): they share the connection during the intro
+        const resolution = this.quality === 'high' ? '2k' : '1k'
+        this.view.loadDeferred().then(() => setSurfaceResolution(resolution))
     }
 
     setDebug()

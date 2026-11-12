@@ -17,6 +17,9 @@ import ActivitiesPanel from './components/panels/ActivitiesPanel.vue'
 import ContactPanel from './components/panels/ContactPanel.vue'
 import DestinationPicker from './components/panels/DestinationPicker.vue'
 import MapOverlay from './components/panels/MapOverlay.vue'
+import PhotoPanel from './components/panels/PhotoPanel.vue'
+import GoalsPanel from './components/panels/GoalsPanel.vue'
+import HologramOverlay from './components/HologramOverlay.vue'
 import SettingsPanel from './components/panels/SettingsPanel.vue'
 import QuickView from './components/QuickView.vue'
 import FlightHUD from './components/FlightHUD.vue'
@@ -40,14 +43,20 @@ const panels = {
     activities: ActivitiesPanel,
     contact: ContactPanel,
     destinations: DestinationPicker,
-    map: MapOverlay
+    map: MapOverlay,
+    photo: PhotoPanel,
+    goals: GoalsPanel
 }
+// Panels that open on one item (M6: a station screen / frame / console, a Forge banner)
+const ITEM_PANELS = [ 'work', 'achievements', 'activities', 'skills', 'photo' ]
 
 const gameState = ref('LOADING')
 const loadProgress = ref(0)
 const location = ref({ id: '', name: '' })
 const activePanel = ref(null)
+const activeItemId = ref('')
 const promptType = ref(null)
+const promptId = ref('')
 const quickOpen = ref(false)
 
 const FLIGHT_STATES = [ 'BOARDING', 'TAKEOFF', 'FLYING', 'LANDING' ]
@@ -70,6 +79,7 @@ function closePanel()
         return
 
     activePanel.value = null
+    activeItemId.value = ''
     props.bridge.emit('panel:close')
     document.activeElement?.blur?.()
 }
@@ -128,12 +138,18 @@ const stops = [
     props.bridge.on('state:change', ({ state }) => { gameState.value = state }),
     props.bridge.on('loading:progress', ({ value }) => { loadProgress.value = value }),
     props.bridge.on('location:change', (value) => { location.value = value }),
-    props.bridge.on('panel:open', ({ type }) =>
+    props.bridge.on('panel:open', ({ type, id }) =>
     {
-        if(!activePanel.value)
-            activePanel.value = type
+        if(activePanel.value)
+            return
+        activePanel.value = type
+        activeItemId.value = id || ''
     }),
-    props.bridge.on('prompt:show', ({ type }) => { promptType.value = type }),
+    props.bridge.on('prompt:show', ({ type, id }) =>
+    {
+        promptType.value = type
+        promptId.value = id || ''
+    }),
     props.bridge.on('prompt:hide', () => { promptType.value = null }),
     // Registered before any panel: Esc closes a panel first, and only skips the flight when
     // nothing was open
@@ -205,9 +221,10 @@ onUnmounted(() =>
     <template v-if="onFoot">
         <MapButton @open="toggleMap" />
         <ControlsHint />
-        <InteractionPrompt v-if="promptType" :type="promptType" />
+        <InteractionPrompt v-if="promptType" :type="promptType" :id="promptId" />
     </template>
 
+    <HologramOverlay v-if="gameState === 'HOLOGRAM'" :current="location.id" />
     <QuickView v-if="quickOpen" @close="closeQuick" />
     <SoundToggle />
 
@@ -215,7 +232,7 @@ onUnmounted(() =>
     <component
         :is="panels[activePanel]"
         v-else-if="panels[activePanel]"
-        v-bind="activePanel === 'destinations' ? { current: location.id, onTravel: (trip) => flyTo(trip) } : activePanel === 'map' ? { current: location.id, onTravel: (trip) => flyTo(trip, true) } : {}"
+        v-bind="activePanel === 'destinations' ? { current: location.id, onTravel: (trip) => flyTo(trip) } : activePanel === 'map' ? { current: location.id, onTravel: (trip) => flyTo(trip, true) } : ITEM_PANELS.includes(activePanel) ? { itemId: activeItemId } : {}"
         @close="closePanel"
     />
 </template>

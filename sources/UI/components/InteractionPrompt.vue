@@ -2,21 +2,26 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-    type: { type: String, required: true }
+    type: { type: String, required: true },
+    id: { type: String, default: '' }
 })
 
 // Prompt label per panel type opened by a content point
 const labels = {
     about: 'About me',
     contact: 'Contact',
-    work: 'View projects',
+    work: 'View project',
     skills: 'View skills',
-    achievements: 'View achievements',
-    activities: 'View activities',
+    achievements: 'View certificate',
+    activities: 'View activity',
+    photo: 'View photo',
+    goals: 'View goals',
+    hologram: 'Explore the hologram',
     destinations: 'Travel',
     egg: 'Inspect'
 }
 
+// Launch pads and the station's hangar console (M6b) both open the destination picker
 const label = computed(() => labels[props.type] || '')
 </script>
 

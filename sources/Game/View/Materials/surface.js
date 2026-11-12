@@ -23,6 +23,13 @@ const PLACEHOLDER = { albedo: placeholder(128, 128, 128, THREE.SRGBColorSpace), 
 // Shared uniforms per set: swapping `.value` updates every material that uses the set
 const uniforms = Object.fromEntries(SETS.map((set) => [ set, { albedo: { value: PLACEHOLDER.albedo }, normalRough: { value: PLACEHOLDER.normalRough } } ]))
 
+// Uploads a texture before it is used (View.upload: one per task, so no frame uploads a set)
+let uploader = null
+export function setTextureUploader(upload)
+{
+    uploader = upload
+}
+
 // Shared clock for the lava pulse (Planets.update sets it)
 export const surfaceTime = { value: 0 }
 
@@ -66,6 +73,10 @@ export function setSurfaceResolution(resolution, sets = SETS)
     return Promise.all(sets.map(async (set) =>
     {
         const maps = await loadSet(resolution, set)
+        if(uploader)
+            for(const texture of [ maps.albedo, maps.normalRough ])
+                if(texture)
+                    await uploader(texture)
         if(wanted !== resolution)
             return
         if(maps.albedo)

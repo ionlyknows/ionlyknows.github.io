@@ -5,9 +5,10 @@ import { usePanelEscape } from '../../composables/usePanelEscape.js'
 import { visibleProjects as projects } from '../../visibleContent.js'
 import { track } from '../../../Game/Analytics.js'
 
+const props = defineProps({ itemId: { type: String, default: '' } }) // M6: opened from a station screen / The Forge
 const emit = defineEmits([ 'close' ])
 
-const index = ref(0)
+const index = ref(Math.max(0, projects.findIndex((item) => item.id === props.itemId)))
 const project = computed(() => projects[index.value])
 
 // Analytics: every project the visitor looks at

@@ -131,10 +131,14 @@ export default class DriftingRocks
 
     update()
     {
-        if(!this.enabled)
+        // Around the walkable planets only: never inside the station, nor round it (Earth is right
+        // below its orbit, M6b)
+        const planet = this.state.planets.current
+        const off = planet.kind === 'station'
+        this.mesh.visible = this.enabled && !off
+        if(!this.enabled || off)
             return
 
-        const planet = this.state.planets.current
         const delta = this.state.time.delta
         if(planet !== this.planet)
         {

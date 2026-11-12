@@ -79,8 +79,9 @@ export default class Asteroids
 
     update()
     {
+        // Only along a real corridor route: the intro's docking arrival (M6b) has no curve or frames
         const flight = this.state.flight
-        const visible = flight.active && flight.phase !== 'establish'
+        const visible = flight.active && flight.phase !== 'establish' && !!flight.route?.curve
         this.mesh.visible = visible
         if(!visible)
             return

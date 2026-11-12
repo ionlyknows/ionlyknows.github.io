@@ -141,7 +141,7 @@ export default class PlayerModel
             texture.wrapS = THREE.RepeatWrapping
             texture.wrapT = THREE.RepeatWrapping
             texture.colorSpace = THREE.NoColorSpace
-            fabricMap.value = texture
+            this.view.upload(texture).then(() => { fabricMap.value = texture })
         })
         const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
         return loader.loadAsync(MODEL_URL)
@@ -151,6 +151,7 @@ export default class PlayerModel
 
     setCharacter(gltf)
     {
+        this.gltf = gltf // the crew (View/CrewModels.js) are clones of it
         const root = gltf.scene
         const materials = new Map()
         root.traverse((object) =>
@@ -425,7 +426,10 @@ export default class PlayerModel
             return
 
         const planet = this.state.planets.current
-        const height = Math.max(0, player.renderPosition.distanceTo(planet.center) - planet.radius)
+        // Apeiron Station (M6b): a flat floor at the interior's height
+        const height = planet.kind === 'station'
+            ? Math.max(0, player.renderPosition.y - this.state.interior.center.y)
+            : Math.max(0, player.renderPosition.distanceTo(planet.center) - planet.radius)
         this.contactShadow.position.y = - height + 0.03
         this.contactShadow.visible = height < 3
         this.contactShadow.material.opacity = 1 - THREE.MathUtils.clamp(height / 3, 0, 1)

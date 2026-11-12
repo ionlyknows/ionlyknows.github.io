@@ -4,8 +4,10 @@ import { usePanelEscape } from '../../composables/usePanelEscape.js'
 import skills from '../../../content/skills.js'
 import { has } from '../../visibleContent.js'
 
+const props = defineProps({ itemId: { type: String, default: '' } }) // M6: `skills-<index>` from a station console
 const emit = defineEmits([ 'close' ])
 const groups = skills.filter((group) => has(group.group) && has(group.items))
+const selected = groups[Number(props.itemId.replace('skills-', ''))]
 
 function close() { emit('close') }
 usePanelEscape(close)
@@ -14,7 +16,7 @@ usePanelEscape(close)
 <template>
     <PanelShell title="Skills" @close="close">
         <div class="iw-skills">
-            <section v-for="group in groups" :key="group.group" class="iw-skills__group">
+            <section v-for="group in groups" :key="group.group" class="iw-skills__group" :class="{ 'is-selected': group === selected }">
                 <h3 class="iw-skills__heading">{{ group.group }}</h3>
                 <ul class="iw-skills__tags">
                     <li v-for="item in group.items.filter(has)" :key="item" class="iw-skills__tag">{{ item }}</li>
@@ -62,4 +64,7 @@ usePanelEscape(close)
     color: var(--iw-text);
     font-size: 15px;
 }
+
+/* M6: the group whose console was used in the station */
+.iw-skills__group.is-selected .iw-skills__heading { color: var(--iw-glow); }
 </style>

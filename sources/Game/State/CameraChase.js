@@ -12,6 +12,10 @@ const POSITION_DAMPING = 5 // 1 - exp(-k·dt): frame-rate independent
 const UP_DAMPING = 4
 const BANK_FOLLOW = 0.4 // share of the ship's bank the camera takes
 const ORBIT_DISTANCE = 9 // autopilot orbit shot
+// M6b hangar shots, from the ship's rest pose on the hangar pad (side, ahead, height): inside the
+// hangar, so they never look through a wall. Leaving: from beside the pad toward the bay door.
+// Docking: from the back of the hangar, the ship coming in toward the camera.
+export const HANGAR_SHOTS = { leave: [ 4.5, - 5, 3.4 ], dock: [ - 4.5, - 5.5, 3.6 ] }
 
 const _desired = new THREE.Vector3()
 const _target = new THREE.Vector3()
@@ -32,6 +36,7 @@ const smoothstep = (edge0, edge1, x) =>
 // boosting. It follows the ship's interpolated render pose; only its position and up are damped.
 // Take-off and landing get short cinematic angles from beside the pad, blended in and out.
 // Autopilot (M5): during the cruise the camera also swings round the ship (front 3/4 → side).
+// Apeiron Station (M6b): the hangar shots hold until the chase camera is clear of the hangar walls.
 export default class CameraChase
 {
     constructor()
@@ -96,7 +101,18 @@ export default class CameraChase
         // Cinematic angles: take-off seen from beside the pad, landing from beside the destination pad
         let shot = 0
         const tau = flight.body.time
-        if(phase === 'boarding')
+        const route = flight.route
+        if((phase === 'boarding' || phase === 'takeoff') && route.from?.hangar)
+        {
+            this.shot(route.startPad, ...HANGAR_SHOTS.leave, render.position)
+            shot = phase === 'boarding' ? 1 : 1 - smoothstep(5, 12, render.position.distanceTo(route.startPad.position))
+        }
+        else if(phase === 'landing' && route.to.hangar)
+        {
+            this.shot(route.endPad, ...HANGAR_SHOTS.dock, render.position)
+            shot = 1 - smoothstep(6, 18, render.position.distanceTo(route.to.hangar.hover))
+        }
+        else if(phase === 'boarding')
         {
             this.shot(flight.route.startPad, 12, - 6, 4, render.position)
             shot = 1

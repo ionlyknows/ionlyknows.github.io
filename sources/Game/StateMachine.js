@@ -19,6 +19,7 @@ export default class StateMachine
     static FLYING = 'FLYING'
     static LANDING = 'LANDING'
     static FLIGHT_STATES = [ 'BOARDING', 'TAKEOFF', 'FLYING', 'LANDING' ]
+    static HOLOGRAM = 'HOLOGRAM' // M6: orbit mode around the station hologram (drag / scroll, no walking)
 
     constructor()
     {
@@ -90,7 +91,7 @@ export default class StateMachine
         this.state = state
 
         const { controls, viewport } = State.getInstance()
-        controls.setInputEnabled(state === StateMachine.ON_FOOT || state === StateMachine.FLYING)
+        controls.setInputEnabled(state === StateMachine.ON_FOOT || state === StateMachine.FLYING || state === StateMachine.HOLOGRAM)
         if(state !== StateMachine.ON_FOOT)
             viewport.pointerLock.deactivate()
 

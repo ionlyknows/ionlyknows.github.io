@@ -5,6 +5,7 @@ import View from '@/View/View.js'
 import State from '@/State/State.js'
 import Debug from '@/Debug/Debug.js'
 import { PROP_BUILDERS, MARKER_SHAPES, HEAD_HEIGHT } from '@/State/PropShapes.js'
+import { createScreen } from './ExhibitScreens.js'
 import { createSurfaceMaterial, surfaceTime } from './Materials/surface.js'
 import { createAtmosphere, ATMOSPHERE_SCALE } from './Materials/atmosphere.js'
 
@@ -22,17 +23,17 @@ const CLICK_TOLERANCE = 6 // px
 
 // Per-location look (textures: see CREDITS.md)
 const LOOKS = {
-    station: { set: 'regolith', tint: '#a9acb2', scale: 0.2, normalScale: 1.4, variation: 0.25, rock: '#8b8d93' },
+    moon: { set: 'regolith', tint: '#a9acb2', scale: 0.2, normalScale: 1.4, variation: 0.25, rock: '#8b8d93' },
     forge: { set: 'volcanic', tint: '#3f3936', scale: 0.18, normalScale: 1.5, variation: 0.25, cracks: 1.2, rock: '#34302e', crystal: '#ffb24a' },
-    observatory: { set: 'ice', tint: '#86d2cc', scale: 0.2, normalScale: 1.2, variation: 0.2, roughness: 0.35, envMapIntensity: 0.5, rock: '#5f9ea0', crystal: '#7ff9ec' },
-    trophy: { set: 'sand', tint: '#dcc690', scale: 0.22, normalScale: 1.4, variation: 0.2, rock: '#b39a6a', crystal: '#ffe08a' }
+    observatory: { set: 'ice', tint: '#86d2cc', scale: 0.2, normalScale: 1.2, variation: 0.2, roughness: 0.35, envMapIntensity: 0.5, rock: '#5f9ea0', crystal: '#7ff9ec' }
 }
 
 const _yAxis = new THREE.Vector3(0, 1, 0)
 const _pointer = new THREE.Vector2()
 
-// All locations: PBR triplanar surface (LOD), props, beacons, launch pad, atmosphere.
-// Only the current planet animates, casts shadows and has beacon lights.
+// All walkable locations: PBR triplanar surface (LOD), props, beacons, launch pad, atmosphere.
+// Only the current planet animates, casts shadows and has beacon lights. Apeiron Station (M6b) has
+// no surface: View/Station.js and View/StationInterior.js draw it (`current` is null there).
 export default class Planets
 {
     constructor()
@@ -44,7 +45,7 @@ export default class Planets
 
         this.segments = 64
         this.setShared()
-        this.items = this.state.planets.items.map((planet) => this.createPlanet(planet))
+        this.items = this.state.planets.items.filter((planet) => planet.kind !== 'station').map((planet) => this.createPlanet(planet))
         this.current = null
 
         this.setBeaconLights()
@@ -82,7 +83,7 @@ export default class Planets
             metal: createSurfaceMaterial({ set: 'metal', scale: 0.8, variation: 0.05, metalness: 0.85, roughness: 0.9, envMapIntensity: 0.6, vertexColors: true, ...env }),
             paint: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.1, envMapIntensity: 0.4, ...env }),
             panel: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.6, envMapIntensity: 0.6, ...env }),
-            // Trophy Moon gold: polished, but highlights stay small
+            // Polished gold (banner finials): highlights stay small
             polished: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.8, envMapIntensity: 0.6, ...env }),
             cloth: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide }),
             // Small indicator lights (antenna, solar panels, telescope lenses)
@@ -122,6 +123,7 @@ export default class Planets
         lod.addLevel(item.near, 0)
         lod.addLevel(far, planet.radius * 7)
         group.add(lod)
+        item.lod = lod
 
         const planetMaterials = {
             rock: createSurfaceMaterial({ set: look.set, color: look.rock, scale: 0.7, variation: 0.15, roughness: look.roughness ?? 1 }),
@@ -151,6 +153,8 @@ export default class Planets
 
             for(const { mat, geometry } of this.propGeometries[type])
             {
+                if(mat === 'hidden') // collider only (workers: View/Workers.js draws them)
+                    continue
                 const mesh = new THREE.InstancedMesh(geometry, planetMaterials[mat] || this.materials[mat], props.length)
                 mesh.receiveShadow = true
 
@@ -163,10 +167,28 @@ export default class Planets
             }
         }
 
-        // Beacons for content points, plus the launch pad
+        // Beacons for content points, plus the launch pad (easter eggs and walk-up exhibits have none)
         for(const point of planet.interactives)
-            if(point.opens !== 'egg') // easter eggs stay hidden
+            if(point.opens !== 'egg' && point.marker !== false)
                 this.createMarker(item, point, point.opens === 'destinations')
+
+        // M6 exhibit screens (featured build, activity banners, goals console), drawn from content
+        for(const screen of planet.screens)
+        {
+            const mesh = createScreen(screen)
+            if(!mesh)
+                continue
+            mesh.updateMatrix()
+            mesh.matrix.premultiply(screen.prop.matrix)
+            mesh.matrixAutoUpdate = false
+            mesh.traverse((child) =>
+            {
+                if(child === mesh)
+                    return
+                child.updateMatrix()
+            })
+            group.add(mesh)
+        }
 
         item.atmosphere = createAtmosphere(planet.radius, planet.accent, ATMOSPHERE_INTENSITY, this.sunDirection)
         group.add(item.atmosphere)
@@ -216,7 +238,8 @@ export default class Planets
         item.markers.push(marker)
     }
 
-    // A small point light per beacon of the current planet (fixed pool: no shader recompiles)
+    // A small point light per beacon of the current planet (fixed pool: no shader recompiles).
+    // Near the station (M6b) View/StationInterior.js uses the same 3 lights.
     setBeaconLights()
     {
         this.beaconLights = []
@@ -283,7 +306,9 @@ export default class Planets
             this.current.atmosphere.material.uniforms.uIntensity.value = this.current.atmosphere.userData.baseIntensity
         }
 
-        this.current = this.items.find((item) => item.planet === planet)
+        this.current = this.items.find((item) => item.planet === planet) || null
+        if(!this.current)
+            return // the station
         for(const caster of this.current.casters)
             caster.castShadow = true
 
@@ -292,6 +317,8 @@ export default class Planets
 
     placeBeaconLights()
     {
+        if(this.view.station?.near || !this.current)
+            return // the station interior has them (View/StationInterior.js)
         this.current.group.updateMatrixWorld(true)
         this.beaconLights.forEach((light, index) =>
         {
@@ -301,6 +328,7 @@ export default class Planets
                 return
 
             light.color.set(marker.userData.color)
+            light.distance = 9
             light.position.set(0, 2.6, 0)
             marker.localToWorld(light.position)
         })
@@ -326,6 +354,8 @@ export default class Planets
     {
         const debug = this.colliderDebug
         const planet = this.state.planets.current
+        if(planet.kind === 'station')
+            return
         if(debug.lines)
             debug.lines.visible = debug.visible
         if(!debug.visible || debug.planet === planet)
@@ -368,10 +398,33 @@ export default class Planets
 
     update()
     {
-        if(this.current?.planet !== this.state.planets.current)
+        if((this.current?.planet ?? null) !== (this.state.planets.current.kind === 'station' ? null : this.state.planets.current))
             this.setCurrent(this.state.planets.current)
 
+        // Near the station its interior has the beacon lights; they are back on the planet as soon
+        // as the camera leaves. With the camera inside the station only the planet spheres and
+        // atmospheres show through the windows, and the outside planets don't update (draw calls).
+        const station = this.view.station
+        if(station.near !== this.near)
+        {
+            this.near = station.near
+            if(!this.near)
+                this.placeBeaconLights()
+        }
+        const indoor = station.inside
+        if(indoor !== this.indoor)
+        {
+            this.indoor = indoor
+            for(const item of this.items)
+                for(const child of item.group.children)
+                    child.visible = !indoor || child === item.lod || child === item.atmosphere
+        }
+        if(indoor)
+            return
+
         this.updateColliderDebug()
+        if(!this.current)
+            return
 
         const elapsed = this.state.time.elapsed
         const { planet, gems, atmosphere } = this.current

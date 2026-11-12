@@ -4,7 +4,7 @@ import Game from '@/Game.js'
 import State from '@/State/State.js'
 import StateMachine from '@/StateMachine.js'
 import UIBridge from '../../UI/UIBridge.js'
-import { FIXED_STEP, MAX_STEPS, BOOST, DURATIONS, AUTO_LANDING_SPEED, buildRoute, createBody, stepBody, shiftBody, jumpToEnd } from './FlightPhysics.js'
+import { FIXED_STEP, MAX_STEPS, BOOST, DURATIONS, AUTO_LANDING_SPEED, buildRoute, createBody, createArrival, stepBody, shiftBody, jumpToEnd } from './FlightPhysics.js'
 
 const REBASE_DISTANCE = 500 // floating origin: rebase when the ship is this far from (0, 0, 0)
 const MOUSE_DEAD_ZONE = 0.2
@@ -13,8 +13,15 @@ const BOOST_SOUND_GAP = 1.2 // s between two boost whooshes
 const CUT_FADE_IN = 0.6 // map trips: from black, already in the ship
 const SKIP_FADE = { out: 0.8, in: 1.2 } // "Skip flight": 2 s of fade around the jump to the landing
 const QUICK_FADE = { out: 0.6, in: 0.8 } // reduced motion: the whole trip is this fade (about 1.4 s)
+// M6b intro: where the ship starts its docking approach (from the alignment point: out along the bay
+// axis, to the side, up), its speed and the approach time. Long = first visit, short = returning.
+// The intro's arrival: first visit = a docking approach from space; returning visitors = the ship
+// already above the pad, turning and settling (1.5 s)
+const INTRO = {
+    long: { out: 70, side: 18, up: 10, speed: 30, approach: 3 }
+}
 
-const PHASE_STATES = { takeoff: StateMachine.TAKEOFF, flying: StateMachine.FLYING, landing: StateMachine.LANDING }
+const PHASE_STATES = { takeoff: 'TAKEOFF', flying: 'FLYING', landing: 'LANDING' } // StateMachine names (no import-time read: module order)
 
 const _input = { x: 0, y: 0, boost: false, slow: false }
 const _zAxis = new THREE.Vector3(0, 0, 1)
@@ -54,6 +61,7 @@ export default class Flight
         this.skipped = false // the landing was skipped: no arrival flash
         this.quick = false // reduced motion: no establishing shot either
         this.cameraCut = false // View camera cuts instead of blending (read and cleared by State/Camera.js)
+        this.intro = false // M6b: the intro's arrival at the station (the state stays INTRO)
 
         // Render pose: the last two fixed steps interpolated
         this.render = {
@@ -109,6 +117,59 @@ export default class Flight
 
         if(quick)
             this.fastForward(QUICK_FADE, true)
+    }
+
+    // M6b intro: the ship's docking approach from space, as pure data (also used to preview it)
+    introBody(short)
+    {
+        const station = this.state.interior.station
+        const { rest, approach, axis, up } = station.hangar
+        const endPad = { position: rest.position.clone(), quaternion: rest.quaternion.clone(), up: rest.up.clone(), forward: rest.forward.clone(), hangar: true }
+        if(short)
+            return createArrival({ from: null, to: station, endPad, autopilot: true, baseSpeed: 1, length: 0 }, station.hangar.hover.clone(), 0, 0, true)
+        const config = INTRO.long
+        const side = new THREE.Vector3().crossVectors(axis, up).normalize()
+        const position = approach.clone().addScaledVector(axis, config.out).addScaledVector(side, config.side).addScaledVector(up, config.up)
+        const route = { from: null, to: station, endPad, autopilot: true, baseSpeed: config.speed, length: 0 }
+        return createArrival(route, position, config.speed, config.approach)
+    }
+
+    // The intro: the ship arrives and docks in the hangar; on touchdown the astronaut steps out
+    arriveIntro(short)
+    {
+        this.body = this.introBody(short)
+        this.route = this.body.route
+        this.active = true
+        this.intro = true
+        this.paused = false
+        this.accumulator = 0
+        this.boost = 0
+        this.wasBoosting = false
+        this.skipping = null
+        this.skipped = false
+        this.quick = false
+        this.cameraCut = true
+        this.updateRender()
+    }
+
+    // Where the intro ship will be `time` s after arriveIntro (the intro camera meets it there)
+    previewIntro(short, time)
+    {
+        const body = this.introBody(short)
+        for(let t = 0; t < time; t += FIXED_STEP)
+            stepBody(body, _input, FIXED_STEP)
+        return { position: body.position.clone(), forward: body.forward.clone(), up: body.frameUp.clone() }
+    }
+
+    // Skip during the intro's arrival: straight to standing in the hangar (Player.update places)
+    endIntro()
+    {
+        if(!this.intro)
+            return
+        this.intro = false
+        this.stop()
+        this.skipped = true
+        this.arrival = this.route.to
     }
 
     fadeTo(target, duration)
@@ -220,7 +281,7 @@ export default class Flight
         while(events.length)
         {
             const phase = events.shift()
-            if(PHASE_STATES[phase])
+            if(PHASE_STATES[phase] && !this.intro)
                 this.game.stateMachine.set(PHASE_STATES[phase])
             if(phase === 'flying')
             {
@@ -293,9 +354,12 @@ export default class Flight
     finish()
     {
         const to = this.route.to
+        const intro = this.intro
+        this.intro = false
         this.stop()
         this.game.stateMachine.set(StateMachine.ON_FOOT)
-        this.bridge.emit('location:change', { id: to.id, name: to.name })
+        if(!intro) // the intro starts at the station: its visit is already counted at Launch
+            this.bridge.emit('location:change', { id: to.id, name: to.name })
     }
 
     stop()

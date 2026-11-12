@@ -5,6 +5,13 @@ import State from '@/State/State.js'
 import Debug from '@/Debug/Debug.js'
 
 const SUN_DISTANCE = 60
+const OUTDOOR = { sun: 3.2, fill: 0.08, fog: 0.002, sky: '#8ea6ff', ground: '#06070c' }
+const INDOOR = { sun: 1.1, fill: 0.55, fog: 0.005, sky: '#8ea6ff', ground: '#06070c' }
+// Outside Apeiron Station: hard sun, and soft blue Earth-shine from below (Earth's side)
+const STATION = { sun: 3.2, fill: 0.32, fog: 0.002, sky: '#0b0e18', ground: '#4f7fbf' }
+const _sky = new THREE.Color()
+const _ground = new THREE.Color()
+const _toEarth = new THREE.Vector3()
 
 const _matrix = new THREE.Matrix4()
 const _inverse = new THREE.Matrix4()
@@ -53,6 +60,13 @@ export default class Lights
         const folder = this.debug.ui.getFolder('view/lights')
         folder.add(this.sun, 'intensity', 0, 5, 0.05).name('sunLightIntensity')
         folder.add(this.fill, 'intensity', 0, 5, 0.01).name('fillLightIntensity')
+    }
+
+    interiorTarget(interior)
+    {
+        if(!this.interiorBounds || this.interiorBounds.center !== interior.center)
+            this.interiorBounds = { center: interior.center, radius: interior.layout.radius } // every module, the hangar's end included
+        return this.interiorBounds
     }
 
     setShadowQuality(quality)
@@ -104,10 +118,33 @@ export default class Lights
 
     update()
     {
-        const planet = this.state.planets.current
+        // Inside the station (M6; M6b: the camera is inside its walls, View/Station.js): a softer sun
+        // through the windows, a stronger cool fill, shadows fitted to the interior, light fog.
+        // Intensities only (eased over ~0.3 s, the camera can fly through the bay door): no recompiles.
+        const interior = this.state.interior
+        const indoor = this.view.station.inside
+        if(indoor !== this.indoor)
+        {
+            this.indoor = indoor
+            this.planet = null
+        }
+        const k = this.lightsSet ? 1 - Math.exp(- 10 * this.state.time.delta) : 1
+        this.lightsSet = true
+        const atStation = !indoor && this.view.station.near
+        const target = indoor ? INDOOR : atStation ? STATION : OUTDOOR
+        this.sun.intensity += (target.sun - this.sun.intensity) * k
+        this.fill.intensity += (target.fill - this.fill.intensity) * k
+        this.fill.color.lerp(_sky.set(target.sky), k)
+        this.fill.groundColor.lerp(_ground.set(target.ground), k)
+        this.view.scene.fog.density += (target.fog - this.view.scene.fog.density) * k
+        const planet = indoor ? this.interiorTarget(interior) : this.state.planets.current
         if(planet !== this.planet)
             this.setPlanet(planet)
 
-        this.fill.position.copy(this.state.player.up)
+        // The fill's "sky" side: the player's up, or (outside the station) away from Earth
+        if(atStation)
+            this.fill.position.copy(_toEarth.subVectors(interior.center, this.state.planets.earth.center).normalize())
+        else
+            this.fill.position.copy(this.state.player.up)
     }
 }

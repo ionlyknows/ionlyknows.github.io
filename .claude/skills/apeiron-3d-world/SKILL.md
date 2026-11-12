@@ -26,6 +26,11 @@ player.quaternion.setFromUnitVectors(_yAxis, up);                  // then rotat
 - Props: sphere colliders `{center, radius}`. **Slide, don't bounce:** remove the velocity component pointing into the collider before moving, resolve overlap once after moving (skin 0.02), then re-project onto the radius. Collision never changes facing. Smooth the visual model and camera target so corrections don't show.
 - Content point "in range" = straight-line distance ≤ 3 units; only the nearest one shows a prompt.
 
+## Station interior (M6): planar mode
+- `State/PlanarPhysics.js` beside the spherical physics: flat floor, gravity −Y, same speeds, jump, radius, skin and fixed step. Colliders are the boxes/circles of `State/InteriorLayout.js`, the same data View draws (no invisible walls).
+- No gap narrower than the astronaut (≈ 1.1 m) between two parallel faces (it traps the player between them): join or widen. The camera ray-tests walls and the ceiling indoors.
+- The interior loads lazily on entry; outside planets don't update or draw detail while inside.
+
 ## Follow camera
 - The camera sits behind and above the player in the player's local frame. Its `camera.up` = slerp toward the player's `up` (factor ~0.1/frame) to avoid flips at the poles.
 - Mouse drag orbits around the player's `up` axis; clamp pitch to 10°–70°.

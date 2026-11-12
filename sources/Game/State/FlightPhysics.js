@@ -6,6 +6,11 @@ import { SHIP_SHAPE, shipRestPose } from './PropShapes.js'
 // (State/Flight.js runs it in the game; the Node route check runs the same code).
 //
 // Phases: boarding (1 s) → takeoff (2 s) → flying (steerable) → landing (3 s) → establish (1.6 s).
+// M6b Apeiron Station: routes start and end at a gate on the hangar's bay axis. Take-off lifts off
+// the hangar pad and glides out through the bay door; the landing is the automatic docking
+// sequence (approach along the route's last part onto the bay axis, 1.6–5 s by speed, then ≈ 3.4 s
+// straight in through the door, a 180° turn above the pad, touchdown nose to the door). "Fly it yourself" hands over to it like any
+// landing. The intro's arrival (createArrival) is the same docking from a point in space.
 // Autopilot (M5): the same route and phases, no steering, a faster cruise (≈ 8 s from take-off to
 // touchdown) that slows down before the landing so the landing starts at its own speed.
 // The ship follows a route curve; the player moves inside a corridor around it. The offset is
@@ -29,6 +34,10 @@ const AUTO_DECEL = 80 // units/s²
 export const AUTO_LANDING_SPEED = 40 // units/s when the landing starts (below its cap: no speed jump)
 const TAKEOFF_HEIGHT = 12
 const CLIMB = { up: 20, out: 35 } // route leaves the pad climbing at ~30°
+// Station: leave out along the bay axis, then a gentle turn; arrive straight along the axis (the
+// docking then starts on it, not beside the station)
+const GATE = { height: 10, climb: { up: 40, out: 15 }, arrive: { up: 40, out: 0 } }
+export const DOCKING = { approach: 2.2, approachMin: 1.6, approachMax: 5, glide: 1.9, settle: 1.5, alignSpeed: 9 } // s, units/s
 const CORRIDOR_RAMP_IN = 70 // corridor widens over the first 70 units
 const CORRIDOR_RAMP_OUT = 90 // and closes over the 90 units before the landing starts
 const STEER_SPEED = 14 // units/s of sideways motion at full input
@@ -41,6 +50,7 @@ const FRAME_SAMPLES = 1024
 const FRAME_SMOOTHING = 48 // samples each side (triangle filter)
 const SCENIC_RANGE = 120 // a planet/Earth within this of the straight path gets a close pass
 const SCENIC_GAP = 30 // corridor edge ↔ scenic surface
+const SCENIC_SPAN = 0.2 // a scenic body's closest point must lie in the middle 60% of the way
 const CLEARANCE = 15 // corridor edge ↔ any other surface
 const HANDLE = 0.4 // Bézier handle length × segment chord
 
@@ -89,9 +99,17 @@ export function corridorRadius(route, s)
 }
 
 // Tangent / up / right of the route at distance s (parallel-transported, so it never flips)
+// Guard: a route without frames (the intro's arrival) or a non-finite s gives a fixed frame, never a crash.
 export function frameAt(route, s, tangent, up, right)
 {
-    const f = THREE.MathUtils.clamp(s / route.length, 0, 1) * FRAME_SAMPLES
+    if(!route?.tangents || !(route.length > 0))
+    {
+        tangent.set(0, 0, 1)
+        up.set(0, 1, 0)
+        right.crossVectors(tangent, up)
+        return
+    }
+    const f = (Number.isFinite(s) ? THREE.MathUtils.clamp(s / route.length, 0, 1) : 0) * FRAME_SAMPLES
     const i = Math.min(FRAME_SAMPLES - 1, Math.floor(f))
     const k = f - i
     tangent.lerpVectors(route.tangents[i], route.tangents[i + 1], k).normalize()
@@ -102,7 +120,9 @@ export function frameAt(route, s, tangent, up, right)
 
 export function pointAt(route, s, target)
 {
-    return route.curve.getPointAt(THREE.MathUtils.clamp(s / route.length, 0, 1), target)
+    if(!route?.curve || !(route.length > 0)) // guard, as in frameAt: the route's end pad, or the origin
+        return route?.endPad ? target.copy(route.endPad.position) : target.set(0, 0, 0)
+    return route.curve.getPointAt(Number.isFinite(s) ? THREE.MathUtils.clamp(s / route.length, 0, 1) : 0, target)
 }
 
 const closestOnSegment = (p, a, b, target) =>
@@ -112,40 +132,65 @@ const closestOnSegment = (p, a, b, target) =>
     return target.copy(a).addScaledVector(_a, t)
 }
 
-// Route between two planets: pad → climb out → (close pass by Earth or another planet when one
-// is near the way, else a gentle side arc) → approach from above → over the destination pad.
-// `bodies` = every planet + Earth ({ center, radius }).
+// Where a route starts or ends: a planet's launch pad (the ship climbs off it along its up) or the
+// station's hangar (the ship flies out along the bay axis from a gate outside the door). Copies:
+// the route owns (and shifts) its own vectors.
+function routeEnd(location, arriving)
+{
+    if(location.hangar)
+    {
+        const { rest, gate, axis } = location.hangar
+        const pad = { position: rest.position.clone(), quaternion: rest.quaternion.clone(), up: rest.up.clone(), forward: rest.forward.clone(), hangar: true }
+        return { pad, origin: gate.clone(), lift: axis.clone(), height: GATE.height, climb: arriving ? GATE.arrive : GATE.climb }
+    }
+    const pad = shipRestPose(location.launchPad, location.landingPoint)
+    return { pad, origin: pad.position, lift: pad.up, height: TAKEOFF_HEIGHT, climb: CLIMB }
+}
+
+// Route between two places: pad (or hangar gate) → climb out → (close pass by Earth or another
+// planet when one is near the way, else a gentle side arc) → approach from above (or along the
+// bay axis) → over the destination pad (or the gate). `bodies` = every location + Earth ({ center, radius }).
 export function buildRoute(from, to, bodies, { autopilot = false } = {})
 {
-    const startPad = shipRestPose(from.launchPad, from.landingPoint)
-    const endPad = shipRestPose(to.launchPad, to.landingPoint)
-    const startUp = startPad.up
-    const endUp = endPad.up
+    const startEnd = routeEnd(from, false)
+    const endEnd = routeEnd(to, true)
+    const startPad = startEnd.pad
+    const endPad = endEnd.pad
+    const startLift = startEnd.lift
+    const endLift = endEnd.lift
 
-    const start = startPad.position.clone().addScaledVector(startUp, TAKEOFF_HEIGHT)
-    const end = endPad.position.clone().addScaledVector(endUp, TAKEOFF_HEIGHT)
+    const start = startEnd.origin.clone().addScaledVector(startLift, startEnd.height)
+    const end = endEnd.origin.clone().addScaledVector(endLift, endEnd.height)
 
-    const out = new THREE.Vector3().subVectors(to.center, from.center).projectOnPlane(startUp)
+    const out = new THREE.Vector3().subVectors(to.center, from.center).projectOnPlane(startLift)
     if(out.lengthSq() < 1e-4)
-        out.copy(startPad.forward)
+        out.copy(startPad.forward).projectOnPlane(startLift)
+    if(out.lengthSq() < 1e-4)
+        out.copy(startPad.up).projectOnPlane(startLift)
     out.normalize()
-    const back = new THREE.Vector3().subVectors(from.center, to.center).projectOnPlane(endUp)
+    const back = new THREE.Vector3().subVectors(from.center, to.center).projectOnPlane(endLift)
     if(back.lengthSq() < 1e-4)
-        back.copy(endPad.forward)
+        back.copy(endPad.forward).projectOnPlane(endLift)
+    if(back.lengthSq() < 1e-4)
+        back.copy(endPad.up).projectOnPlane(endLift)
     back.normalize()
 
-    const climb = start.clone().addScaledVector(startUp, CLIMB.up).addScaledVector(out, CLIMB.out)
-    const approach = end.clone().addScaledVector(endUp, CLIMB.up).addScaledVector(back, CLIMB.out)
+    const climb = start.clone().addScaledVector(startLift, startEnd.climb.up).addScaledVector(out, startEnd.climb.out)
+    const approach = end.clone().addScaledVector(endLift, endEnd.climb.up).addScaledVector(back, endEnd.climb.out)
 
-    // Middle point: close pass by the nearest scenic body, otherwise a side arc
+    // Middle point: close pass by the nearest scenic body, otherwise a side arc. Only bodies beside
+    // the way count (closest point in the middle part of it): one behind the start or the end made
+    // a hairpin there (M6b: the station sits behind Signal Moon on the way to The Forge)
     const others = bodies.filter((body) => body !== from && body !== to)
     const middle = new THREE.Vector3().addVectors(climb, approach).multiplyScalar(0.5)
     let scenic = null
     let scenicDistance = Infinity
+    const span = _d.subVectors(approach, climb).lengthSq()
     for(const body of others)
     {
         const distance = closestOnSegment(body.center, climb, approach, _c).distanceTo(body.center) - body.radius
-        if(distance < SCENIC_RANGE && distance < scenicDistance)
+        const along = _b.subVectors(body.center, climb).dot(_a.subVectors(approach, climb)) / span
+        if(along > SCENIC_SPAN && along < 1 - SCENIC_SPAN && distance < SCENIC_RANGE && distance < scenicDistance)
         {
             scenic = body
             scenicDistance = distance
@@ -170,8 +215,8 @@ export function buildRoute(from, to, bodies, { autopilot = false } = {})
 
     // Two tangent-continuous cubic Béziers (pad → middle → pad) with long handles: wide,
     // gentle bends everywhere (a CatmullRom through the climb points bent tighter than the corridor)
-    const startDirection = new THREE.Vector3().copy(startUp).multiplyScalar(CLIMB.up).addScaledVector(out, CLIMB.out).normalize()
-    const endDirection = new THREE.Vector3().copy(endUp).multiplyScalar(- CLIMB.up).addScaledVector(back, - CLIMB.out).normalize()
+    const startDirection = new THREE.Vector3().copy(startLift).multiplyScalar(startEnd.climb.up).addScaledVector(out, startEnd.climb.out).normalize()
+    const endDirection = new THREE.Vector3().copy(endLift).multiplyScalar(- endEnd.climb.up).addScaledVector(back, - endEnd.climb.out).normalize()
     const points = [ start, middle, end ]
     const route = { from, to, startPad, endPad, scenic, points, startDirection, endDirection, autopilot }
 
@@ -192,14 +237,30 @@ export function buildRoute(from, to, bodies, { autopilot = false } = {})
     if(autopilot)
         route.baseSpeed = Math.max(route.baseSpeed, AUTO_LANDING_SPEED * 1.5)
 
-    // Take-off: straight up off the pad, then into the route's first tangent
-    const startTangent = route.tangents[0]
-    route.takeoff = new THREE.CubicBezierCurve3(
-        startPad.position.clone(),
-        startPad.position.clone().addScaledVector(startUp, 6),
-        start.clone().addScaledVector(startTangent, - 8),
-        start.clone()
-    )
+    // Take-off: straight up off the pad, then into the route's first tangent. From the hangar: lift
+    // off the pad, glide out through the bay door along its axis, then into the route. The take-off
+    // ends on the curve's own start direction (where the flight really moves next), not the smoothed
+    // corridor tangent: they differ where the route bends early (the hangar's climb out, M6b)
+    const startTangent = route.startDirection
+    if(from.hangar)
+    {
+        const door = from.hangar.door.clone()
+        const axis = startLift
+        route.takeoff = new THREE.CurvePath()
+        route.takeoff.add(new THREE.CubicBezierCurve3(startPad.position.clone(), startPad.position.clone().addScaledVector(startPad.up, 2), door.clone().addScaledVector(axis, - 6), door.clone()))
+        route.takeoff.add(new THREE.CubicBezierCurve3(door.clone(), door.clone().addScaledVector(axis, 5), start.clone().addScaledVector(startTangent, - 6), start.clone()))
+        for(const curve of route.takeoff.curves)
+            curve.arcLengthDivisions = 300
+    }
+    else
+    {
+        route.takeoff = new THREE.CubicBezierCurve3(
+            startPad.position.clone(),
+            startPad.position.clone().addScaledVector(startPad.up, 6),
+            start.clone().addScaledVector(startTangent, - 8),
+            start.clone()
+        )
+    }
     route.takeoff.arcLengthDivisions = 400
     route.takeoffLength = route.takeoff.getLength()
     route.startQuaternion = orient(new THREE.Quaternion(), startTangent, route.ups[0])
@@ -310,6 +371,160 @@ export function createBody(route, playerPosition, { hatch = SHIP_SHAPE.hatch, cu
     return body
 }
 
+// Docking into the station's hangar (the station's landing phase), from `position` moving along
+// `forward` at `speed`: the approach (arriving at the align speed on the bay axis), straight in to the
+// hover point above the pad, then a 180° turn while settling on the pad (nose to the door, ready to
+// leave). On a route the approach is the rest of the route itself, from distance `s` (the corridor is
+// closed there, so the ship is on it, and the route ends straight along the bay axis); its time
+// follows the speeds. The intro's arrival from space (no route) curves to the alignment point
+// in `approachTime`.
+// settleOnly: start above the pad (the returning visitor's short intro): only the 180° turn and touchdown
+export function createDocking(station, { position, forward, up, speed, quaternion = null, route = null, s = 0, approachTime = DOCKING.approach, settleOnly = false })
+{
+    const { rest, hover, approach, axis } = station.hangar
+    const inward = axis.clone().negate()
+    let curve
+    let alignPoint
+    if(route)
+    {
+        const length = route.length - s
+        curve = {
+            getLength: () => length,
+            getPointAt: (u, target) => pointAt(route, s + u * length, target),
+            getTangentAt: (u, target) => route.curve.getTangentAt(THREE.MathUtils.clamp((s + u * length) / route.length, 0, 1), target)
+        }
+        alignPoint = pointAt(route, route.length, new THREE.Vector3())
+        approachTime = THREE.MathUtils.clamp(2 * length / (speed + DOCKING.alignSpeed), DOCKING.approachMin, DOCKING.approachMax)
+    }
+    else
+    {
+        const handle = Math.max(4, position.distanceTo(approach) * 0.38)
+        curve = new THREE.CubicBezierCurve3(position.clone(), position.clone().addScaledVector(forward, handle), approach.clone().addScaledVector(axis, handle), approach.clone())
+        curve.arcLengthDivisions = 400
+        alignPoint = approach.clone()
+    }
+    const glide = new THREE.LineCurve3(alignPoint, hover.clone())
+    const settle = new THREE.LineCurve3(hover.clone(), rest.position.clone())
+    const segment = (kind, path, duration, startSpeed, endSpeed) => ({ kind, curve: path, length: path.getLength(), duration, startSpeed, endSpeed })
+    const segments = [
+        segment('approach', curve, approachTime, 0, DOCKING.alignSpeed),
+        segment('glide', glide, DOCKING.glide, DOCKING.alignSpeed, 0),
+        segment('settle', settle, DOCKING.settle, 0, 0)
+    ]
+    segments[0].startSpeed = Math.min(speed, 2 * segments[0].length / approachTime) // the profile never reverses
+    if(settleOnly)
+        segments.splice(0, 2)
+    return {
+        docking: true,
+        segments,
+        duration: segments.reduce((total, s) => total + s.duration, 0),
+        startQuaternion: quaternion ? quaternion.clone() : orient(new THREE.Quaternion(), forward, up),
+        inward,
+        up: rest.up.clone(),
+        segment: 0
+    }
+}
+
+// The intro (M6b): the ship arrives from space already on its docking approach. `route` only needs
+// `to` (the station) and `endPad` (its hangar rest pose); the body starts in the landing phase.
+// settleOnly: it starts above the pad instead, nose inward (the short intro)
+export function createArrival(route, position, speed, approachTime, settleOnly = false)
+{
+    const pad = route.endPad
+    const forward = settleOnly
+        ? route.to.hangar.axis.clone().negate()
+        : new THREE.Vector3().subVectors(route.to.hangar.approach, position).normalize()
+    const quaternion = orient(new THREE.Quaternion(), forward, pad.up)
+    const body = {
+        route,
+        phase: 'landing',
+        time: 0,
+        s: 0,
+        speed,
+        multiplier: 1,
+        n: new THREE.Vector2(),
+        offset: new THREE.Vector2(),
+        lateral: new THREE.Vector2(),
+        position: position.clone(),
+        previousPosition: position.clone(),
+        quaternion: quaternion.clone(),
+        previousQuaternion: quaternion.clone(),
+        frameUp: pad.up.clone(),
+        previousFrameUp: pad.up.clone(),
+        forward: forward.clone(),
+        thrust: 0.35,
+        steering: false,
+        landing: createDocking(route.to, { position, forward, up: pad.up, speed, approachTime, settleOnly }),
+        events: [],
+        playerStart: position.clone(),
+        playerPosition: position.clone(),
+        previousPlayerPosition: position.clone(),
+        hatch: position.clone(),
+        playerVisibility: 0,
+        previousPlayerVisibility: 0
+    }
+    return body
+}
+
+// One step of the docking sequence (time-based segments, each with its own quintic speed profile)
+function stepDocking(body)
+{
+    const docking = body.landing
+    let time = body.time
+    let index = 0
+    while(index < docking.segments.length - 1 && time > docking.segments[index].duration)
+    {
+        time -= docking.segments[index].duration
+        index++
+    }
+    const segment = docking.segments[index]
+    docking.segment = index
+    const tau = Math.min(1, time / segment.duration + 1e-9)
+    const distance = quintic(tau, segment.length, segment.startSpeed * segment.duration, segment.endSpeed * segment.duration)
+    segment.curve.getPointAt(THREE.MathUtils.clamp(distance / segment.length, 0, 1), body.position)
+
+    if(segment.kind === 'approach')
+    {
+        // From the ship's pose at the hand-over (bank included) to nose along the path, station up.
+        // The target moves, so its sign is kept continuous step to step and the blend is a plain
+        // normalised lerp: a shortest-path slerp switched sides (a flip) when the route's up arrived
+        // almost opposite the station's. The camera's up follows the ship's.
+        segment.curve.getTangentAt(THREE.MathUtils.clamp(distance / segment.length, 0, 1), _forward).normalize()
+        orient(_quaternion, _forward, docking.up)
+        const reference = docking.target || docking.startQuaternion
+        if(_quaternion.dot(reference) < 0)
+            _quaternion.set(- _quaternion.x, - _quaternion.y, - _quaternion.z, - _quaternion.w)
+        docking.target = (docking.target || new THREE.Quaternion()).copy(_quaternion)
+        const w = smoothstep(0, 0.6, tau)
+        const start = docking.startQuaternion
+        body.quaternion.set(start.x + (_quaternion.x - start.x) * w, start.y + (_quaternion.y - start.y) * w, start.z + (_quaternion.z - start.z) * w, start.w + (_quaternion.w - start.w) * w).normalize()
+        body.frameUp.copy(_yAxis).applyQuaternion(body.quaternion)
+        body.thrust = 0.35
+    }
+    else if(segment.kind === 'glide')
+    {
+        orient(body.quaternion, docking.inward, docking.up)
+        body.frameUp.copy(docking.up)
+        body.thrust = 0.25 * (1 - tau)
+    }
+    else
+    {
+        // Turn round above the pad while settling (yaw 180° about the station's up)
+        _forward.copy(docking.inward).applyAxisAngle(docking.up, Math.PI * smoothstep(0, 1, tau))
+        orient(body.quaternion, _forward, docking.up)
+        body.frameUp.copy(docking.up)
+        body.thrust = 0.12 * (1 - smoothstep(0.6, 1, tau))
+    }
+
+    if(body.time >= docking.duration - 1e-9)
+    {
+        body.position.copy(body.route.endPad.position)
+        body.quaternion.copy(body.route.endPad.quaternion)
+        body.thrust = 0
+        setPhase(body, 'establish')
+    }
+}
+
 // "Skip flight" / reduced motion: straight to the touchdown at the destination pad (the caller
 // fades to black first). `time` = how far into the establishing shot to start.
 export function jumpToEnd(body, time = 0)
@@ -385,6 +600,8 @@ export function stepBody(body, input, dt)
     }
     else if(body.phase === 'flying')
         stepFlying(body, input, dt)
+    else if(body.phase === 'landing' && body.landing.docking)
+        stepDocking(body)
     else if(body.phase === 'landing')
     {
         const landing = body.landing
@@ -483,8 +700,14 @@ function stepFlying(body, input, dt)
     body.quaternion.multiply(_quaternion.setFromAxisAngle(_zAxis, bank))
     body.thrust = body.multiplier
 
-    // Automatic landing: the corridor is closed here, so the ship is on the route
-    if(route.length - body.s <= LANDING_DISTANCE)
+    // Automatic landing: the corridor is closed here, so the ship is on the route (the station:
+    // the docking sequence)
+    if(route.length - body.s <= LANDING_DISTANCE && route.to.hangar)
+    {
+        body.landing = createDocking(route.to, { position: body.position, forward: _forward, up: _up, speed: body.speed, quaternion: body.quaternion, route, s: body.s })
+        setPhase(body, 'landing')
+    }
+    else if(route.length - body.s <= LANDING_DISTANCE)
     {
         const pad = route.endPad
         const landingCurve = new THREE.CubicBezierCurve3(
@@ -506,19 +729,20 @@ function stepFlying(body, input, dt)
     }
 }
 
+// Control points of a curve (Bézier, line, or a path of them)
+const curvePoints = (curve) => curve ? (curve.curves ? curve.curves.flatMap(curvePoints) : [ curve.v0, curve.v1, curve.v2, curve.v3 ].filter(Boolean)) : []
+
 // Floating origin: move everything the flight stores by -offset
 export function shiftBody(body, offset)
 {
     const route = body.route
+    const landing = body.landing
     for(const vector of [
         body.position, body.previousPosition, body.playerStart, body.playerPosition, body.previousPlayerPosition, body.hatch,
-        route.startPad.position, route.endPad.position, ...route.points,
-        ...route.curve.curves.flatMap((curve) => [ curve.v0, curve.v1, curve.v2, curve.v3 ]),
-        route.takeoff.v0, route.takeoff.v1, route.takeoff.v2, route.takeoff.v3
+        route.startPad?.position, route.endPad.position, ...(route.points || []),
+        ...curvePoints(route.curve), ...curvePoints(route.takeoff),
+        ...(landing ? (landing.segments ? landing.segments.flatMap((segment) => curvePoints(segment.curve)) : curvePoints(landing.curve)) : [])
     ])
-        vector.sub(offset)
-    if(body.landing)
-        for(const vector of [ body.landing.curve.v0, body.landing.curve.v1, body.landing.curve.v2, body.landing.curve.v3 ])
-            vector.sub(offset)
+        vector?.sub(offset)
 }
 

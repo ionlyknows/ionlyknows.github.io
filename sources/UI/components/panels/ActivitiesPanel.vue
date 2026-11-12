@@ -1,11 +1,20 @@
 <script setup>
+import { onMounted, nextTick } from 'vue'
 import PanelShell from './PanelShell.vue'
 import { usePanelEscape } from '../../composables/usePanelEscape.js'
 import activities from '../../../content/activities.js'
 import { has } from '../../visibleContent.js'
 
+const props = defineProps({ itemId: { type: String, default: '' } }) // M6: opened from a banner on The Forge
 const emit = defineEmits([ 'close' ])
 const items = activities.filter((activity) => has(activity.title))
+
+// Opened from a banner: that activity is highlighted and scrolled into view
+onMounted(async () =>
+{
+    await nextTick()
+    document.getElementById(`iw-activity-${props.itemId}`)?.scrollIntoView({ block: 'nearest' })
+})
 
 function close() { emit('close') }
 usePanelEscape(close)
@@ -14,7 +23,7 @@ usePanelEscape(close)
 <template>
     <PanelShell title="Activities" @close="close">
         <ul class="iw-activities">
-            <li v-for="activity in items" :key="activity.id" class="iw-activities__card">
+            <li v-for="activity in items" :id="`iw-activity-${activity.id}`" :key="activity.id" class="iw-activities__card" :class="{ 'is-selected': activity.id === itemId }">
                 <p v-if="has(activity.role) || has(activity.year)" class="iw-activities__meta">
                     <span v-if="has(activity.role)">{{ activity.role }}</span>
                     <span v-if="has(activity.role) && has(activity.year)"> · </span>
@@ -53,10 +62,15 @@ usePanelEscape(close)
     background: rgba(255, 255, 255, 0.03);
 }
 
+.iw-activities__card.is-selected
+{
+    border-color: var(--iw-gold);
+}
+
 .iw-activities__meta
 {
     margin: 0 0 6px;
-    color: var(--iw-loc-trophy);
+    color: var(--iw-gold);
     font-family: var(--iw-font-mono);
     font-size: 12px;
     letter-spacing: 0.08em;
@@ -81,7 +95,7 @@ usePanelEscape(close)
 {
     display: inline-block;
     margin-top: 12px;
-    color: var(--iw-loc-trophy);
+    color: var(--iw-gold);
     font-weight: 600;
     text-decoration: none;
 }
@@ -90,7 +104,7 @@ usePanelEscape(close)
 
 .iw-activities__link:focus-visible
 {
-    outline: 2px solid var(--iw-loc-trophy);
+    outline: 2px solid var(--iw-gold);
     outline-offset: 3px;
 }
 </style>
